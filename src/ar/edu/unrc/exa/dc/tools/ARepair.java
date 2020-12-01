@@ -13,23 +13,6 @@ import static ar.edu.unrc.exa.dc.util.Utils.exceptionToString;
 
 public final class ARepair {
 
-    private enum SearchStrategy {
-        BASE_CHOICE {
-            @Override
-            public String getName() {
-                return "base-choice";
-            }
-        },
-        ALL_COMBINATIONS {
-            @Override
-            public String getName() {
-                return "all-combinations";
-            }
-        };
-
-        public abstract String getName();
-    }
-
     public enum ARepairResult {
 
         REPAIRED,
@@ -63,6 +46,23 @@ public final class ARepair {
             return repair != null;
         }
 
+    }
+
+    private enum SearchStrategy {
+        BASE_CHOICE {
+            @Override
+            public String getName() {
+                return "base-choice";
+            }
+        },
+        ALL_COMBINATIONS {
+            @Override
+            public String getName() {
+                return "all-combinations";
+            }
+        };
+
+        public abstract String getName();
     }
 
     public static final int SCOPE_DEFAULT = 3;
