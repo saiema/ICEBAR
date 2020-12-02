@@ -3,6 +3,9 @@ package ar.edu.unrc.exa.dc.tools;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Stack;
@@ -83,6 +86,19 @@ public final class BeAFixResult {
                     parseTest(test, eol + 1);
             } else {
                 throw new IllegalArgumentException("After trimming we should be seeing either pred or run but we get " + test.substring(from));
+            }
+        }
+
+        @Override
+        public int hashCode() {
+            MessageDigest messageDigest;
+            try {
+                messageDigest = MessageDigest.getInstance("MD5");
+                messageDigest.update(command().getBytes());
+                byte[] digest = messageDigest.digest();
+                return Arrays.hashCode(digest);
+            } catch (NoSuchAlgorithmException e) {
+                throw new IllegalStateException("This should not be happening!", e);
             }
         }
 
@@ -195,5 +211,4 @@ public final class BeAFixResult {
         }
         return tests;
     }
-
 }

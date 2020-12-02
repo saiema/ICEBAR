@@ -21,9 +21,9 @@ public final class Utils {
 
     public static boolean isValidPath(Path pathToCheck, PathCheck check) {
         if (pathToCheck == null)
-            throw new IllegalArgumentException("null path");
+            return false;
         if (!pathToCheck.toFile().exists())
-            throw new IllegalArgumentException("path doesn't exist (" + pathToCheck.toString() + ")");
+            return false;
         switch (check) {
             case DIR: return pathToCheck.toFile().isDirectory();
             case ALS: return pathToCheck.toFile().isFile() && pathToCheck.endsWith(".als");
