@@ -16,8 +16,7 @@ import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-import static ar.edu.unrc.exa.dc.util.Utils.generateTestsFile;
-import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
+import static ar.edu.unrc.exa.dc.util.Utils.*;
 
 public class IterativeCEBasedAlloyRepair {
 
@@ -35,11 +34,11 @@ public class IterativeCEBasedAlloyRepair {
         }
     }
 
-    private ARepair aRepair;
-    private BeAFix beAFix;
-    private Set<BeAFixTest> ceAndPositiveTrustedTests; //this should be a hash set
-    private Path modelToRepair;
-    private Path oracle;
+    private final ARepair aRepair;
+    private final BeAFix beAFix;
+    private final Set<BeAFixTest> ceAndPositiveTrustedTests; //this should be a hash set
+    private final Path modelToRepair;
+    private final Path oracle;
 
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
@@ -96,7 +95,7 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     public ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
-        Path testsPath = Paths.get(candidate.modelToRepair().toAbsolutePath().toString().replace(".als", "_tests.als"));
+        Path testsPath = Paths.get(modelToRepair.toAbsolutePath().toString().replace(".als", "_tests.als"));
         File testsFile = testsPath.toFile();
         if (testsFile.exists()) {
             if (!testsFile.delete()) {
@@ -121,8 +120,28 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     public BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate) {
-        //TODO: implements
-        return null;
+        Path modelToCheckWithOraclePath = Paths.get(candidate.modelToRepair().toAbsolutePath().toString().replace(".als", "_withOracle.als"));
+        File modelToCheckWithOracleFile = modelToCheckWithOraclePath.toFile();
+        if (modelToCheckWithOracleFile.exists()) {
+            if (!modelToCheckWithOracleFile.delete()) {
+                logger.severe("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile.toString()) + ")");
+                BeAFixResult error = new BeAFixResult();
+                error.error(true);
+                error.message("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile.toString()) + ")");
+                return error;
+            }
+        }
+        try {
+            mergeFiles(candidate.modelToRepair(), oracle, modelToCheckWithOraclePath);
+        } catch (IOException e) {
+            logger.severe("An exception occurred while trying to generate model with oracle file\n" + Utils.exceptionToString(e) + "\n");
+            BeAFixResult error = new BeAFixResult();
+            error.error(true);
+            error.message(Utils.exceptionToString(e));
+            return error;
+        }
+        beAFix.pathToModel(modelToCheckWithOraclePath);
+        return beAFix.run();
     }
 
 }

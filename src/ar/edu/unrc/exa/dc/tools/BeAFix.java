@@ -81,6 +81,11 @@ public final class BeAFix {
         return this;
     }
 
+    public BeAFix pathToModel(Path pathToModel) {
+        this.pathToModel = pathToModel;
+        return this;
+    }
+
     public BeAFix setOutputDir(Path outputDirectory) {
         this.outputDirectory = outputDirectory;
         return this;
