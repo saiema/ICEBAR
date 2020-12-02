@@ -1,10 +1,15 @@
 package ar.edu.unrc.exa.dc.tools;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.Stack;
+import java.util.stream.Collectors;
+import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.TestType;
 
-public final class BeAFixResults {
+public final class BeAFixResult {
 
     private static final String TEST_SEPARATOR = "===TEST===\n";
 
@@ -88,11 +93,28 @@ public final class BeAFixResults {
     private Path untFile;
     private Path tptFile;
     private String message;
+    private boolean error;
 
     private Collection<BeAFixTest> ceTests;
     private Collection<BeAFixTest> uptTests;
     private Collection<BeAFixTest> untTests;
     private Collection<BeAFixTest> tptTests;
+
+    public void error(boolean error) {
+        this.error = error;
+    }
+
+    public boolean error() {
+        return this.error;
+    }
+
+    public void message(String message) {
+        this.message = message;
+    }
+
+    public String message() {
+        return this.message;
+    }
 
     public void counterexampleTests(Path cetFile) {
         this.cetFile = cetFile;
@@ -100,12 +122,6 @@ public final class BeAFixResults {
 
     public Path counterexampleTests() {
         return cetFile;
-    }
-
-    public boolean hasCounterexamples() {
-        if (this.cetFile == null)
-            return false;
-        return ceTests == null || !ceTests.isEmpty();
     }
 
     public void untrustedPositiveTests(Path uptFile) {
@@ -116,24 +132,12 @@ public final class BeAFixResults {
         return uptFile;
     }
 
-    public boolean hasUntrustedPositiveTests() {
-        if (this.uptFile == null)
-            return false;
-        return uptTests == null || !uptTests.isEmpty();
-    }
-
     public void untrustedNegativeTests(Path untFile) {
         this.untFile = untFile;
     }
 
     public Path untrustedNegativeTests() {
         return untFile;
-    }
-
-    public boolean hasUntrustedNegativeTests() {
-        if (this.untFile == null)
-            return false;
-        return untTests == null || !untTests.isEmpty();
     }
 
     public void trustedPositiveTests(Path tptFile) {
@@ -144,37 +148,33 @@ public final class BeAFixResults {
         return tptFile;
     }
 
-    public boolean hasTrustedPositiveTests() {
-        if (this.tptFile == null)
-            return false;
-        return tptTests == null || !tptTests.isEmpty();
-    }
-
-    public Collection<BeAFixTest> getCounterexampleTests() {
+    public Collection<BeAFixTest> getCounterexampleTests() throws IOException {
         if (ceTests == null)
-            ceTests = parseTestsFrom(cetFile);
+            ceTests = parseTestsFrom(cetFile, TestType.COUNTEREXAMPLE);
         return ceTests;
     }
 
-    public Collection<BeAFixTest> getUntrustedPositiveTests() {
+    public Collection<BeAFixTest> getUntrustedPositiveTests() throws IOException {
         if (uptTests == null)
-            uptTests = parseTestsFrom(uptFile);
+            uptTests = parseTestsFrom(uptFile, TestType.UNTRUSTED_POSITIVE);
         return uptTests;
     }
 
-    public Collection<BeAFixTest> getUntrustedNegativeTests() {
+    public Collection<BeAFixTest> getUntrustedNegativeTests() throws IOException {
         if (untTests == null)
-            untTests = parseTestsFrom(untFile);
+            untTests = parseTestsFrom(untFile, TestType.UNTRUSTED_NEGATIVE);
         return untTests;
     }
 
-    public Collection<BeAFixTest> getTrustedPositiveTests() {
+    public Collection<BeAFixTest> getTrustedPositiveTests() throws IOException {
         if (tptTests == null)
-            tptTests = parseTestsFrom(tptFile);
+            tptTests = parseTestsFrom(tptFile, TestType.TRUSTED_POSITIVE);
         return tptTests;
     }
 
     private boolean validateTestsFile(Path tests) {
+        if (tests == null)
+            return false;
         if (!tests.toFile().exists())
             return false;
         if (!tests.toFile().isFile())
@@ -182,9 +182,18 @@ public final class BeAFixResults {
         return tests.toString().endsWith(".tests");
     }
 
-    private Collection<BeAFixTest> parseTestsFrom(Path file) {
-        //TODO: implement
-        return null;
+    private Collection<BeAFixTest> parseTestsFrom(Path file, TestType testType) throws IOException {
+        if (!validateTestsFile(file))
+            throw new IllegalArgumentException("Invalid tests file: " + file.toString());
+        String[] rawTests = Files.lines(file).collect(Collectors.joining("\n")).split(TEST_SEPARATOR);
+        Collection<BeAFixTest> tests = new LinkedList<>();
+        for (String rawTest : rawTests) {
+            if (rawTest.trim().isEmpty())
+                continue;
+            BeAFixTest test = new BeAFixTest(rawTest, testType);
+            tests.add(test);
+        }
+        return tests;
     }
 
 }

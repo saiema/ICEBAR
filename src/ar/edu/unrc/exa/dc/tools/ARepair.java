@@ -1,5 +1,7 @@
 package ar.edu.unrc.exa.dc.tools;
 
+import ar.edu.unrc.exa.dc.util.Utils;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -10,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import static ar.edu.unrc.exa.dc.util.Utils.exceptionToString;
+import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
 
 public final class ARepair {
 
@@ -206,9 +209,13 @@ public final class ARepair {
         try {
             String[] args = getARepairCommand();
             ProcessBuilder pb = new ProcessBuilder(args);
-            File errorLog = new File("externalError.log");
+            File errorLog = new File("aRepairExternalError.log");
+            if (errorLog.exists() && !errorLog.delete())
+                throw new IllegalStateException("An error occurred while trying to delete " + errorLog.toString());
             pb.redirectError(ProcessBuilder.Redirect.appendTo(errorLog));
-            File outputLog = new File("externalOutput.log");
+            File outputLog = new File("aRepairExternalOutput.log");
+            if (outputLog.exists() && !outputLog.delete())
+                throw new IllegalStateException("An error occurred while trying to delete " + outputLog.toString());
             pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLog));
             Process p = pb.start();
             int exitCode = p.waitFor();
@@ -246,37 +253,19 @@ public final class ARepair {
     }
 
     private boolean readyToRun() {
-        if (invalidPath(satSolvers, true, false))
+        if (!isValidPath(satSolvers, Utils.PathCheck.DIR))
             return false;
-        if (invalidPath(modelToRepair, false, true))
+        if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
             return false;
-        if (invalidPath(testsPath, false, true))
+        if (!isValidPath(testsPath, Utils.PathCheck.ALS))
             return false;
         if (classpath == null)
             return false;
         for (Path p : classpath) {
-            if (invalidPath(p))
+            if (!isValidPath(p, Utils.PathCheck.EXISTS))
                 return false;
         }
         return true;
-    }
-
-    private boolean invalidPath(Path pathToCheck) {
-        return invalidPath(pathToCheck, true, false) || invalidPath(pathToCheck, false, false);
-    }
-
-    private boolean invalidPath(Path pathToCheck, boolean isDir, boolean isAls) {
-        if (isDir && isAls)
-            throw new IllegalArgumentException("Can't check directory and als files at the same time");
-        if (pathToCheck == null)
-            throw new IllegalArgumentException("null path");
-        if (isDir)
-            return !pathToCheck.toFile().exists() || !pathToCheck.toFile().isDirectory();
-        if (!pathToCheck.toFile().exists() || !pathToCheck.toFile().isFile())
-            return true;
-        if (isAls)
-            return !pathToCheck.toFile().getName().endsWith(".als");
-        return false;
     }
 
     private String pathsInformation() {
