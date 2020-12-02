@@ -2,15 +2,22 @@ package ar.edu.unrc.exa.dc.search;
 
 import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.ARepair.ARepairResult;
+import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
+import ar.edu.unrc.exa.dc.util.Utils;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+
+import static ar.edu.unrc.exa.dc.util.Utils.generateTestsFile;
+import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
 
 public class IterativeCEBasedAlloyRepair {
 
@@ -28,9 +35,28 @@ public class IterativeCEBasedAlloyRepair {
         }
     }
 
+    private ARepair aRepair;
+    private BeAFix beAFix;
     private Set<BeAFixTest> ceAndPositiveTrustedTests; //this should be a hash set
     private Path modelToRepair;
-    private Path oracles;
+    private Path oracle;
+
+    public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix) {
+        if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
+            throw new IllegalArgumentException("Invalid model to repair path (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
+        if (!isValidPath(oracle, Utils.PathCheck.ALS))
+            throw new IllegalArgumentException("Invalid oracle path (" + (oracle==null?"NULL":oracle.toString()) + ")");
+        if (aRepair == null)
+            throw new IllegalArgumentException("null ARepair instance");
+        if (beAFix == null)
+            throw new IllegalArgumentException("null BeAFix instance");
+        this.aRepair = aRepair;
+        this.aRepair.modelToRepair(modelToRepair);
+        this.beAFix = beAFix;
+        this.ceAndPositiveTrustedTests = new HashSet<>();
+        this.modelToRepair = modelToRepair;
+        this.oracle = oracle;
+    }
 
     public Optional<FixCandidate> repair() throws IOException {
         Stack<FixCandidate> searchSpace = new Stack<>();
@@ -70,8 +96,28 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     public ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
-        //TODO: implement
-        return null;
+        Path testsPath = Paths.get(candidate.modelToRepair().toAbsolutePath().toString().replace(".als", "_tests.als"));
+        File testsFile = testsPath.toFile();
+        if (testsFile.exists()) {
+            if (!testsFile.delete()) {
+                logger.severe("Couldn't delete tests file (" + testsFile.toString() + ")");
+                ARepairResult error = ARepairResult.ERROR;
+                error.message("Couldn't delete tests file (" + testsFile.toString() + ")");
+                return error;
+            }
+        }
+        Collection<BeAFixTest> tests = new LinkedList<>(ceAndPositiveTrustedTests);
+        tests.addAll(candidate.untrustedTests());
+        try {
+            generateTestsFile(tests, testsPath);
+        } catch (IOException e) {
+            logger.severe("An exception occurred while trying to generate tests file\n" + Utils.exceptionToString(e) + "\n");
+            ARepairResult error = ARepairResult.ERROR;
+            error.message(Utils.exceptionToString(e));
+            return error;
+        }
+        aRepair.testsPath(testsPath);
+        return aRepair.run();
     }
 
     public BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate) {
