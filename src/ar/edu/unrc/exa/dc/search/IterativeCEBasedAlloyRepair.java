@@ -64,11 +64,16 @@ public class IterativeCEBasedAlloyRepair {
         while (!searchSpace.isEmpty()) {
             FixCandidate current = searchSpace.pop();
             ARepairResult aRepairResult = runARepairWithCurrentConfig(current);
+            if (aRepairResult.equals(ARepairResult.ERROR)) {
+                logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
+                return Optional.empty();
+            }
             if (aRepairResult.hasRepair()) {
                 FixCandidate repairCandidate = new FixCandidate(aRepairResult.repair(), 0, null);
                 BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate);
                 if (beAFixResult.error()) {
                     logger.severe("BeAFix ended in error");
+                    return Optional.empty();
                 } else if (beAFixResult.getCounterexampleTests().isEmpty()) {
                     return Optional.of(repairCandidate);
                 } else {
