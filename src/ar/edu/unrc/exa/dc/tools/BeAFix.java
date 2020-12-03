@@ -52,7 +52,7 @@ public final class BeAFix {
     public static final boolean AREPAIR_COMPAT_DEFAULT = true;
     public static final int TESTS_STARTING_INDEX_DEFAULT = 1;
     public static final boolean MODEL_OVERRIDES_DEFAULT = true;
-    public static final Path MODEL_OVERRIDES_FOLDER_DEFAULT = Paths.get("modelOverrides");
+    public static final Path MODEL_OVERRIDES_FOLDER_DEFAULT = null;
     public static final boolean INSTANCE_TESTS_DEFAULT = true;
     public static final Path BUGGY_FUNCTIONS_DEFAULT = null;
 
@@ -223,17 +223,17 @@ public final class BeAFix {
         String[] args = new String[23];
         args[0] = "java";
         args[1] = "-jar"; args[2] = beAFixJar.toString();
-        args[3] = "\"" + pathToModel.toString() + "\"";
+        args[3] = pathToModel.toString();
         args[4] = "TESTS";
         args[5] = "--generate"; args[6] = Integer.toString(testsToGenerate);
-        args[7] = "--out"; args[8] = "\"" + outputDirectory.toString() + "\"";
+        args[7] = "--out"; args[8] = outputDirectory.toString();
         args[9] = "--arepair"; args[10] = Boolean.toString(aRepairCompatibility);
-        args[11] = "--tname"; args[12] = "\"" + baseTestsName + "\"";
+        args[11] = "--tname"; args[12] = baseTestsName;
         args[13] = "--tindex"; args[14] = Integer.toString(testsStartingIndex);
         args[15] = "--modeloverriding"; args[16] = Boolean.toString(modelOverrides);
-        args[17] = "--mofolder"; args[18] = "\"" + (modelOverridesFolder == null?" ":modelOverridesFolder.toString()) + "\"";
+        args[17] = "--mofolder"; args[18] = (modelOverridesFolder == null?"\" \"":modelOverridesFolder.toString());
         args[19] = "--itests"; args[20] = Boolean.toString(instanceTests);
-        args[21] = "--buggyfuncs"; args[22] = "\"" + (buggyFunctions == null?" ":buggyFunctions.toString()) + "\"";
+        args[21] = "--buggyfuncs"; args[22] = (buggyFunctions == null?"\" \"":buggyFunctions.toString());
         return args;
     }
 

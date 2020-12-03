@@ -34,13 +34,16 @@ public class IterativeCEBasedAlloyRepair {
         }
     }
 
+    public static final int LAPS_DEFAULT = 4;
+
     private final ARepair aRepair;
     private final BeAFix beAFix;
     private final Set<BeAFixTest> ceAndPositiveTrustedTests; //this should be a hash set
     private final Path modelToRepair;
     private final Path oracle;
+    private final int laps;
 
-    public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix) {
+    public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
             throw new IllegalArgumentException("Invalid model to repair path (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
         if (!isValidPath(oracle, Utils.PathCheck.ALS))
@@ -49,12 +52,19 @@ public class IterativeCEBasedAlloyRepair {
             throw new IllegalArgumentException("null ARepair instance");
         if (beAFix == null)
             throw new IllegalArgumentException("null BeAFix instance");
+        if (laps < 0)
+            throw new IllegalArgumentException("Negative value for laps");
         this.aRepair = aRepair;
         this.aRepair.modelToRepair(modelToRepair);
         this.beAFix = beAFix;
         this.ceAndPositiveTrustedTests = new HashSet<>();
         this.modelToRepair = modelToRepair;
         this.oracle = oracle;
+        this.laps = laps;
+    }
+
+    public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix) {
+        this(modelToRepair, oracle, aRepair, beAFix, LAPS_DEFAULT);
     }
 
     public Optional<FixCandidate> repair() throws IOException {
@@ -76,7 +86,7 @@ public class IterativeCEBasedAlloyRepair {
                     return Optional.empty();
                 } else if (beAFixResult.getCounterexampleTests().isEmpty()) {
                     return Optional.of(repairCandidate);
-                } else {
+                } else if (current.depth() < laps) {
                     ceAndPositiveTrustedTests.addAll(beAFixResult.getCounterexampleTests());
                     ceAndPositiveTrustedTests.addAll(beAFixResult.getTrustedPositiveTests());
                     for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
@@ -145,8 +155,7 @@ public class IterativeCEBasedAlloyRepair {
             error.message(Utils.exceptionToString(e));
             return error;
         }
-        beAFix.pathToModel(modelToCheckWithOraclePath);
-        return beAFix.run();
+        return beAFix.pathToModel(modelToCheckWithOraclePath).run();
     }
 
 }

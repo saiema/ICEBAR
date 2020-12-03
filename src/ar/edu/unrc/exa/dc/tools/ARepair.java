@@ -47,6 +47,19 @@ public final class ARepair {
             return repair != null;
         }
 
+        @Override
+        public String toString() {
+            String rep = "{\n\t"  + name();
+            if (hasMessage()) {
+                rep += "\n\tMessage: " + message;
+            }
+            if (hasRepair()) {
+                rep += "\n\tRepair found: " + repair.toAbsolutePath().toString();
+            }
+            rep += "\n}";
+            return rep;
+        }
+
     }
 
     private enum SearchStrategy {
@@ -74,18 +87,33 @@ public final class ARepair {
     public static final int MAX_TRY_PER_HOLE_DEFAULT = 1000;
     public static final int PARTITION_NUM_DEFAULT = 10;
     public static final int MAX_TRY_PER_DEPTH_DEFAULT = 10000;
+    public static final Path WORKING_DIRECTORY_DEFAULT = Paths.get("");
 
     /*
-    java -Xmx16g -Xmx16g -Djava.library.path="sat-solvers" -cp "arepair-1.0-jar-with-dependencies.jar:libs/aparser-1.0.jar:libs/alloy.jar" patcher.Patcher
-    --model-path ".hidden/toFix.als"
-    --test-path ".hidden/tests.als"
-    --scope "3"
-    --minimum-cost "3"
-    --search-strategy "base-choice" "all-combination"
+    java
+    -Xmx16g
+    -Xmx16g
+    -Djava.library.path="sat-solvers"
+    -cp
+    "arepair-1.0-jar-with-dependencies.jar:libs/aparser-1.0.jar:libs/alloy.jar"
+    patcher.Patcher
+    --model-path
+    ".hidden/toFix.als"
+    --test-path
+    ".hidden/tests.als"
+    --scope
+    "3"
+    --minimum-cost
+    "3"
+    --search-strategy
+    "base-choice" "all-combination"
     --enable-cache
-    --max-try-per-hole 1000
-    --partition-num 10           //
-    --max-try-per-depth 10000    //
+    --max-try-per-hole
+    1000
+    --partition-num
+    10           //
+    --max-try-per-depth
+    10000    //
      */
     /*
     -e,--enable-cache: This argument is optional. If this argument is specified, ARepair uses the hierarchical caching for repair. Otherwise, it does not.
@@ -97,6 +125,7 @@ public final class ARepair {
     private int memory = MEMORY_DEFAULT;
     private Path satSolvers;
     private List<Path> classpath;
+    private Path workingDirectory = WORKING_DIRECTORY_DEFAULT;
     private static final String PATCHER_CLASS = "patcher.Patcher";
     private static final String FIX_FILE = ".hidden/fix.als";
     private Path modelToRepair;
@@ -145,6 +174,11 @@ public final class ARepair {
 
     public ARepair testsPath(Path testsPath) {
         this.testsPath = testsPath;
+        return this;
+    }
+
+    public ARepair setWorkingDirectory(Path workingDirectory) {
+        this.workingDirectory = workingDirectory;
         return this;
     }
 
@@ -207,6 +241,7 @@ public final class ARepair {
         try {
             String[] args = getARepairCommand();
             ProcessBuilder pb = new ProcessBuilder(args);
+            pb.directory(workingDirectory.toFile());
             File errorLog = new File("aRepairExternalError.log");
             if (errorLog.exists() && !errorLog.delete())
                 throw new IllegalStateException("An error occurred while trying to delete " + errorLog.toString());
@@ -232,13 +267,8 @@ public final class ARepair {
     }
 
     private ARepairResult checkFix() {
-        File repair;
+        File repair = Paths.get(workingDirectory.toAbsolutePath().toString(), FIX_FILE).toFile();
         ARepairResult result;
-        if (modelToRepair.getParent() != null) {
-            repair = Paths.get(modelToRepair.getParent().toString(), FIX_FILE).toFile();
-        } else {
-            repair = Paths.get("").toAbsolutePath().resolve(FIX_FILE).toFile();
-        }
         if (!repair.exists()) {
             result = ARepairResult.NOT_REPAIRED;
             result.message("No fix found in " + repair.toString());
@@ -251,11 +281,13 @@ public final class ARepair {
     }
 
     private boolean readyToRun() {
-        if (!isValidPath(satSolvers, Utils.PathCheck.DIR))
+        if (!isValidPath(Paths.get(workingDirectory.toString(), satSolvers.toString()), Utils.PathCheck.DIR))
             return false;
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
             return false;
         if (!isValidPath(testsPath, Utils.PathCheck.ALS))
+            return false;
+        if (!isValidPath(workingDirectory, Utils.PathCheck.DIR))
             return false;
         if (classpath == null)
             return false;
@@ -268,19 +300,47 @@ public final class ARepair {
 
     private String pathsInformation() {
         String pinfo = "";
-        pinfo += "sat-solvers path: " + (satSolvers==null?"NULL":satSolvers.toString()) + "\n";
-        pinfo += "classpath       : " + (classpath==null?"NULL":classpath.stream().map(Path::toString).collect(Collectors.joining(","))) + "\n";
-        pinfo += "model to repair : " + (modelToRepair==null?"NULL":modelToRepair.toString()) + "\n";
-        pinfo += "tests path      : " + (testsPath==null?"NULL":testsPath.toString()) + "\n";
+        pinfo += "working directory : " + (workingDirectory==null?"NULL":workingDirectory.toAbsolutePath().toString()) + "\n";
+        pinfo += "sat-solvers path  : " + (satSolvers==null?"NULL":satSolvers.toString() + " (this directory is relative to the working directory)") + "\n";
+        pinfo += "classpath         : " + (classpath==null?"NULL":classpath.stream().map(Path::toString).collect(Collectors.joining(","))) + "\n";
+        pinfo += "model to repair   : " + (modelToRepair==null?"NULL":modelToRepair.toString()) + "\n";
+        pinfo += "tests path        : " + (testsPath==null?"NULL":testsPath.toString()) + "\n";
         return pinfo;
     }
+
+    /*
+    java
+    -Xmx16g
+    -Xmx16g
+    -Djava.library.path="sat-solvers"
+    -cp
+    "arepair-1.0-jar-with-dependencies.jar:libs/aparser-1.0.jar:libs/alloy.jar"
+    patcher.Patcher
+    --model-path
+    ".hidden/toFix.als"
+    --test-path
+    ".hidden/tests.als"
+    --scope
+    "3"
+    --minimum-cost
+    "3"
+    --search-strategy
+    "base-choice" "all-combination"
+    --enable-cache
+    --max-try-per-hole
+    1000
+    --partition-num
+    10           //
+    --max-try-per-depth
+    10000
+     */
 
     private String[] getARepairCommand() {
         String classpath = this.classpath.isEmpty()?".":this.classpath.stream().map(Path::toString).collect(Collectors.joining(":"));
         String[] args = new String[23 + (enableCache?1:0)];
         args[0] = "java";
         args[1] = "-Xms" + memory + "g"; args[2] = "-Xmx" + memory + "g";
-        args[3] = "-Djava.library.path=\"" + satSolvers.toString() + "\"";
+        args[3] = "-Djava.library.path=" + satSolvers.toString();
         args[4] = "-cp"; args[5] = classpath;
         args[6] = PATCHER_CLASS;
         args[7] = "--model-path"; args[8] = "\"" + modelToRepair.toString() + "\"";
@@ -292,7 +352,7 @@ public final class ARepair {
         args[19] = "--partition-num"; args[20] = Integer.toString(partitionNum);
         args[21] = "--max-try-per-depth"; args[22] = Integer.toString(maxTryPerDepth);
         if (enableCache) {
-            args[22] = "--enable-cache";
+            args[23] = "--enable-cache";
         }
         return args;
     }

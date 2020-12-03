@@ -31,8 +31,8 @@ public final class Utils {
             return false;
         switch (check) {
             case DIR: return pathToCheck.toFile().isDirectory();
-            case ALS: return pathToCheck.toFile().isFile() && pathToCheck.endsWith(".als");
-            case JAR: return pathToCheck.toFile().isFile() && pathToCheck.endsWith(".jar");
+            case ALS: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".als");
+            case JAR: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".jar");
             case FILE: return pathToCheck.toFile().isFile();
             case EXISTS: return true;
         }
@@ -50,11 +50,11 @@ public final class Utils {
         if (!rFile.createNewFile())
             throw new Error("Couldn't create result file (" + (result.toString()) + ")");
         for (String aLine : Files.readAllLines(a)) {
-            Files.write(result, aLine.getBytes(), StandardOpenOption.APPEND);
+            Files.write(result, (aLine + "\n").getBytes(), StandardOpenOption.APPEND);
         }
         Files.write(result, "\n".getBytes(), StandardOpenOption.APPEND);
         for (String bLine : Files.readAllLines(b)) {
-            Files.write(result, bLine.getBytes(), StandardOpenOption.APPEND);
+            Files.write(result, (bLine + "\n").getBytes(), StandardOpenOption.APPEND);
         }
     }
 
@@ -71,6 +71,37 @@ public final class Utils {
         for (BeAFixTest test : tests) {
             Files.write(output, ("--" + test.testType().toString() + "\n" + test.predicate() + "\n" + test.command() + "\n").getBytes(), StandardOpenOption.APPEND);
         }
+    }
+
+    /**
+     * Get text between two strings. Passed limiting strings are not
+     * included into result.
+     *
+     * @param text     Text to search in.
+     * @param textFrom Text to start cutting from (exclusive).
+     * @param textTo   Text to stop cuutting at (exclusive).
+     */
+    public static String getBetweenStrings(
+            String text,
+            String textFrom,
+            String textTo) {
+
+        String result = "";
+
+        // Cut the beginning of the text to not occasionally meet a
+        // 'textTo' value in it:
+        result =
+                text.substring(
+                        text.indexOf(textFrom) + textFrom.length(),
+                        text.length());
+
+        // Cut the excessive ending of the text:
+        result =
+                result.substring(
+                        0,
+                        result.indexOf(textTo));
+
+        return result;
     }
 
 }

@@ -11,6 +11,7 @@ import java.util.LinkedList;
 import java.util.Stack;
 import java.util.stream.Collectors;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.TestType;
+import ar.edu.unrc.exa.dc.util.Utils;
 
 public final class BeAFixResult {
 
@@ -29,7 +30,7 @@ public final class BeAFixResult {
             if (testType == null)
                 throw new IllegalArgumentException("null test type");
             this.testType = testType;
-            parseTest(test, 0);
+            parseTest(test);
         }
 
         public String command() {
@@ -44,49 +45,16 @@ public final class BeAFixResult {
             return testType;
         }
 
-        private void parseTest(final String test, final int from) {
-            String text = from == 0?test.trim():test;
-            if (from >= text.length() && (this.command == null || this.predicate == null))
-                throw new IllegalArgumentException("Reached end of test and failed to found both command and predicate\n" + test);
-            if (text.startsWith("pred", from)) {
-                if (this.predicate != null)
-                    throw new IllegalArgumentException("Two predicates found in test: " + this.predicate + " and " + text.substring(from));
-                Stack<Character> curlyBracesStack = new Stack<>();
-                StringBuilder pred = new StringBuilder();
-                int currIdx = from;
-                boolean stackUpdated = false;
-                while (currIdx < test.length()) {
-                    char currChar = test.charAt(currIdx);
-                    if (currChar == '{') {
-                        curlyBracesStack.push('{');
-                        stackUpdated = true;
-                    } else if (currChar == '}' && curlyBracesStack.peek() == '{')
-                        curlyBracesStack.pop();
-                    else if (currChar == '}' && curlyBracesStack.peek() == '}')
-                        curlyBracesStack.push('{');
-                    else
-                        pred.append(currChar);
-                    if (stackUpdated && curlyBracesStack.isEmpty())
-                        break;
-                    currIdx++;
-                }
-                this.predicate = pred.toString();
-                if (this.command == null)
-                    parseTest(test, currIdx + 1);
-            } else if (text.startsWith("run", from)) {
-                int eol = text.indexOf('\n', from);
-                if (eol >= 0 && this.command == null) {
-                    this.command = text.substring(from, eol);
-                } else if (eol >= 0) {
-                    throw new IllegalArgumentException("Two commands found in test: " + this.command + " and " + text.substring(from, eol));
-                } else if (this.command == null) {
-                    throw new IllegalArgumentException("No end of line character found starting with " + test.substring(from));
-                }
-                if (this.predicate == null)
-                    parseTest(test, eol + 1);
-            } else {
-                throw new IllegalArgumentException("After trimming we should be seeing either pred or run but we get " + test.substring(from));
-            }
+        private static final String PREDICATE_START_DELIMITER = "--TEST START\n";
+        private static final String PREDICATE_END_DELIMITER = "--TEST FINISH\n";
+        private void parseTest(final String test) {
+            this.predicate = Utils.getBetweenStrings(test, PREDICATE_START_DELIMITER, PREDICATE_END_DELIMITER);
+            if (predicate.isEmpty())
+                throw new IllegalArgumentException("Predicate not found in:\n" + test);
+            int runIdx = test.indexOf("run");
+            if (runIdx < 0)
+                throw new IllegalArgumentException("Command not found in:\n" + test);
+            this.command = test.substring(runIdx, test.indexOf("\n", runIdx));
         }
 
         @Override
@@ -100,6 +68,15 @@ public final class BeAFixResult {
             } catch (NoSuchAlgorithmException e) {
                 throw new IllegalStateException("This should not be happening!", e);
             }
+        }
+
+        @Override
+        public String toString() {
+            String rep = "{\n\t" + testType.name();
+            rep += "\n\tPredicate:\n" + predicate;
+            rep += "\n\tCommand: " + command;
+            rep += "\n}";
+            return rep;
         }
 
     }
@@ -211,4 +188,56 @@ public final class BeAFixResult {
         }
         return tests;
     }
+
+    @Override
+    public String toString() {
+        String rep = "{\n\t";
+        if (error)
+            rep += "An error occurred!\n\tMessage: " + message + "\n}";
+        else {
+            rep += "Message: " + message;
+            rep += "\n\tCounterexample tests:\n";
+            rep += testsToString(TestType.COUNTEREXAMPLE);
+            rep += "\n\tPositive trusted tests:\n";
+            rep += testsToString(TestType.TRUSTED_POSITIVE);
+            rep += "\n\tPositive untrusted tests:\n";
+            rep += testsToString(TestType.UNTRUSTED_POSITIVE);
+            rep += "\n\tNegative untrusted tests:\n";
+            rep += testsToString(TestType.UNTRUSTED_NEGATIVE);
+            rep += "}";
+        }
+        return rep;
+    }
+
+    private String testsToString(TestType testType) {
+        StringBuilder rep = new StringBuilder();
+        try {
+            Collection<BeAFixTest> tests = null;
+            switch (testType) {
+                case COUNTEREXAMPLE: {
+                    tests = getCounterexampleTests();
+                    break;
+                }
+                case UNTRUSTED_POSITIVE: {
+                    tests = getUntrustedPositiveTests();
+                    break;
+                }
+                case UNTRUSTED_NEGATIVE: {
+                    tests = getUntrustedNegativeTests();
+                    break;
+                }
+                case TRUSTED_POSITIVE: {
+                    tests = getTrustedPositiveTests();
+                    break;
+                }
+            }
+            for (BeAFixTest ceTest : tests) {
+                rep.append(ceTest.toString()).append("\n");
+            }
+        } catch (IOException e) {
+            rep.append("\tException while getting ").append(testType.name()).append(" tests:\n").append(Utils.exceptionToString(e));
+        }
+        return rep.toString();
+    }
+
 }
