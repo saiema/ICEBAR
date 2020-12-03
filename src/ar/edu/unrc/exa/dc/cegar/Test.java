@@ -27,12 +27,13 @@ public final class Test {
     private static final String AREPAIR_JAR = "arepair-1.0-jar-with-dependencies.jar";
 
     private static final Path model = Paths.get("/home/stein/Desktop/Projects/ICEBAR/Benchmarks/ARepair/arr1.als");
-    private static final Path tests = Paths.get("/home/stein/Desktop/Projects/ICEBAR/Benchmarks/ARepair/arr_tests.als");
+    private static final Path tests = Paths.get("/home/stein/Desktop/Projects/ICEBAR/Benchmarks/ARepair/arr.als");
     private static final Path oracle = Paths.get("/home/stein/Desktop/Projects/ICEBAR/Benchmarks/ARepair/arr_oracle.als");
     private static final Path modelWithOracle = Paths.get("/home/stein/Desktop/Projects/ICEBAR/Benchmarks/ARepair/arr1_withOracle.als");
 
     public static void main(String[] args) throws IOException {
-        testBeAFix();
+        testARepair();
+        //testBeAFix();
     }
 
     private static void testARepair() {
