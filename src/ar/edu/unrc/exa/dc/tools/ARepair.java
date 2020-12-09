@@ -18,7 +18,8 @@ public final class ARepair {
 
         REPAIRED,
         NOT_REPAIRED,
-        ERROR;
+        ERROR,
+        NO_TESTS;
 
         private String message = null;
         private Path repair = null;
@@ -50,11 +51,13 @@ public final class ARepair {
         @Override
         public String toString() {
             String rep = "{\n\t"  + name();
-            if (hasMessage()) {
-                rep += "\n\tMessage: " + message;
-            }
-            if (hasRepair()) {
-                rep += "\n\tRepair found: " + repair.toAbsolutePath().toString();
+            if (!equals(NO_TESTS)) {
+                if (hasMessage()) {
+                    rep += "\n\tMessage: " + message;
+                }
+                if (hasRepair()) {
+                    rep += "\n\tRepair found: " + repair.toAbsolutePath().toString();
+                }
             }
             rep += "\n}";
             return rep;

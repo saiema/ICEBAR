@@ -9,6 +9,7 @@ import ar.edu.unrc.exa.dc.util.Utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -42,6 +43,7 @@ public class IterativeCEBasedAlloyRepair {
     private final Path modelToRepair;
     private final Path oracle;
     private final int laps;
+    private int tests;
 
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
@@ -61,6 +63,7 @@ public class IterativeCEBasedAlloyRepair {
         this.modelToRepair = modelToRepair;
         this.oracle = oracle;
         this.laps = laps;
+        this.tests = 0;
     }
 
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix) {
@@ -78,8 +81,8 @@ public class IterativeCEBasedAlloyRepair {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
                 return Optional.empty();
             }
-            if (aRepairResult.hasRepair()) {
-                FixCandidate repairCandidate = new FixCandidate(aRepairResult.repair(), 0, null);
+            if (aRepairResult.hasRepair() || aRepairResult.equals(ARepairResult.NO_TESTS)) {
+                FixCandidate repairCandidate = aRepairResult.equals(ARepairResult.NO_TESTS)?current:new FixCandidate(aRepairResult.repair(), 0, null);
                 BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate);
                 if (beAFixResult.error()) {
                     logger.severe("BeAFix ended in error");
@@ -87,8 +90,10 @@ public class IterativeCEBasedAlloyRepair {
                 } else if (beAFixResult.getCounterexampleTests().isEmpty()) {
                     return Optional.of(repairCandidate);
                 } else if (current.depth() < laps) {
-                    ceAndPositiveTrustedTests.addAll(beAFixResult.getCounterexampleTests());
-                    ceAndPositiveTrustedTests.addAll(beAFixResult.getTrustedPositiveTests());
+                    boolean noUntrustedTests = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
+                    boolean ceOrPositiveTestsAdded;
+                    ceOrPositiveTestsAdded = ceAndPositiveTrustedTests.addAll(beAFixResult.getCounterexampleTests());
+                    ceOrPositiveTestsAdded |= ceAndPositiveTrustedTests.addAll(beAFixResult.getTrustedPositiveTests());
                     for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
                         Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
                         newTests.add(upTest);
@@ -101,6 +106,11 @@ public class IterativeCEBasedAlloyRepair {
                         FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, current.depth() + 1, newTests);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
+                    if (noUntrustedTests && ceOrPositiveTestsAdded) {
+                        searchSpace.push(new FixCandidate(current.modelToRepair(), current.depth() + 1, current.untrustedTests()));
+                    }
+                    tests = ceAndPositiveTrustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
+                    beAFix.testsStartingIndex(tests + 1);
                 }
             } else if (aRepairResult.hasMessage()) {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
@@ -109,7 +119,11 @@ public class IterativeCEBasedAlloyRepair {
         return Optional.empty();
     }
 
-    public ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
+    private ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
+        Collection<BeAFixTest> tests = new LinkedList<>(ceAndPositiveTrustedTests);
+        tests.addAll(candidate.untrustedTests());
+        if (tests.isEmpty())
+            return ARepairResult.NO_TESTS;
         Path testsPath = Paths.get(modelToRepair.toAbsolutePath().toString().replace(".als", "_tests.als"));
         File testsFile = testsPath.toFile();
         if (testsFile.exists()) {
@@ -120,8 +134,6 @@ public class IterativeCEBasedAlloyRepair {
                 return error;
             }
         }
-        Collection<BeAFixTest> tests = new LinkedList<>(ceAndPositiveTrustedTests);
-        tests.addAll(candidate.untrustedTests());
         try {
             generateTestsFile(tests, testsPath);
         } catch (IOException e) {
@@ -134,7 +146,15 @@ public class IterativeCEBasedAlloyRepair {
         return aRepair.run();
     }
 
-    public BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate) {
+    private BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate) {
+        try {
+            if (!beAFix.cleanOutputDir()) {
+                return BeAFixResult.error("Couldn't delete BeAFix output directory");
+            }
+        } catch (IOException e) {
+            logger.severe("An exception occurred when trying to clean BeAFix output directory\n" + exceptionToString(e));
+            return BeAFixResult.error("An exception occurred when trying to clean BeAFix output directory\n" + exceptionToString(e));
+        }
         Path modelToCheckWithOraclePath = Paths.get(candidate.modelToRepair().toAbsolutePath().toString().replace(".als", "_withOracle.als"));
         File modelToCheckWithOracleFile = modelToCheckWithOraclePath.toFile();
         if (modelToCheckWithOracleFile.exists()) {

@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static ar.edu.unrc.exa.dc.util.Utils.exceptionToString;
 import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
@@ -140,6 +142,19 @@ public final class BeAFix {
     public BeAFix buggyFunctions(Path buggyFunctions) {
         this.buggyFunctions = buggyFunctions;
         return this;
+    }
+
+    public boolean cleanOutputDir() throws IOException {
+        if (outputDirectory == null)
+            throw new IllegalStateException("Output directory not defined");
+        if (!isValidPath(outputDirectory, Utils.PathCheck.EXISTS))
+            return true;
+        AtomicBoolean result = new AtomicBoolean(false);
+        Files.walk(outputDirectory)
+                .sorted(Comparator.reverseOrder())
+                .map(Path::toFile)
+                .forEach(f -> result.set(f.delete()));
+        return result.get();
     }
 
     //AUXILIARY METHODS

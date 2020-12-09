@@ -62,12 +62,34 @@ public final class BeAFixResult {
             MessageDigest messageDigest;
             try {
                 messageDigest = MessageDigest.getInstance("MD5");
-                messageDigest.update(command().getBytes());
+                messageDigest.update(testType.name().getBytes());
+                messageDigest.update(getPredicateBody().getBytes());
                 byte[] digest = messageDigest.digest();
                 return Arrays.hashCode(digest);
             } catch (NoSuchAlgorithmException e) {
                 throw new IllegalStateException("This should not be happening!", e);
             }
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (other == null)
+                return false;
+            if (this == other)
+                return true;
+            if (!(other instanceof BeAFixTest))
+                return false;
+            BeAFixTest otherAsTest = (BeAFixTest) other;
+            if (!testType.equals(otherAsTest.testType))
+                return false;
+            return getPredicateBody().compareTo(((BeAFixTest) other).getPredicateBody()) == 0;
+        }
+
+        private String getPredicateBody() {
+            int start = predicate.indexOf('{');
+            if (start < 0)
+                throw new IllegalStateException("There should be at least one { in the predicate\n" + predicate);
+            return predicate.substring(start);
         }
 
         @Override
@@ -92,6 +114,13 @@ public final class BeAFixResult {
     private Collection<BeAFixTest> uptTests;
     private Collection<BeAFixTest> untTests;
     private Collection<BeAFixTest> tptTests;
+
+    public static BeAFixResult error(String message) {
+        BeAFixResult beAFixResult = new BeAFixResult();
+        beAFixResult.error(true);
+        beAFixResult.message(message);
+        return beAFixResult;
+    }
 
     public void error(boolean error) {
         this.error = error;

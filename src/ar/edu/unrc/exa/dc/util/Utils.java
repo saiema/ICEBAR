@@ -17,7 +17,7 @@ public final class Utils {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         e.printStackTrace(pw);
-        return pw.toString();
+        return sw.toString();
     }
 
     public enum PathCheck {
