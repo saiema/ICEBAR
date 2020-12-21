@@ -8,7 +8,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
-import java.util.Stack;
 import java.util.stream.Collectors;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.TestType;
 import ar.edu.unrc.exa.dc.util.Utils;
@@ -19,7 +18,7 @@ public final class BeAFixResult {
 
     public static final class BeAFixTest {
 
-        public enum TestType {COUNTEREXAMPLE, UNTRUSTED_POSITIVE, UNTRUSTED_NEGATIVE, TRUSTED_POSITIVE}
+        public enum TestType {COUNTEREXAMPLE, UNTRUSTED_POSITIVE, UNTRUSTED_NEGATIVE, TRUSTED_POSITIVE, TRUSTED_NEGATIVE}
         private final TestType testType;
         private String command;
         private String predicate;
@@ -107,6 +106,7 @@ public final class BeAFixResult {
     private Path uptFile;
     private Path untFile;
     private Path tptFile;
+    private Path tntFile;
     private String message;
     private boolean error;
 
@@ -114,6 +114,7 @@ public final class BeAFixResult {
     private Collection<BeAFixTest> uptTests;
     private Collection<BeAFixTest> untTests;
     private Collection<BeAFixTest> tptTests;
+    private Collection<BeAFixTest> tntTests;
 
     public static BeAFixResult error(String message) {
         BeAFixResult beAFixResult = new BeAFixResult();
@@ -170,6 +171,10 @@ public final class BeAFixResult {
         return tptFile;
     }
 
+    public void trustedNegativeTests(Path tntFile) {this.tntFile = tntFile;}
+
+    public Path trustedNegativeTests() { return tntFile; }
+
     public Collection<BeAFixTest> getCounterexampleTests() throws IOException {
         if (ceTests == null)
             ceTests = parseTestsFrom(cetFile, TestType.COUNTEREXAMPLE);
@@ -192,6 +197,12 @@ public final class BeAFixResult {
         if (tptTests == null)
             tptTests = parseTestsFrom(tptFile, TestType.TRUSTED_POSITIVE);
         return tptTests;
+    }
+
+    public Collection<BeAFixTest> getTrustedNegativeTests() throws IOException {
+        if (tntTests == null)
+            tntTests = parseTestsFrom(tntFile, TestType.TRUSTED_NEGATIVE);
+        return tntTests;
     }
 
     private boolean validateTestsFile(Path tests) {
@@ -231,6 +242,8 @@ public final class BeAFixResult {
             rep += testsToString(TestType.TRUSTED_POSITIVE);
             rep += "\n\tPositive untrusted tests:\n";
             rep += testsToString(TestType.UNTRUSTED_POSITIVE);
+            rep += "\n\tNegative trusted tests:\n";
+            rep += testsToString(TestType.TRUSTED_NEGATIVE);
             rep += "\n\tNegative untrusted tests:\n";
             rep += testsToString(TestType.UNTRUSTED_NEGATIVE);
             rep += "}";
@@ -258,6 +271,9 @@ public final class BeAFixResult {
                 case TRUSTED_POSITIVE: {
                     tests = getTrustedPositiveTests();
                     break;
+                }
+                case TRUSTED_NEGATIVE: {
+                    tests = getTrustedNegativeTests();
                 }
             }
             for (BeAFixTest ceTest : tests) {

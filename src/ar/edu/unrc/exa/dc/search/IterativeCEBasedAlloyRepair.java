@@ -38,7 +38,7 @@ public class IterativeCEBasedAlloyRepair {
 
     private final ARepair aRepair;
     private final BeAFix beAFix;
-    private final Set<BeAFixTest> ceAndPositiveTrustedTests; //this should be a hash set
+    private final Set<BeAFixTest> trustedTests; //this should be a hash set
     private final Path modelToRepair;
     private final Path oracle;
     private final int laps;
@@ -58,7 +58,7 @@ public class IterativeCEBasedAlloyRepair {
         this.aRepair = aRepair;
         this.aRepair.modelToRepair(modelToRepair);
         this.beAFix = beAFix;
-        this.ceAndPositiveTrustedTests = new HashSet<>();
+        this.trustedTests = new HashSet<>();
         this.modelToRepair = modelToRepair;
         this.oracle = oracle;
         this.laps = laps;
@@ -90,9 +90,10 @@ public class IterativeCEBasedAlloyRepair {
                     return Optional.of(repairCandidate);
                 } else if (current.depth() < laps) {
                     boolean noUntrustedTests = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
-                    boolean ceOrPositiveTestsAdded;
-                    ceOrPositiveTestsAdded = ceAndPositiveTrustedTests.addAll(beAFixResult.getCounterexampleTests());
-                    ceOrPositiveTestsAdded |= ceAndPositiveTrustedTests.addAll(beAFixResult.getTrustedPositiveTests());
+                    boolean trustedTestsAdded;
+                    trustedTestsAdded = trustedTests.addAll(beAFixResult.getCounterexampleTests());
+                    trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
+                    trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
                     for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
                         Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
                         newTests.add(upTest);
@@ -105,10 +106,10 @@ public class IterativeCEBasedAlloyRepair {
                         FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, current.depth() + 1, newTests);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
-                    if (noUntrustedTests && ceOrPositiveTestsAdded) {
+                    if (noUntrustedTests && trustedTestsAdded) {
                         searchSpace.push(new FixCandidate(current.modelToRepair(), current.depth() + 1, current.untrustedTests()));
                     }
-                    tests = ceAndPositiveTrustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
+                    tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
                     beAFix.testsStartingIndex(tests + 1);
                 }
             } else if (aRepairResult.hasMessage()) {
@@ -119,7 +120,7 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     private ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
-        Collection<BeAFixTest> tests = new LinkedList<>(ceAndPositiveTrustedTests);
+        Collection<BeAFixTest> tests = new LinkedList<>(trustedTests);
         tests.addAll(candidate.untrustedTests());
         if (tests.isEmpty())
             return ARepairResult.NO_TESTS;
