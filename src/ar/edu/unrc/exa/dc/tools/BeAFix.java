@@ -201,7 +201,7 @@ public final class BeAFix {
         BeAFixResult testsResults = new BeAFixResult();
         if (ceTests.toFile().exists()) testsResults.counterexampleTests(ceTests);
         if (nuTests.toFile().exists()) testsResults.untrustedNegativeTests(nuTests);
-        if (ntTests.toFile().exists()) testsResults.untrustedNegativeTests(ntTests);
+        if (ntTests.toFile().exists()) testsResults.trustedNegativeTests(ntTests);
         if (puTests.toFile().exists()) testsResults.untrustedPositiveTests(puTests);
         if (ptTests.toFile().exists()) testsResults.trustedPositiveTests(ptTests);
         return testsResults;

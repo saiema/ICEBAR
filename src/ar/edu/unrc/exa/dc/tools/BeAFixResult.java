@@ -276,6 +276,8 @@ public final class BeAFixResult {
                     tests = getTrustedNegativeTests();
                 }
             }
+            if (tests == null || tests.isEmpty())
+                return "NO TESTS\n";
             for (BeAFixTest ceTest : tests) {
                 rep.append(ceTest.toString()).append("\n");
             }

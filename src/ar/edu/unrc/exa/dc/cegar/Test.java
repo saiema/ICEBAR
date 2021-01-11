@@ -19,7 +19,7 @@ import java.util.Optional;
 public final class Test {
 
     //BEAFIX
-    private static final Path BEAFIX_JAR = Paths.get("/home/stein/Desktop/Projects/ICEBAR/BeAFix/org.alloytools.alloy/out/artifacts/AStryker/BeAFixCLI-2.3.6.jar");
+    private static final Path BEAFIX_JAR = Paths.get("/home/stein/Desktop/Projects/ICEBAR/BeAFix/org.alloytools.alloy/out/artifacts/AStryker/BeAFixCLI-2.3.8.jar");
 
     //AREPAIR
     private static final String AREPAIR_ROOT = "/home/stein/Desktop/Projects/ICEBAR/ARepair";
@@ -36,10 +36,10 @@ public final class Test {
     private static final Path modelWithOracle = Paths.get("/home/stein/Desktop/Projects/ICEBAR/Benchmarks/ARepair/graphs_acyclic_23_(10_11)_withOracle.als");
 
     public static void main(String[] args) throws IOException {
-//        ARepair aRepair = arepair();
-//        BeAFix beAFix = beafix();
-//        Optional<FixCandidate> fix = repair(model, oracle, aRepair, beAFix);
-        testARepair();
+        ARepair aRepair = arepair();
+        BeAFix beAFix = beafix();
+        Optional<FixCandidate> fix = repair(model, oracle, aRepair, beAFix);
+//        testARepair();
         //testBeAFix();
     }
 

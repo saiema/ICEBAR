@@ -86,7 +86,7 @@ public class IterativeCEBasedAlloyRepair {
                 if (beAFixResult.error()) {
                     logger.severe("BeAFix ended in error");
                     return Optional.empty();
-                } else if (beAFixResult.getCounterexampleTests().isEmpty()) {
+                } else if (beAFixResult.getCounterexampleTests().isEmpty() && beAFixResult.getTrustedNegativeTests().isEmpty()) {
                     return Optional.of(repairCandidate);
                 } else if (current.depth() < laps) {
                     boolean noUntrustedTests = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
