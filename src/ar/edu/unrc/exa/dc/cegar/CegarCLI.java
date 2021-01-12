@@ -15,6 +15,8 @@ import java.util.Optional;
 
 public class CegarCLI {
 
+    private static final String VERSION = "0.1.0";
+
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
     private static final String AREPAIR_TARGET_ROOT = "target";
@@ -27,8 +29,14 @@ public class CegarCLI {
      * @param args the arguments to be used, must be three, two als files and one .properties file
      */
     public static void main(String[] args) throws IOException {
-        if (args.length != 3)
+        if (args.length == 1 && args[0].trim().equals("--help")) {
+            help();
+            return;
+        }
+        if (args.length != 3) {
+            help();
             throw new IllegalArgumentException("Expecting 3 arguments (model, oracle, properties)");
+        }
         String model = args[0];
         String oracle = args[1];
         String properties = args[2];
@@ -47,6 +55,15 @@ public class CegarCLI {
         } else {
             System.out.println("No Fix Found for model: " + model + "\n");
         }
+    }
+
+    private static void help() {
+        String help = "CEGAR CLI\nVERSION " + VERSION + "\n" +
+                "CounterExample Guided Alloy Repair\n" +
+                "Usage:\n" +
+                "\t--help                         :     Shows this message\n" +
+                "\t<model> <oracle> <properties>  :     Tries to repair a model (.als file) using an oracle (.als file) with a set of properties (.properties file)\n";
+        System.out.println(help);
     }
 
     private static BeAFix beafix() {
