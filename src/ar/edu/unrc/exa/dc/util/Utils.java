@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collection;
 
@@ -22,6 +23,12 @@ public final class Utils {
 
     public enum PathCheck {
         DIR, ALS, JAR, FILE, EXISTS
+    }
+
+    public static boolean isValidPath(String pathToCheck, PathCheck check) {
+        if (pathToCheck == null)
+            return false;
+        return isValidPath(Paths.get(pathToCheck), check);
     }
 
     public static boolean isValidPath(Path pathToCheck, PathCheck check) {

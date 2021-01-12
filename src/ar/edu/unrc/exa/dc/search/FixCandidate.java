@@ -41,4 +41,9 @@ public class FixCandidate {
         return this.untrustedTests;
     }
 
+    @Override
+    public String toString() {
+        return "Model: " + modelToRepair.toString() + "\n" + "Depth: " + depth;
+    }
+
 }

@@ -50,7 +50,7 @@ public final class BeAFix {
 
     public static final int TESTS_TO_GENERATE_DEFAULT = 4;
     public static final String BASE_TESTS_NAME_DEFAULT = "test";
-    public static final boolean CREATE_OUT_DIR_DEFAULT = false;
+    public static final boolean CREATE_OUT_DIR_DEFAULT = true;
     public static final boolean AREPAIR_COMPAT_DEFAULT = true;
     public static final int TESTS_STARTING_INDEX_DEFAULT = 1;
     public static final boolean MODEL_OVERRIDES_DEFAULT = true;
