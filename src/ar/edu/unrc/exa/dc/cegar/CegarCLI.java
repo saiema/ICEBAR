@@ -46,6 +46,7 @@ public class CegarCLI {
             throw new IllegalArgumentException("invalid oracle path (" + oracle + ")");
         if (!Utils.isValidPath(properties, Utils.PathCheck.FILE))
             throw new IllegalArgumentException("invalid properties path (" + properties + ")");
+        CEGARProperties.getInstance().loadConfig(properties);
         BeAFix beafix = beafix();
         ARepair arepair = arepair();
         IterativeCEBasedAlloyRepair iterativeCEBasedAlloyRepair = new IterativeCEBasedAlloyRepair(Paths.get(model), Paths.get(oracle), arepair, beafix);

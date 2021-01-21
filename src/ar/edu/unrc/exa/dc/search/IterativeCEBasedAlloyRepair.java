@@ -15,6 +15,7 @@ import java.util.*;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.Collectors;
 
 import static ar.edu.unrc.exa.dc.util.Utils.*;
 
@@ -75,14 +76,30 @@ public class IterativeCEBasedAlloyRepair {
         searchSpace.add(originalCandidate);
         while (!searchSpace.isEmpty()) {
             FixCandidate current = searchSpace.pop();
+            logger.info("Repairing current candidate\n" + current.toString());
             ARepairResult aRepairResult = runARepairWithCurrentConfig(current);
+            logger.info("ARepair finished\n" + aRepairResult.toString());
             if (aRepairResult.equals(ARepairResult.ERROR)) {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
                 return Optional.empty();
             }
             if (aRepairResult.hasRepair() || aRepairResult.equals(ARepairResult.NO_TESTS)) {
-                FixCandidate repairCandidate = aRepairResult.equals(ARepairResult.NO_TESTS)?current:new FixCandidate(aRepairResult.repair(), 0, null);
+                FixCandidate repairCandidate = aRepairResult.equals(ARepairResult.NO_TESTS)?current:new FixCandidate(aRepairResult.repair(), current.depth(), null);
                 BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate);
+                if (!beAFixResult.error()) {
+                    String beafixMsg = "BeAFix finished\n";
+                    beafixMsg += "Counterexample tests: " + beAFixResult.getCounterexampleTests().size() + "\n";
+                    beafixMsg += "Trusted positive tests: " + beAFixResult.getTrustedPositiveTests().size() + "\n";
+                    beafixMsg += "Trusted negative tests: " + beAFixResult.getTrustedNegativeTests().size() + "\n";
+                    beafixMsg += "Untrusted positive tests: " + beAFixResult.getUntrustedPositiveTests().size() + "\n";
+                    beafixMsg += "Untrusted negative tests: " + beAFixResult.getUntrustedNegativeTests().size() + "\n";
+                    beafixMsg += "CE: " + beAFixResult.getCounterexampleTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                    beafixMsg += "TP: " + beAFixResult.getTrustedPositiveTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                    beafixMsg += "TN: " + beAFixResult.getTrustedNegativeTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                    beafixMsg += "UP: " + beAFixResult.getUntrustedPositiveTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                    beafixMsg += "UN: " + beAFixResult.getUntrustedNegativeTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                    logger.info(beafixMsg);
+                }
                 if (beAFixResult.error()) {
                     logger.severe("BeAFix ended in error");
                     return Optional.empty();
@@ -110,7 +127,8 @@ public class IterativeCEBasedAlloyRepair {
                         searchSpace.push(new FixCandidate(current.modelToRepair(), current.depth() + 1, current.untrustedTests()));
                     }
                     tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
-                    beAFix.testsStartingIndex(tests + 1);
+                    logger.info("Total tests generated: " + tests);
+                    beAFix.testsStartingIndex(beAFixResult.getMaxIndex() + 1);
                 }
             } else if (aRepairResult.hasMessage()) {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());

@@ -22,6 +22,7 @@ public final class BeAFixResult {
         private final TestType testType;
         private String command;
         private String predicate;
+        private int index;
 
         public BeAFixTest(String test, TestType testType) {
             if (test == null || test.trim().isEmpty())
@@ -44,6 +45,8 @@ public final class BeAFixResult {
             return testType;
         }
 
+        public int getIndex() { return index; }
+
         private static final String PREDICATE_START_DELIMITER = "--TEST START\n";
         private static final String PREDICATE_END_DELIMITER = "--TEST FINISH\n";
         private void parseTest(final String test) {
@@ -54,14 +57,18 @@ public final class BeAFixResult {
             if (runIdx < 0)
                 throw new IllegalArgumentException("Command not found in:\n" + test);
             this.command = test.substring(runIdx, test.indexOf("\n", runIdx));
+            String indexRaw = this.command.replaceAll("\\D+","");
+            this.index = Integer.parseInt(indexRaw);
         }
 
         @Override
         public int hashCode() {
             MessageDigest messageDigest;
             try {
+                String expect = command().substring(command().indexOf("expect"));
                 messageDigest = MessageDigest.getInstance("MD5");
                 messageDigest.update(testType.name().getBytes());
+                messageDigest.update(expect.getBytes());
                 messageDigest.update(getPredicateBody().getBytes());
                 byte[] digest = messageDigest.digest();
                 return Arrays.hashCode(digest);
@@ -115,6 +122,7 @@ public final class BeAFixResult {
     private Collection<BeAFixTest> untTests;
     private Collection<BeAFixTest> tptTests;
     private Collection<BeAFixTest> tntTests;
+    private int maxIndex = -1;
 
     public static BeAFixResult error(String message) {
         BeAFixResult beAFixResult = new BeAFixResult();
@@ -138,6 +146,8 @@ public final class BeAFixResult {
     public String message() {
         return this.message;
     }
+
+    public int getMaxIndex() { return maxIndex; }
 
     public void counterexampleTests(Path cetFile) {
         this.cetFile = cetFile;
@@ -225,6 +235,8 @@ public final class BeAFixResult {
                 continue;
             BeAFixTest test = new BeAFixTest(rawTest, testType);
             tests.add(test);
+            if (test.getIndex() > maxIndex)
+                maxIndex = test.getIndex();
         }
         return tests;
     }
@@ -236,6 +248,7 @@ public final class BeAFixResult {
             rep += "An error occurred!\n\tMessage: " + message + "\n}";
         else {
             rep += "Message: " + message;
+            rep += "\n\tMax index for test batch: " + maxIndex;
             rep += "\n\tCounterexample tests:\n";
             rep += testsToString(TestType.COUNTEREXAMPLE);
             rep += "\n\tPositive trusted tests:\n";

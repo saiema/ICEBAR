@@ -81,18 +81,19 @@ public class CEGARProperties {
 
     private CEGARProperties() throws IOException {
         prop = new Properties();
-        loadPropertiesFromFile();
+        loadPropertiesFromFile(null);
     }
 
-    private void loadPropertiesFromFile() throws IOException {
+    private void loadPropertiesFromFile(String fromFile) throws IOException {
+        prop.clear();
         String cwd = System.getProperty("user.dir");
-        String configFile = cwd + File.separator + DEFAULT_PROPERTIES;
+        String configFile = fromFile!=null?fromFile:(cwd + File.separator + DEFAULT_PROPERTIES);
         File propFile = createConfigFileIfMissing(configFile);
         InputStream inputStream = new FileInputStream(propFile);
         prop.load(inputStream);
     }
 
-    private Properties prop;
+    private final Properties prop;
 
     private File createConfigFileIfMissing(String configFile) throws IOException {
         File propFile = new File(configFile);
@@ -102,8 +103,8 @@ public class CEGARProperties {
         return propFile;
     }
 
-    public void loadConfig() throws IOException {
-        loadPropertiesFromFile();
+    public void loadConfig(String configFile) throws IOException {
+        loadPropertiesFromFile(configFile);
     }
 
     public boolean argumentExist(ConfigKey key) {
