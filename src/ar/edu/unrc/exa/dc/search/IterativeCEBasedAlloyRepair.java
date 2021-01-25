@@ -83,6 +83,7 @@ public class IterativeCEBasedAlloyRepair {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
                 return Optional.empty();
             }
+            boolean arepairNoTests = aRepairResult.equals(ARepairResult.NO_TESTS);
             if (aRepairResult.hasRepair() || aRepairResult.equals(ARepairResult.NO_TESTS)) {
                 FixCandidate repairCandidate = aRepairResult.equals(ARepairResult.NO_TESTS)?current:new FixCandidate(aRepairResult.repair(), current.depth(), null);
                 BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate);
@@ -108,23 +109,24 @@ public class IterativeCEBasedAlloyRepair {
                 } else if (current.depth() < laps) {
                     boolean noUntrustedTests = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
                     boolean trustedTestsAdded;
+                    int newDepth = arepairNoTests?current.depth():current.depth() + 1;
                     trustedTestsAdded = trustedTests.addAll(beAFixResult.getCounterexampleTests());
                     trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
                     trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
                     for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
                         Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
                         newTests.add(upTest);
-                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, current.depth() + 1, newTests);
+                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
                     for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
                         Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
                         newTests.add(unTest);
-                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, current.depth() + 1, newTests);
+                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
                     if (noUntrustedTests && trustedTestsAdded) {
-                        searchSpace.push(new FixCandidate(current.modelToRepair(), current.depth() + 1, current.untrustedTests()));
+                        searchSpace.push(new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests()));
                     }
                     tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
                     logger.info("Total tests generated: " + tests);
