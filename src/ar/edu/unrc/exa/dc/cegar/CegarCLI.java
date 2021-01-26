@@ -68,9 +68,25 @@ public class CegarCLI {
     }
 
     private static BeAFix beafix() {
-        return new BeAFix().setBeAFixJar(Paths.get(CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.BEAFIX_JAR)))
+        BeAFix beAFix = new BeAFix().setBeAFixJar(Paths.get(CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.BEAFIX_JAR)))
                 .setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath())
                 .createOutDirIfNonExistent(true);
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS))
+            beAFix.instanceTests(CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS));
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_TESTS))
+            beAFix.testsToGenerate(CEGARProperties.getInstance().getIntArgument(CEGARProperties.ConfigKey.BEAFIX_TESTS));
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_MODEL_OVERRIDES_FOLDER)) {
+            String modelOverridesFolderValue = CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.BEAFIX_MODEL_OVERRIDES_FOLDER);
+            Path modelOverridesFolder = modelOverridesFolderValue.trim().isEmpty()?null:Paths.get(modelOverridesFolderValue);
+            beAFix.modelOverridesFolder(modelOverridesFolder);
+            beAFix.modelOverrides(modelOverridesFolder != null);
+        }
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_BUGGY_FUNCS_FILE)) {
+            String buggyFuncsFileValue = CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.BEAFIX_BUGGY_FUNCS_FILE);
+            Path buggyFuncsFile = buggyFuncsFileValue.trim().isEmpty()?null:Paths.get(buggyFuncsFileValue);
+            beAFix.buggyFunctions(buggyFuncsFile);
+        }
+        return beAFix;
     }
 
     private static ARepair arepair() {
