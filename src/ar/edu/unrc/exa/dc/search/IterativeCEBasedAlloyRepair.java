@@ -140,6 +140,8 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     private ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
+        if (!aRepair.cleanFixDirectory())
+            logger.warning("There was a problem cleaning ARepair .hidden folder, will keep going (cross your fingers)");
         Collection<BeAFixTest> tests = new LinkedList<>(trustedTests);
         tests.addAll(candidate.untrustedTests());
         if (tests.isEmpty())

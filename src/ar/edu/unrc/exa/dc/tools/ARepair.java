@@ -130,7 +130,8 @@ public final class ARepair {
     private List<Path> classpath;
     private Path workingDirectory = WORKING_DIRECTORY_DEFAULT;
     private static final String PATCHER_CLASS = "patcher.Patcher";
-    private static final String FIX_FILE = ".hidden/fix.als";
+    private static final String AREPAIR_HIDDEN_DIR = ".hidden";
+    private static final String FIX_FILE = AREPAIR_HIDDEN_DIR + "/fix.als";
     private Path modelToRepair;
     private Path testsPath;
     private SearchStrategy searchStrategy = SEARCH_STRATEGY_DEFAULT;
@@ -235,6 +236,17 @@ public final class ARepair {
             throw new IllegalArgumentException("non positive max try per depth (" + maxTryPerDepth + ")");
         this.maxTryPerDepth = maxTryPerDepth;
         return this;
+    }
+
+    public boolean cleanFixDirectory() {
+        Path hiddenDir = Paths.get(workingDirectory.toAbsolutePath().toString(), AREPAIR_HIDDEN_DIR);
+        try {
+            Utils.deleteFolderAndItsContent(hiddenDir);
+        } catch (IOException e) {
+            System.err.println("Let's hope this error does not represents a problem");
+            e.printStackTrace();
+        }
+        return hiddenDir.toFile().mkdir();
     }
 
     //AUXILIARY METHODS

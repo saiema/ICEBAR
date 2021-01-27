@@ -6,10 +6,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 
 public final class Utils {
@@ -109,6 +107,32 @@ public final class Utils {
                         result.indexOf(textTo));
 
         return result;
+    }
+
+    /**
+     * Deletes Folder with all of its content
+     *
+     * @param folder path to folder which should be deleted
+     */
+    public static void deleteFolderAndItsContent(final Path folder) throws IOException {
+        Files.walkFileTree(folder, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                if (!Files.isSymbolicLink(file))
+                    Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                if (exc != null) {
+                    throw exc;
+                }
+                if (!Files.isSymbolicLink(dir))
+                    Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 
 }

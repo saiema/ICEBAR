@@ -91,7 +91,7 @@ public class CegarCLI {
 
     private static ARepair arepair() {
         List<Path> classpath = new LinkedList<>();
-        Path aRepairRoot = Paths.get(CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.AREPAIR_ROOT));
+        Path aRepairRoot = Paths.get(CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.AREPAIR_ROOT)).toAbsolutePath();
         Path aRepairSatSolvers = Paths.get(AREPAIR_SAT_SOLVERS);
         Path aRepairAlloyJar = Paths.get(aRepairRoot.toString(), AREPAIR_LIBS_ROOT, ALLOY_JAR);
         Path aRepairAParserJar = Paths.get(aRepairRoot.toString(), AREPAIR_LIBS_ROOT, APARSER_JAR);
