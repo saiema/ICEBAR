@@ -8,6 +8,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.TestType;
 import ar.edu.unrc.exa.dc.util.Utils;
@@ -15,6 +16,8 @@ import ar.edu.unrc.exa.dc.util.Utils;
 public final class BeAFixResult {
 
     private static final String TEST_SEPARATOR = "===TEST===\n";
+
+    public enum ResultType {TESTS, CHECK, ERROR}
 
     public static final class BeAFixTest {
 
@@ -115,7 +118,7 @@ public final class BeAFixResult {
     private Path tptFile;
     private Path tntFile;
     private String message;
-    private boolean error;
+    private boolean check;
 
     private Collection<BeAFixTest> ceTests;
     private Collection<BeAFixTest> uptTests;
@@ -123,20 +126,34 @@ public final class BeAFixResult {
     private Collection<BeAFixTest> tptTests;
     private Collection<BeAFixTest> tntTests;
     private int maxIndex = -1;
+    private ResultType resultType;
 
     public static BeAFixResult error(String message) {
         BeAFixResult beAFixResult = new BeAFixResult();
-        beAFixResult.error(true);
+        beAFixResult.resultType = ResultType.ERROR;
         beAFixResult.message(message);
         return beAFixResult;
     }
 
-    public void error(boolean error) {
-        this.error = error;
+    public static BeAFixResult check(Path checkFile) {
+        if (checkFile == null)
+            throw new IllegalArgumentException("checkFile is null");
+        if (!checkFile.toFile().exists())
+            return error("No check file found at: " + checkFile.toString());
+        return parseCheckFile(checkFile);
+    }
+
+    public boolean isCheck() { return this.resultType.equals(ResultType.CHECK); }
+
+    public boolean checkResult() {
+        if (!isCheck()) {
+            throw new IllegalStateException("This is not a CHECK result");
+        }
+        return check;
     }
 
     public boolean error() {
-        return this.error;
+        return this.resultType.equals(ResultType.ERROR);
     }
 
     public void message(String message) {
@@ -228,8 +245,10 @@ public final class BeAFixResult {
     private Collection<BeAFixTest> parseTestsFrom(Path file, TestType testType) throws IOException {
         if (!validateTestsFile(file))
             throw new IllegalArgumentException("Invalid tests file: " + file.toString());
-        String[] rawTests = Files.lines(file).collect(Collectors.joining("\n")).split(TEST_SEPARATOR);
         Collection<BeAFixTest> tests = new LinkedList<>();
+        if (isCheck() || error())
+            return tests;
+        String[] rawTests = Files.lines(file).collect(Collectors.joining("\n")).split(TEST_SEPARATOR);
         for (String rawTest : rawTests) {
             if (rawTest.trim().isEmpty())
                 continue;
@@ -241,25 +260,70 @@ public final class BeAFixResult {
         return tests;
     }
 
+    private static final String INVALID = "INVALID";
+    private static final String VALID = "VALID";
+    private static final String EXCEPTION = "EXCEPTION";
+    private static BeAFixResult parseCheckFile(Path checkFile) {
+        BeAFixResult beAFixResult = new BeAFixResult();
+        try {
+            List<String> checkLines = Files.lines(checkFile).collect(Collectors.toList());
+            if (checkLines.isEmpty()) {
+                return error("No lines found in check file: " + checkLines.toString());
+            }
+            String firstLine = checkLines.get(0);
+            if (firstLine.compareTo(VALID) == 0) {
+                beAFixResult.resultType = ResultType.CHECK;
+                beAFixResult.check = true;
+                beAFixResult.message("Valid model (" + checkFile.toString().replace(".verification", ".als") + ")");
+            } else if (firstLine.compareTo(INVALID) == 0) {
+                beAFixResult.resultType = ResultType.CHECK;
+                beAFixResult.check = false;
+                beAFixResult.message("Invalid model (" + checkFile.toString().replace(".verification", ".als") + ")");
+            } else if (firstLine.compareTo(EXCEPTION) == 0) {
+                beAFixResult.resultType = ResultType.ERROR;
+                StringBuilder exceptionMsg = new StringBuilder();
+                for (int i = 1; i < checkLines.size(); i++) {
+                    exceptionMsg.append(checkLines.get(i)).append("\n");
+                }
+                beAFixResult.message("Error validating model (" + checkFile.toString().replace(".verification", ".als") +  ")\n" + exceptionMsg);
+            } else {
+                return error("Invalid validation file (" + checkFile.toString() + ")" + "\n" + String.join("\n", checkLines));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return error("Error while parsing check file (" + checkFile.toString() + ")" + "\n" + Utils.exceptionToString(e));
+        }
+        return beAFixResult;
+    }
+
     @Override
     public String toString() {
         String rep = "{\n\t";
-        if (error)
-            rep += "An error occurred!\n\tMessage: " + message + "\n}";
-        else {
-            rep += "Message: " + message;
-            rep += "\n\tMax index for test batch: " + maxIndex;
-            rep += "\n\tCounterexample tests:\n";
-            rep += testsToString(TestType.COUNTEREXAMPLE);
-            rep += "\n\tPositive trusted tests:\n";
-            rep += testsToString(TestType.TRUSTED_POSITIVE);
-            rep += "\n\tPositive untrusted tests:\n";
-            rep += testsToString(TestType.UNTRUSTED_POSITIVE);
-            rep += "\n\tNegative trusted tests:\n";
-            rep += testsToString(TestType.TRUSTED_NEGATIVE);
-            rep += "\n\tNegative untrusted tests:\n";
-            rep += testsToString(TestType.UNTRUSTED_NEGATIVE);
-            rep += "}";
+        switch (resultType) {
+            case ERROR: {
+                rep += "An error occurred!\n\tMessage: " + message + "\n}";
+                break;
+            }
+            case TESTS: {
+                rep += "Message: " + message;
+                rep += "\n\tMax index for test batch: " + maxIndex;
+                rep += "\n\tCounterexample tests:\n";
+                rep += testsToString(TestType.COUNTEREXAMPLE);
+                rep += "\n\tPositive trusted tests:\n";
+                rep += testsToString(TestType.TRUSTED_POSITIVE);
+                rep += "\n\tPositive untrusted tests:\n";
+                rep += testsToString(TestType.UNTRUSTED_POSITIVE);
+                rep += "\n\tNegative trusted tests:\n";
+                rep += testsToString(TestType.TRUSTED_NEGATIVE);
+                rep += "\n\tNegative untrusted tests:\n";
+                rep += testsToString(TestType.UNTRUSTED_NEGATIVE);
+                rep += "}";
+                break;
+            }
+            case CHECK: {
+                rep += "CHECK " + (check?"SUCCEEDED":"FAILED") + "\n\tMessage: " + message + "\n}";
+                break;
+            }
         }
         return rep;
     }

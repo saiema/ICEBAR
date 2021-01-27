@@ -72,10 +72,16 @@ public final class BeAFix {
     private boolean instanceTests = INSTANCE_TESTS_DEFAULT;
     private Path buggyFunctions = BUGGY_FUNCTIONS_DEFAULT;
 
-    public BeAFixResult run() {
+    public BeAFixResult runTestGeneration() {
         if (!readyToRun())
             throw new IllegalArgumentException("Missing or invalid path related arguments\n" + pathsInformation());
         return executeBeAFix();
+    }
+
+    public BeAFixResult runModelCheck() {
+        if (!readyToRun())
+            throw new IllegalArgumentException("Missing or invalid path related arguments\n" + pathsInformation());
+        return executeBeAFixCheck();
     }
 
     public BeAFix setBeAFixJar(Path beAFixJar) {
@@ -160,7 +166,7 @@ public final class BeAFix {
     //AUXILIARY METHODS
 
     private BeAFixResult executeBeAFix() {
-        BeAFixResult beAFixResult = new BeAFixResult();
+        BeAFixResult beAFixResult;
         try {
             String[] args = getBeAFixCommand();
             ProcessBuilder pb = new ProcessBuilder(args);
@@ -175,14 +181,38 @@ public final class BeAFix {
             Process p = pb.start();
             int exitCode = p.waitFor();
             if (exitCode != 0) {
-                beAFixResult.message("BeAFix ended with exit code " + exitCode + " but no exception was caught");
-                beAFixResult.error(true);
+                beAFixResult = BeAFixResult.error("BeAFix ended with exit code " + exitCode + " but no exception was caught");
             } else {
                 beAFixResult = getResults();
             }
         } catch (IOException | InterruptedException  e) {
-            beAFixResult.message("An exception was caught when executing ARepair\n" + exceptionToString(e));
-            beAFixResult.error(true);
+            beAFixResult = BeAFixResult.error("An exception was caught when executing BeAFix\n" + exceptionToString(e));
+        }
+        return beAFixResult;
+    }
+
+    private BeAFixResult executeBeAFixCheck() {
+        BeAFixResult beAFixResult;
+        try {
+            String[] args = getBeAFixCheckCommand();
+            ProcessBuilder pb = new ProcessBuilder(args);
+            File errorLog = new File("beAFixExternalError.log");
+            if (errorLog.exists() && !errorLog.delete())
+                throw new IllegalStateException("An error occurred while trying to delete " + errorLog.toString());
+            pb.redirectError(ProcessBuilder.Redirect.appendTo(errorLog));
+            File outputLog = new File("beAFixExternalOutput.log");
+            if (outputLog.exists() && !outputLog.delete())
+                throw new IllegalStateException("An error occurred while trying to delete " + outputLog.toString());
+            pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLog));
+            Process p = pb.start();
+            int exitCode = p.waitFor();
+            if (exitCode != 0) {
+                beAFixResult = BeAFixResult.error("BeAFix ended with exit code " + exitCode + " but no exception was caught");
+            } else {
+                beAFixResult = BeAFixResult.check(Paths.get(pathToModel.toAbsolutePath().toString().replace(".als", ".verification")));
+            }
+        } catch (IOException | InterruptedException  e) {
+            beAFixResult = BeAFixResult.error("An exception was caught when executing BeAFix\n" + exceptionToString(e));
         }
         return beAFixResult;
     }
@@ -252,6 +282,15 @@ public final class BeAFix {
         args[17] = "--mofolder"; args[18] = (modelOverridesFolder == null?"\" \"":modelOverridesFolder.toString());
         args[19] = "--itests"; args[20] = Boolean.toString(instanceTests);
         args[21] = "--buggyfuncs"; args[22] = (buggyFunctions == null?"\" \"":buggyFunctions.toString());
+        return args;
+    }
+
+    private String[] getBeAFixCheckCommand() {
+        String[] args = new String[5];
+        args[0] = "java";
+        args[1] = "-jar"; args[2] = beAFixJar.toString();
+        args[3] = pathToModel.toString();
+        args[4] = "CHECK";
         return args;
     }
 

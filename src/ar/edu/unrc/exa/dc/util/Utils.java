@@ -91,14 +91,14 @@ public final class Utils {
             String textFrom,
             String textTo) {
 
-        String result = "";
+        String result;
 
         // Cut the beginning of the text to not occasionally meet a
         // 'textTo' value in it:
         result =
                 text.substring(
-                        text.indexOf(textFrom) + textFrom.length(),
-                        text.length());
+                        text.indexOf(textFrom) + textFrom.length()
+                );
 
         // Cut the excessive ending of the text:
         result =

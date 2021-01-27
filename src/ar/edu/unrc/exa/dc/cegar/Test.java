@@ -8,7 +8,6 @@ import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.util.Utils;
 
-import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -103,7 +102,7 @@ public final class Test {
                 .pathToModel(modelWithOracle)
                 .setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath())
                 .createOutDirIfNonExistent(true)
-                .run();
+                .runTestGeneration();
         System.out.println(beAFixResult.toString());
     }
 

@@ -86,51 +86,63 @@ public class IterativeCEBasedAlloyRepair {
             boolean arepairNoTests = aRepairResult.equals(ARepairResult.NO_TESTS);
             if (aRepairResult.hasRepair() || aRepairResult.equals(ARepairResult.NO_TESTS)) {
                 FixCandidate repairCandidate = aRepairResult.equals(ARepairResult.NO_TESTS)?current:new FixCandidate(aRepairResult.repair(), current.depth(), null);
-                BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate);
-                if (!beAFixResult.error()) {
-                    String beafixMsg = "BeAFix finished\n";
-                    beafixMsg += "Counterexample tests: " + beAFixResult.getCounterexampleTests().size() + "\n";
-                    beafixMsg += "Trusted positive tests: " + beAFixResult.getTrustedPositiveTests().size() + "\n";
-                    beafixMsg += "Trusted negative tests: " + beAFixResult.getTrustedNegativeTests().size() + "\n";
-                    beafixMsg += "Untrusted positive tests: " + beAFixResult.getUntrustedPositiveTests().size() + "\n";
-                    beafixMsg += "Untrusted negative tests: " + beAFixResult.getUntrustedNegativeTests().size() + "\n";
-                    beafixMsg += "CE: " + beAFixResult.getCounterexampleTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
-                    beafixMsg += "TP: " + beAFixResult.getTrustedPositiveTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
-                    beafixMsg += "TN: " + beAFixResult.getTrustedNegativeTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
-                    beafixMsg += "UP: " + beAFixResult.getUntrustedPositiveTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
-                    beafixMsg += "UN: " + beAFixResult.getUntrustedNegativeTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
-                    logger.info(beafixMsg);
-                }
-                if (beAFixResult.error()) {
-                    logger.severe("BeAFix ended in error");
+                logger.info("Validating current candidate with BeAFix");
+                BeAFixResult beAFixCheckResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.CHECK);
+                logger.info("BeAFix check finished\n" + beAFixCheckResult.toString());
+                if (beAFixCheckResult.error()) {
+                    logger.severe("BeAFix check ended in error, ending search");
                     return Optional.empty();
-                } else if (beAFixResult.getCounterexampleTests().isEmpty() && beAFixResult.getTrustedNegativeTests().isEmpty()) {
+                } else if (beAFixCheckResult.checkResult()) {
+                    logger.info("BeAFix validated the repair, fix found");
                     return Optional.of(repairCandidate);
-                } else if (current.depth() < laps) {
-                    boolean noUntrustedTests = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
-                    boolean trustedTestsAdded;
-                    int newDepth = arepairNoTests?current.depth():current.depth() + 1;
-                    trustedTestsAdded = trustedTests.addAll(beAFixResult.getCounterexampleTests());
-                    trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
-                    trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
-                    for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
-                        Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
-                        newTests.add(upTest);
-                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
-                        searchSpace.push(newCandidateFromUntrustedTest);
+                } else {
+                    logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
+                    BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS);
+                    if (!beAFixResult.error()) {
+                        String beafixMsg = "BeAFix finished\n";
+                        beafixMsg += "Counterexample tests: " + beAFixResult.getCounterexampleTests().size() + "\n";
+                        beafixMsg += "Trusted positive tests: " + beAFixResult.getTrustedPositiveTests().size() + "\n";
+                        beafixMsg += "Trusted negative tests: " + beAFixResult.getTrustedNegativeTests().size() + "\n";
+                        beafixMsg += "Untrusted positive tests: " + beAFixResult.getUntrustedPositiveTests().size() + "\n";
+                        beafixMsg += "Untrusted negative tests: " + beAFixResult.getUntrustedNegativeTests().size() + "\n";
+                        beafixMsg += "CE: " + beAFixResult.getCounterexampleTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                        beafixMsg += "TP: " + beAFixResult.getTrustedPositiveTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                        beafixMsg += "TN: " + beAFixResult.getTrustedNegativeTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                        beafixMsg += "UP: " + beAFixResult.getUntrustedPositiveTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                        beafixMsg += "UN: " + beAFixResult.getUntrustedNegativeTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                        logger.info(beafixMsg);
+                    } else {
+                        logger.severe("BeAFix test generation ended in error, ending search");
+                        return Optional.empty();
                     }
-                    for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
-                        Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
-                        newTests.add(unTest);
-                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
-                        searchSpace.push(newCandidateFromUntrustedTest);
+                    if (current.depth() < laps) {
+                        boolean noUntrustedTests = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
+                        boolean trustedTestsAdded;
+                        int newDepth = arepairNoTests?current.depth():current.depth() + 1;
+                        trustedTestsAdded = trustedTests.addAll(beAFixResult.getCounterexampleTests());
+                        trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
+                        trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
+                        for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
+                            Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
+                            newTests.add(upTest);
+                            FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
+                            searchSpace.push(newCandidateFromUntrustedTest);
+                        }
+                        for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
+                            Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
+                            newTests.add(unTest);
+                            FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
+                            searchSpace.push(newCandidateFromUntrustedTest);
+                        }
+                        if (noUntrustedTests && trustedTestsAdded) {
+                            searchSpace.push(new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests()));
+                        }
+                        tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
+                        logger.info("Total tests generated: " + tests);
+                        beAFix.testsStartingIndex(beAFixResult.getMaxIndex() + 1);
+                    } else {
+                        logger.info("max laps reached (" + laps + "), ending search");
                     }
-                    if (noUntrustedTests && trustedTestsAdded) {
-                        searchSpace.push(new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests()));
-                    }
-                    tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
-                    logger.info("Total tests generated: " + tests);
-                    beAFix.testsStartingIndex(beAFixResult.getMaxIndex() + 1);
                 }
             } else if (aRepairResult.hasMessage()) {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
@@ -168,7 +180,9 @@ public class IterativeCEBasedAlloyRepair {
         return aRepair.run();
     }
 
-    private BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate) {
+    private enum BeAFixMode {TESTS, CHECK}
+
+    private BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate, BeAFixMode mode) {
         try {
             if (!beAFix.cleanOutputDir()) {
                 return BeAFixResult.error("Couldn't delete BeAFix output directory");
@@ -182,22 +196,27 @@ public class IterativeCEBasedAlloyRepair {
         if (modelToCheckWithOracleFile.exists()) {
             if (!modelToCheckWithOracleFile.delete()) {
                 logger.severe("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile.toString()) + ")");
-                BeAFixResult error = new BeAFixResult();
-                error.error(true);
-                error.message("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile.toString()) + ")");
-                return error;
+                return BeAFixResult.error("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile.toString()) + ")");
             }
         }
         try {
             mergeFiles(candidate.modelToRepair(), oracle, modelToCheckWithOraclePath);
         } catch (IOException e) {
             logger.severe("An exception occurred while trying to generate model with oracle file\n" + Utils.exceptionToString(e) + "\n");
-            BeAFixResult error = new BeAFixResult();
-            error.error(true);
-            error.message(Utils.exceptionToString(e));
-            return error;
+            return BeAFixResult.error(Utils.exceptionToString(e));
         }
-        return beAFix.pathToModel(modelToCheckWithOraclePath).run();
+        BeAFixResult beAFixResult = null;
+        switch (mode) {
+            case TESTS: {
+                beAFixResult = beAFix.pathToModel(modelToCheckWithOraclePath).runTestGeneration();
+                break;
+            }
+            case CHECK: {
+                beAFixResult = beAFix.pathToModel(modelToCheckWithOraclePath).runModelCheck();
+                break;
+            }
+        }
+        return beAFixResult;
     }
 
 }
