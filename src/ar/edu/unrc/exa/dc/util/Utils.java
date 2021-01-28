@@ -1,5 +1,6 @@
 package ar.edu.unrc.exa.dc.util;
 
+import ar.edu.unrc.exa.dc.cegar.Report;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 
 import java.io.File;
@@ -133,6 +134,18 @@ public final class Utils {
                 return FileVisitResult.CONTINUE;
             }
         });
+    }
+
+    public static void writeReport(Report report) throws IOException {
+        String reportFileRaw = "cegar.info";
+        Path reportFilePath = Paths.get(reportFileRaw);
+        File reportFile = reportFilePath.toFile();
+        if (reportFile.exists() && !reportFile.delete())
+            throw new Error("Report file (" + reportFilePath.toString() + ") exists but couldn't be deleted");
+        if (!reportFile.createNewFile()) {
+            throw new Error("Couldn't create report file (" + reportFilePath.toString() + ")");
+        }
+        Files.write(reportFilePath, report.toString().getBytes(), StandardOpenOption.APPEND);
     }
 
 }

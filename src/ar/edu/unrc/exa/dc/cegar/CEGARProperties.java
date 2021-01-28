@@ -21,6 +21,10 @@ public class CEGARProperties {
                 return BEAFIX_PREFIX + ".tests";
             }
         },
+        BEAFIX_AREPAIR_COMPAT_RELAXED_MODE {
+            @Override
+            public String getKey() { return BEAFIX_PREFIX + ".compat.relaxed"; }
+        },
         BEAFIX_MODEL_OVERRIDES_FOLDER {
             @Override
             public String getKey() {
@@ -147,7 +151,11 @@ public class CEGARProperties {
 
 
     private boolean isBooleanKey(ConfigKey key) {
-        return key == ConfigKey.BEAFIX_INSTANCE_TESTS;
+        switch (key) {
+            case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
+            case BEAFIX_INSTANCE_TESTS: return true;
+            default: return false;
+        }
     }
 
     private boolean isIntKey(ConfigKey key) {

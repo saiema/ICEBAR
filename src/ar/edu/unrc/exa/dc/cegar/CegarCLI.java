@@ -86,6 +86,9 @@ public class CegarCLI {
             Path buggyFuncsFile = buggyFuncsFileValue.trim().isEmpty()?null:Paths.get(buggyFuncsFileValue);
             beAFix.buggyFunctions(buggyFuncsFile);
         }
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE)) {
+            beAFix.aRepairCompatibilityRelaxedMode(CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE));
+        }
         return beAFix;
     }
 
