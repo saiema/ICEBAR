@@ -228,7 +228,7 @@ public final class BeAFix {
         Path ntTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", NEG_TRUSTED_POSTFIX));
         Path puTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", POS_UNTRUSTED_POSTFIX));
         Path ptTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", POS_TRUSTED_POSTFIX));
-        BeAFixResult testsResults = new BeAFixResult();
+        BeAFixResult testsResults = BeAFixResult.tests();
         if (ceTests.toFile().exists()) testsResults.counterexampleTests(ceTests);
         if (nuTests.toFile().exists()) testsResults.untrustedNegativeTests(nuTests);
         if (ntTests.toFile().exists()) testsResults.trustedNegativeTests(ntTests);

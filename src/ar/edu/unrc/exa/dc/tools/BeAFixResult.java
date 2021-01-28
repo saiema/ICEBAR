@@ -128,6 +128,14 @@ public final class BeAFixResult {
     private int maxIndex = -1;
     private ResultType resultType;
 
+    private BeAFixResult() {}
+
+    public static BeAFixResult tests() {
+        BeAFixResult beAFixResult = new BeAFixResult();
+        beAFixResult.resultType = ResultType.TESTS;
+        return beAFixResult;
+    }
+
     public static BeAFixResult error(String message) {
         BeAFixResult beAFixResult = new BeAFixResult();
         beAFixResult.resultType = ResultType.ERROR;
