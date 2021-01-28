@@ -6,6 +6,8 @@ import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 import ar.edu.unrc.exa.dc.util.Utils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.time.StopWatch;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,16 +73,25 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     public Optional<FixCandidate> repair() throws IOException {
+        //watchs for different time proccess recording
+        StopWatch repair_time = new StopWatch(); repair_time.start();repair_time.suspend();
+        StopWatch ce_gen_time = new StopWatch(); ce_gen_time.start();ce_gen_time.suspend();
+        int currentLap=-1;
+        //CEGAR process
         Stack<FixCandidate> searchSpace = new Stack<>();
         FixCandidate originalCandidate = new FixCandidate(modelToRepair, 0, null);
         searchSpace.add(originalCandidate);
         while (!searchSpace.isEmpty()) {
+            currentLap++;
             FixCandidate current = searchSpace.pop();
             logger.info("Repairing current candidate\n" + current.toString());
+            repair_time.resume();
             ARepairResult aRepairResult = runARepairWithCurrentConfig(current);
+            repair_time.suspend();
             logger.info("ARepair finished\n" + aRepairResult.toString());
             if (aRepairResult.equals(ARepairResult.ERROR)) {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
+                SaveResultToFile("ARepair_Fail",current.depth(),tests,repair_time,ce_gen_time);//German
                 return Optional.empty();
             }
             boolean arepairNoTests = aRepairResult.equals(ARepairResult.NO_TESTS);
@@ -91,13 +102,17 @@ public class IterativeCEBasedAlloyRepair {
                 logger.info("BeAFix check finished\n" + beAFixCheckResult.toString());
                 if (beAFixCheckResult.error()) {
                     logger.severe("BeAFix check ended in error, ending search");
+                    SaveResultToFile("BeAFix_Check_Fail",repairCandidate.depth(),tests,repair_time,ce_gen_time);//German
                     return Optional.empty();
                 } else if (beAFixCheckResult.checkResult()) {
                     logger.info("BeAFix validated the repair, fix found");
+                    SaveResultToFile("correct",repairCandidate.depth(),tests,repair_time,ce_gen_time);//German
                     return Optional.of(repairCandidate);
                 } else {
                     logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
+                    ce_gen_time.resume();
                     BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS);
+                    ce_gen_time.suspend();
                     if (!beAFixResult.error()) {
                         String beafixMsg = "BeAFix finished\n";
                         beafixMsg += "Counterexample tests: " + beAFixResult.getCounterexampleTests().size() + "\n";
@@ -113,12 +128,13 @@ public class IterativeCEBasedAlloyRepair {
                         logger.info(beafixMsg);
                     } else {
                         logger.severe("BeAFix test generation ended in error, ending search");
+                        SaveResultToFile("BeAFix_Gen_Fail",repairCandidate.depth(),tests,repair_time,ce_gen_time);//German
                         return Optional.empty();
                     }
                     if (current.depth() < laps) {
                         boolean noUntrustedTests = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
                         boolean trustedTestsAdded;
-                        int newDepth = arepairNoTests?current.depth():current.depth() + 1;
+                        int newDepth = current.depth() + 1;
                         trustedTestsAdded = trustedTests.addAll(beAFixResult.getCounterexampleTests());
                         trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
                         trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
@@ -142,13 +158,21 @@ public class IterativeCEBasedAlloyRepair {
                         beAFix.testsStartingIndex(beAFixResult.getMaxIndex() + 1);
                     } else {
                         logger.info("max laps reached (" + laps + "), ending search");
+                        SaveResultToFile("Laps-OUT",repairCandidate.depth(),tests,repair_time,ce_gen_time);//German
                     }
                 }
             } else if (aRepairResult.hasMessage()) {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
+                SaveResultToFile("ARepair_Fail",currentLap,tests,repair_time,ce_gen_time);//German
             }
         }
         return Optional.empty();
+    }
+
+    //save condensed process informtation to file in csv mode (to be captured by batch mode processing)
+    private void SaveResultToFile(String out, int laps, int tests, StopWatch repair_time, StopWatch ce_gen_time) throws IOException {
+        String text_report = out+";"+laps+";"+tests+";"+repair_time.toString()+";"+ce_gen_time.toString();
+        FileUtils.writeStringToFile(new File("cegar.info"),text_report,"ISO-8859-1");
     }
 
     private ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
