@@ -80,8 +80,10 @@ public class IterativeCEBasedAlloyRepair {
         Stack<FixCandidate> searchSpace = new Stack<>();
         FixCandidate originalCandidate = new FixCandidate(modelToRepair, 0, null);
         searchSpace.add(originalCandidate);
+        int maxReachedLap = 0;
         while (!searchSpace.isEmpty()) {
             FixCandidate current = searchSpace.pop();
+            maxReachedLap = Math.max(maxReachedLap, current.depth());
             logger.info("Repairing current candidate\n" + current.toString());
             arepairTimeCounter.clockStart();
             ARepairResult aRepairResult = runARepairWithCurrentConfig(current);
@@ -169,6 +171,9 @@ public class IterativeCEBasedAlloyRepair {
                 writeReport(report);
             }
         }
+        logger.info("CEGAR ended with no more candidates");
+        Report report = Report.exhaustedSearchSpace(maxReachedLap, tests, arepairTimeCounter, beafixTimeCounter);
+        writeReport(report);
         return Optional.empty();
     }
 

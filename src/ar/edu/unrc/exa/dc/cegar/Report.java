@@ -47,6 +47,14 @@ public class Report {
                 return "BeAFix_Gen_Fail";
             }
 
+        },
+        EXHAUSTED_CANDIDATES {
+
+            @Override
+            public String toString() {
+                return "exhausted";
+            }
+
         }
         ;
         @Override
@@ -56,12 +64,23 @@ public class Report {
     private final Status status;
     private final int tests;
     private final FixCandidate candidate;
+    private final int laps;
     private final TimeCounter beafixTimer;
     private final TimeCounter arepairTimer;
 
     private Report(Status status, FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
         this.status = status;
         this.candidate = candidate;
+        this.laps = candidate.depth();
+        this.tests = tests;
+        this.beafixTimer = beafixTimer;
+        this.arepairTimer = arepairTimer;
+    }
+
+    private Report(Status status, int laps, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
+        this.status = status;
+        this.candidate = null;
+        this.laps = laps;
         this.tests = tests;
         this.beafixTimer = beafixTimer;
         this.arepairTimer = arepairTimer;
@@ -87,11 +106,15 @@ public class Report {
         return new Report(Status.BEAFIX_GEN_FAILED, candidate, tests, beafixTimer, arepairTimer);
     }
 
+    public static Report exhaustedSearchSpace(int laps, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
+        return new Report(Status.EXHAUSTED_CANDIDATES, laps, tests, beafixTimer, arepairTimer);
+    }
+
     private static final String SEPARATOR = ";";
 
     @Override
     public String toString() {
-        return status.toString() + SEPARATOR + candidate.depth() + SEPARATOR + tests + SEPARATOR + arepairTimer.toMilliSeconds() + SEPARATOR + beafixTimer.toSeconds();
+        return status.toString() + SEPARATOR + laps + SEPARATOR + tests + SEPARATOR + arepairTimer.toMilliSeconds() + SEPARATOR + beafixTimer.toSeconds();
     }
 
 }

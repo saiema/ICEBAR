@@ -49,7 +49,10 @@ public class CegarCLI {
         CEGARProperties.getInstance().loadConfig(properties);
         BeAFix beafix = beafix();
         ARepair arepair = arepair();
-        IterativeCEBasedAlloyRepair iterativeCEBasedAlloyRepair = new IterativeCEBasedAlloyRepair(Paths.get(model).toAbsolutePath(), Paths.get(oracle), arepair, beafix);
+        int laps = IterativeCEBasedAlloyRepair.LAPS_DEFAULT;
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_LAPS))
+            laps = CEGARProperties.getInstance().getIntArgument(CEGARProperties.ConfigKey.CEGAR_LAPS);
+        IterativeCEBasedAlloyRepair iterativeCEBasedAlloyRepair = new IterativeCEBasedAlloyRepair(Paths.get(model).toAbsolutePath(), Paths.get(oracle), arepair, beafix, laps);
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {
             System.out.println("Fix found\n" + fix.get().toString() + "\n");
