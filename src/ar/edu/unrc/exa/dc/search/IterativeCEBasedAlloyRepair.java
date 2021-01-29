@@ -98,7 +98,9 @@ public class IterativeCEBasedAlloyRepair {
             if (aRepairResult.hasRepair() || aRepairResult.equals(ARepairResult.NO_TESTS)) {
                 FixCandidate repairCandidate = aRepairResult.equals(ARepairResult.NO_TESTS)?current:new FixCandidate(aRepairResult.repair(), current.depth(), null);
                 logger.info("Validating current candidate with BeAFix");
+                beafixTimeCounter.clockStart();
                 BeAFixResult beAFixCheckResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.CHECK);
+                beafixTimeCounter.clockEnd();
                 logger.info("BeAFix check finished\n" + beAFixCheckResult.toString());
                 if (beAFixCheckResult.error()) {
                     logger.severe("BeAFix check ended in error, ending search");
