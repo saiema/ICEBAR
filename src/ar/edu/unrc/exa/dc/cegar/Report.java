@@ -114,7 +114,7 @@ public class Report {
 
     @Override
     public String toString() {
-        return status.toString() + SEPARATOR + laps + SEPARATOR + tests + SEPARATOR + arepairTimer.toMilliSeconds() + SEPARATOR + beafixTimer.toMilliSeconds();
+        return status.toString() + SEPARATOR + laps + SEPARATOR + tests + SEPARATOR + beafixTimer.toMilliSeconds() + SEPARATOR + arepairTimer.toMilliSeconds();
     }
 
 }

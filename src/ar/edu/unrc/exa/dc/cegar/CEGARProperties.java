@@ -62,7 +62,7 @@ public class CEGARProperties {
     /**
      * The path to a default .properties file
      */
-    private static final String DEFAULT_PROPERTIES = "cegar.properties";
+    public static final String DEFAULT_PROPERTIES = "cegar.properties";
 
     /**
      * The {@code ExperimentProperties} instance that will be returned by {@link CEGARProperties#getInstance()}

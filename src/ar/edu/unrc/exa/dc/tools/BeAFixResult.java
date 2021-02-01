@@ -5,23 +5,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.TestType;
 import ar.edu.unrc.exa.dc.util.Utils;
 
+import static ar.edu.unrc.exa.dc.util.Utils.validateTestsFile;
+
 public final class BeAFixResult {
 
-    private static final String TEST_SEPARATOR = "===TEST===\n";
+    static final String TEST_SEPARATOR = "===TEST===\n";
 
     public enum ResultType {TESTS, CHECK, ERROR}
 
     public static final class BeAFixTest {
 
-        public enum TestType {COUNTEREXAMPLE, UNTRUSTED_POSITIVE, UNTRUSTED_NEGATIVE, TRUSTED_POSITIVE, TRUSTED_NEGATIVE}
+        public enum TestType {COUNTEREXAMPLE, UNTRUSTED_POSITIVE, UNTRUSTED_NEGATIVE, TRUSTED_POSITIVE, TRUSTED_NEGATIVE, INITIAL}
         private final TestType testType;
         private String command;
         private String predicate;
@@ -60,7 +59,11 @@ public final class BeAFixResult {
             if (runIdx < 0)
                 throw new IllegalArgumentException("Command not found in:\n" + test);
             this.command = test.substring(runIdx, test.indexOf("\n", runIdx));
-            String indexRaw = this.command.replaceAll("\\D+","");
+            String[] commandSegments = this.command.split(" ");
+            if (commandSegments.length != 4)
+                throw new IllegalArgumentException("Command was expected to have 4 words, but got " + commandSegments.length + " instead ( " + Arrays.toString(commandSegments) + ")");
+            String commandsPredicate = commandSegments[1].trim();
+            String indexRaw = commandsPredicate.replaceAll("\\D+","");
             this.index = Integer.parseInt(indexRaw);
         }
 
@@ -172,98 +175,84 @@ public final class BeAFixResult {
         return this.message;
     }
 
-    public int getMaxIndex() { return maxIndex; }
+    public int getMaxIndex() throws IOException {
+        if (maxIndex > -1)
+            return maxIndex;
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getCounterexampleTests()));
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getUntrustedNegativeTests()));
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getTrustedNegativeTests()));
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getUntrustedPositiveTests()));
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getTrustedPositiveTests()));
+        return maxIndex;
+    }
+
+    int getMaxIndexFrom(Collection<BeAFixTest> tests) {
+        int max = 0;
+        for (BeAFixTest test : tests) {
+            if (test.getIndex() > max)
+                max = test.getIndex();
+        }
+        return max;
+    }
 
     public void counterexampleTests(Path cetFile) {
         this.cetFile = cetFile;
-    }
-
-    public Path counterexampleTests() {
-        return cetFile;
     }
 
     public void untrustedPositiveTests(Path uptFile) {
         this.uptFile = uptFile;
     }
 
-    public Path untrustedPositiveTests() {
-        return uptFile;
-    }
-
     public void untrustedNegativeTests(Path untFile) {
         this.untFile = untFile;
-    }
-
-    public Path untrustedNegativeTests() {
-        return untFile;
     }
 
     public void trustedPositiveTests(Path tptFile) {
         this.tptFile = tptFile;
     }
 
-    public Path trustedPositiveTests() {
-        return tptFile;
-    }
-
     public void trustedNegativeTests(Path tntFile) {this.tntFile = tntFile;}
-
-    public Path trustedNegativeTests() { return tntFile; }
 
     public Collection<BeAFixTest> getCounterexampleTests() throws IOException {
         if (ceTests == null)
-            ceTests = parseTestsFrom(cetFile, TestType.COUNTEREXAMPLE);
+            ceTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(cetFile, TestType.COUNTEREXAMPLE);
         return ceTests;
     }
 
     public Collection<BeAFixTest> getUntrustedPositiveTests() throws IOException {
         if (uptTests == null)
-            uptTests = parseTestsFrom(uptFile, TestType.UNTRUSTED_POSITIVE);
+            uptTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(uptFile, TestType.UNTRUSTED_POSITIVE);
         return uptTests;
     }
 
     public Collection<BeAFixTest> getUntrustedNegativeTests() throws IOException {
         if (untTests == null)
-            untTests = parseTestsFrom(untFile, TestType.UNTRUSTED_NEGATIVE);
+            untTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(untFile, TestType.UNTRUSTED_NEGATIVE);
         return untTests;
     }
 
     public Collection<BeAFixTest> getTrustedPositiveTests() throws IOException {
         if (tptTests == null)
-            tptTests = parseTestsFrom(tptFile, TestType.TRUSTED_POSITIVE);
+            tptTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(tptFile, TestType.TRUSTED_POSITIVE);
         return tptTests;
     }
 
     public Collection<BeAFixTest> getTrustedNegativeTests() throws IOException {
         if (tntTests == null)
-            tntTests = parseTestsFrom(tntFile, TestType.TRUSTED_NEGATIVE);
+            tntTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(tntFile, TestType.TRUSTED_NEGATIVE);
         return tntTests;
     }
 
-    private boolean validateTestsFile(Path tests) {
-        if (tests == null)
-            return false;
-        if (!tests.toFile().exists())
-            return false;
-        if (!tests.toFile().isFile())
-            return false;
-        return tests.toString().endsWith(".tests");
-    }
-
-    private Collection<BeAFixTest> parseTestsFrom(Path file, TestType testType) throws IOException {
+    static Collection<BeAFixTest> parseTestsFrom(Path file, TestType testType) throws IOException {
         if (!validateTestsFile(file))
             throw new IllegalArgumentException("Invalid tests file: " + file.toString());
         Collection<BeAFixTest> tests = new LinkedList<>();
-        if (isCheck() || error())
-            return tests;
         String[] rawTests = Files.lines(file).collect(Collectors.joining("\n")).split(TEST_SEPARATOR);
         for (String rawTest : rawTests) {
             if (rawTest.trim().isEmpty())
                 continue;
             BeAFixTest test = new BeAFixTest(rawTest, testType);
             tests.add(test);
-            if (test.getIndex() > maxIndex)
-                maxIndex = test.getIndex();
         }
         return tests;
     }

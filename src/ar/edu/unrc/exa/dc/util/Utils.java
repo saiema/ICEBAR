@@ -10,6 +10,8 @@ import java.io.StringWriter;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.stream.Collectors;
 
 public final class Utils {
 
@@ -146,6 +148,16 @@ public final class Utils {
             throw new Error("Couldn't create report file (" + reportFilePath.toString() + ")");
         }
         Files.write(reportFilePath, report.toString().getBytes(), StandardOpenOption.APPEND);
+    }
+
+    public static boolean validateTestsFile(Path tests) {
+        if (tests == null)
+            return false;
+        if (!tests.toFile().exists())
+            return false;
+        if (!tests.toFile().isFile())
+            return false;
+        return tests.toString().endsWith(".tests");
     }
 
 }

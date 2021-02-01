@@ -6,6 +6,7 @@ import ar.edu.unrc.exa.dc.tools.ARepair.ARepairResult;
 import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
+import ar.edu.unrc.exa.dc.tools.InitialTests;
 import ar.edu.unrc.exa.dc.util.TimeCounter;
 import ar.edu.unrc.exa.dc.util.Utils;
 
@@ -72,6 +73,11 @@ public class IterativeCEBasedAlloyRepair {
         this(modelToRepair, oracle, aRepair, beAFix, LAPS_DEFAULT);
     }
 
+    private InitialTests initialTests;
+    public void setInitialTests(InitialTests initialTests) {
+        this.initialTests = initialTests;
+    }
+
     public Optional<FixCandidate> repair() throws IOException {
         //watches for different time process recording
         TimeCounter arepairTimeCounter = new TimeCounter();
@@ -104,12 +110,12 @@ public class IterativeCEBasedAlloyRepair {
                 logger.info("BeAFix check finished\n" + beAFixCheckResult.toString());
                 if (beAFixCheckResult.error()) {
                     logger.severe("BeAFix check ended in error, ending search");
-                    Report report = Report.beafixCheckFailed(current, tests, arepairTimeCounter, beafixTimeCounter);
+                    Report report = Report.beafixCheckFailed(current, tests, beafixTimeCounter, arepairTimeCounter);
                     writeReport(report);
                     return Optional.empty();
                 } else if (beAFixCheckResult.checkResult()) {
                     logger.info("BeAFix validated the repair, fix found");
-                    Report report = Report.repairFound(current, tests, arepairTimeCounter, beafixTimeCounter);
+                    Report report = Report.repairFound(current, tests, beafixTimeCounter, arepairTimeCounter);
                     writeReport(report);
                     return Optional.of(repairCandidate);
                 } else {
@@ -119,20 +125,11 @@ public class IterativeCEBasedAlloyRepair {
                     beafixTimeCounter.clockEnd();
                     if (!beAFixResult.error()) {
                         String beafixMsg = "BeAFix finished\n";
-                        beafixMsg += "Counterexample tests: " + beAFixResult.getCounterexampleTests().size() + "\n";
-                        beafixMsg += "Trusted positive tests: " + beAFixResult.getTrustedPositiveTests().size() + "\n";
-                        beafixMsg += "Trusted negative tests: " + beAFixResult.getTrustedNegativeTests().size() + "\n";
-                        beafixMsg += "Untrusted positive tests: " + beAFixResult.getUntrustedPositiveTests().size() + "\n";
-                        beafixMsg += "Untrusted negative tests: " + beAFixResult.getUntrustedNegativeTests().size() + "\n";
-                        beafixMsg += "CE: " + beAFixResult.getCounterexampleTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
-                        beafixMsg += "TP: " + beAFixResult.getTrustedPositiveTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
-                        beafixMsg += "TN: " + beAFixResult.getTrustedNegativeTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
-                        beafixMsg += "UP: " + beAFixResult.getUntrustedPositiveTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
-                        beafixMsg += "UN: " + beAFixResult.getUntrustedNegativeTests().stream().map(BeAFixTest::command).collect(Collectors.joining(", ")) + "\n";
+                        beafixMsg += beAFixResult.toString() + "\n";
                         logger.info(beafixMsg);
                     } else {
                         logger.severe("BeAFix test generation ended in error, ending search");
-                        Report report = Report.beafixGenFailed(current, tests, arepairTimeCounter, beafixTimeCounter);
+                        Report report = Report.beafixGenFailed(current, tests, beafixTimeCounter, arepairTimeCounter);
                         writeReport(report);
                         return Optional.empty();
                     }
@@ -163,18 +160,18 @@ public class IterativeCEBasedAlloyRepair {
                         beAFix.testsStartingIndex(beAFixResult.getMaxIndex() + 1);
                     } else {
                         logger.info("max laps reached (" + laps + "), ending search");
-                        Report report = Report.lapsReached(current, tests, arepairTimeCounter, beafixTimeCounter);
+                        Report report = Report.lapsReached(current, tests, beafixTimeCounter, arepairTimeCounter);
                         writeReport(report);
                     }
                 }
             } else if (aRepairResult.hasMessage()) {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
-                Report report = Report.arepairFailed(current, tests, arepairTimeCounter, beafixTimeCounter);
+                Report report = Report.arepairFailed(current, tests, beafixTimeCounter, arepairTimeCounter);
                 writeReport(report);
             }
         }
         logger.info("CEGAR ended with no more candidates");
-        Report report = Report.exhaustedSearchSpace(maxReachedLap, tests, arepairTimeCounter, beafixTimeCounter);
+        Report report = Report.exhaustedSearchSpace(maxReachedLap, tests, beafixTimeCounter, arepairTimeCounter);
         writeReport(report);
         return Optional.empty();
     }
@@ -197,6 +194,8 @@ public class IterativeCEBasedAlloyRepair {
             }
         }
         try {
+            if (initialTests != null)
+                tests.addAll(initialTests.getInitialTests());
             generateTestsFile(tests, testsPath);
         } catch (IOException e) {
             logger.severe("An exception occurred while trying to generate tests file\n" + Utils.exceptionToString(e) + "\n");

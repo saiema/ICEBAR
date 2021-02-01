@@ -4,6 +4,7 @@ import ar.edu.unrc.exa.dc.search.FixCandidate;
 import ar.edu.unrc.exa.dc.search.IterativeCEBasedAlloyRepair;
 import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.BeAFix;
+import ar.edu.unrc.exa.dc.tools.InitialTests;
 import ar.edu.unrc.exa.dc.util.Utils;
 
 import java.io.IOException;
@@ -15,7 +16,7 @@ import java.util.Optional;
 
 public class CegarCLI {
 
-    private static final String VERSION = "0.1.0";
+    private static final String VERSION = "1.0.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -24,40 +25,104 @@ public class CegarCLI {
     private static final String APARSER_JAR = "aparser-1.0.jar";
     private static final String AREPAIR_JAR = "arepair-1.0-jar-with-dependencies.jar";
 
+    private static final String HELP = "--help";
+
     /**
      * Runs CEGAR with a model, oracle, and a properties file
      * @param args the arguments to be used, must be three, two als files and one .properties file
      */
     public static void main(String[] args) throws IOException {
-        if (args.length == 1 && args[0].trim().equals("--help")) {
+        if (args[0].trim().compareTo(HELP) == 0) {
             help();
             return;
         }
-        if (args.length != 3) {
-            help();
-            throw new IllegalArgumentException("Expecting 3 arguments (model, oracle, properties)");
-        }
-        String model = args[0];
-        String oracle = args[1];
-        String properties = args[2];
-        if (!Utils.isValidPath(model, Utils.PathCheck.ALS))
-            throw new IllegalArgumentException("invalid model path (" + model + ")");
-        if (!Utils.isValidPath(oracle, Utils.PathCheck.ALS))
-            throw new IllegalArgumentException("invalid oracle path (" + oracle + ")");
-        if (!Utils.isValidPath(properties, Utils.PathCheck.FILE))
-            throw new IllegalArgumentException("invalid properties path (" + properties + ")");
-        CEGARProperties.getInstance().loadConfig(properties);
+        parseCommandLine(args);
+        CEGARProperties.getInstance().loadConfig(
+                CEGARExperiment.getInstance().hasProperties()?
+                        CEGARExperiment.getInstance().propertiesPath().toString():
+                        CEGARProperties.DEFAULT_PROPERTIES
+        );
         BeAFix beafix = beafix();
         ARepair arepair = arepair();
         int laps = IterativeCEBasedAlloyRepair.LAPS_DEFAULT;
         if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_LAPS))
             laps = CEGARProperties.getInstance().getIntArgument(CEGARProperties.ConfigKey.CEGAR_LAPS);
-        IterativeCEBasedAlloyRepair iterativeCEBasedAlloyRepair = new IterativeCEBasedAlloyRepair(Paths.get(model).toAbsolutePath(), Paths.get(oracle), arepair, beafix, laps);
+        IterativeCEBasedAlloyRepair iterativeCEBasedAlloyRepair = new IterativeCEBasedAlloyRepair(
+                CEGARExperiment.getInstance().modelPath(),
+                CEGARExperiment.getInstance().oraclePath(),
+                arepair,
+                beafix,
+                laps
+        );
+        if (CEGARExperiment.getInstance().hasInitialTests()) {
+            InitialTests initialTests = new InitialTests(CEGARExperiment.getInstance().initialTestsPath());
+            iterativeCEBasedAlloyRepair.setInitialTests(initialTests);
+        }
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {
             System.out.println("Fix found\n" + fix.get().toString() + "\n");
         } else {
-            System.out.println("No Fix Found for model: " + model + "\n");
+            System.out.println("No Fix Found for model: " + CEGARExperiment.getInstance().modelPath().toString() + "\n");
+        }
+    }
+
+    private static void parseCommandLine(String[] args) {
+        if (args.length == 0)
+            return;
+        boolean configKeyRead = false;
+        String configKey = null;
+        for (String arg : args) {
+            arg = arg.replaceAll("\"", "");
+            if (arg.trim().startsWith("--")) {
+                if (configKeyRead)
+                    throw new IllegalArgumentException("Expecting value for " + configKey + " got " + arg.trim() + " instead");
+                configKeyRead = true;
+                configKey = arg.trim().substring(2);
+            } else {
+                if (!configKeyRead)
+                    throw new IllegalArgumentException("Expecting config key but got a value instead " + arg.trim());
+                setConfig(configKey, arg.trim());
+                configKeyRead = false;
+                configKey = null;
+            }
+        }
+    }
+
+    private static final String MODEL_KEY = "model";
+    private static final String ORACLE_KEY = "oracle";
+    private static final String PROPERTIES_KEY = "properties";
+    private static final String INITIAL_TESTS_KEY = "initialtests";
+    private static void setConfig(String key, String value) {
+        switch (key.toLowerCase()) {
+            case MODEL_KEY: {
+                if (CEGARExperiment.getInstance().hasModel())
+                    throw new IllegalArgumentException("Already a model path has been defined (current: " + CEGARExperiment.getInstance().modelPath().toString() + " | new: " + value + ")");
+                Path modelPath = Paths.get(value).toAbsolutePath();
+                CEGARExperiment.getInstance().modelPath(modelPath);
+                break;
+            }
+            case ORACLE_KEY: {
+                if (CEGARExperiment.getInstance().hasOracle())
+                    throw new IllegalArgumentException("Already an oracle path has been defined (current: " + CEGARExperiment.getInstance().oraclePath().toString() + " | new: " + value + ")");
+                Path oraclePath = Paths.get(value).toAbsolutePath();
+                CEGARExperiment.getInstance().oraclePath(oraclePath);
+                break;
+            }
+            case PROPERTIES_KEY: {
+                if (CEGARExperiment.getInstance().hasProperties())
+                    throw new IllegalArgumentException("Already a properties path has been defined (current: " + CEGARExperiment.getInstance().propertiesPath().toString() + " | new: " + value + ")");
+                Path propertiesPath = Paths.get(value).toAbsolutePath();
+                CEGARExperiment.getInstance().propertiesPath(propertiesPath);
+                break;
+            }
+            case INITIAL_TESTS_KEY: {
+                if (CEGARExperiment.getInstance().hasInitialTests())
+                    throw new IllegalArgumentException("Already an initial tests path has been defined (current: " + CEGARExperiment.getInstance().initialTestsPath().toString() + " | new: " + value + ")");
+                Path initialTestsPath = Paths.get(value).toAbsolutePath();
+                CEGARExperiment.getInstance().initialTestsPath(initialTestsPath);
+                break;
+            }
+            default : throw new IllegalArgumentException("Invalid configuration key (" + key + ")");
         }
     }
 
@@ -65,8 +130,14 @@ public class CegarCLI {
         String help = "CEGAR CLI\nVERSION " + VERSION + "\n" +
                 "CounterExample Guided Alloy Repair\n" +
                 "Usage:\n" +
-                "\t--help                         :     Shows this message\n" +
-                "\t<model> <oracle> <properties>  :     Tries to repair a model (.als file) using an oracle (.als file) with a set of properties (.properties file)\n";
+                "\t--help                                             :  Shows this message\n" +
+                "\t--" + MODEL_KEY + "<path to .als file>             :  The path to the model to repair (anything in this file can be modified to repair) (*).\n" +
+                "\t--" + ORACLE_KEY + "<path to .als file>            :  The path to the oracle (containing predicates, assertions, and anything related to those which can't be modified to repair) (*).\n" +
+                "\t--" + PROPERTIES_KEY + "<path to .properties file> :  CEGAR properties, please look at 'cegar_stein.properties' as an example (**).\n" +
+                "\t--" + INITIAL_TESTS_KEY + "<path to .als file>     :  Initial tests set which will be used in conjunction with counterexample based tests (***).\n" +
+                "(*)   : This is a required argument.\n" +
+                "(**)  : Default properties will be used instead (from cegar.properties).\n" +
+                "(***) : Optional argument, default is no initial tests.\n";
         System.out.println(help);
     }
 
