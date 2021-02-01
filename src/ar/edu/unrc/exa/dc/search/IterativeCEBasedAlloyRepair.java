@@ -165,8 +165,8 @@ public class IterativeCEBasedAlloyRepair {
                 }
             } else if (aRepairResult.hasMessage()) {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
-                Report report = Report.arepairFailed(current, tests, beafixTimeCounter, arepairTimeCounter);
-                writeReport(report);
+//                Report report = Report.arepairFailed(current, tests, beafixTimeCounter, arepairTimeCounter);
+//                writeReport(report);
             }
         }
         logger.info("CEGAR ended with no more candidates");

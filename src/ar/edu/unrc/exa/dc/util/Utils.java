@@ -85,7 +85,7 @@ public final class Utils {
      *
      * @param text     Text to search in.
      * @param textFrom Text to start cutting from (exclusive).
-     * @param textTo   Text to stop cuutting at (exclusive).
+     * @param textTo   Text to stop cutting at (exclusive).
      */
     public static String getBetweenStrings(
             String text,
