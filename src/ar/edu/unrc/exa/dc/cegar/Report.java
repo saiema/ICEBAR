@@ -3,8 +3,6 @@ package ar.edu.unrc.exa.dc.cegar;
 import ar.edu.unrc.exa.dc.search.FixCandidate;
 import ar.edu.unrc.exa.dc.util.TimeCounter;
 
-import java.sql.Time;
-
 public class Report {
 
     public enum Status {

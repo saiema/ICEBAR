@@ -5,7 +5,6 @@ import ar.edu.unrc.exa.dc.search.IterativeCEBasedAlloyRepair;
 import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.InitialTests;
-import ar.edu.unrc.exa.dc.util.Utils;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -57,6 +56,7 @@ public class CegarCLI {
         if (CEGARExperiment.getInstance().hasInitialTests()) {
             InitialTests initialTests = new InitialTests(CEGARExperiment.getInstance().initialTestsPath());
             iterativeCEBasedAlloyRepair.setInitialTests(initialTests);
+            beafix.testsStartingIndex(initialTests.getMaxIndex() + 1);
         }
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {

@@ -323,33 +323,6 @@ public final class ARepair {
         return pinfo;
     }
 
-    /*
-    java
-    -Xmx16g
-    -Xmx16g
-    -Djava.library.path="sat-solvers"
-    -cp
-    "arepair-1.0-jar-with-dependencies.jar:libs/aparser-1.0.jar:libs/alloy.jar"
-    patcher.Patcher
-    --model-path
-    ".hidden/toFix.als"
-    --test-path
-    ".hidden/tests.als"
-    --scope
-    "3"
-    --minimum-cost
-    "3"
-    --search-strategy
-    "base-choice" "all-combination"
-    --enable-cache
-    --max-try-per-hole
-    1000
-    --partition-num
-    10           //
-    --max-try-per-depth
-    10000
-     */
-
     private String[] getARepairCommand() {
         String classpath = this.classpath.isEmpty()?".":this.classpath.stream().map(Path::toString).collect(Collectors.joining(":"));
         String[] args = new String[23 + (enableCache?1:0)];

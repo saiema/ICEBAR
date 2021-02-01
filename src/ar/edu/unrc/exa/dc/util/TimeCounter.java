@@ -1,6 +1,5 @@
 package ar.edu.unrc.exa.dc.util;
 
-import java.sql.Time;
 import java.util.concurrent.TimeUnit;
 
 public class TimeCounter {
