@@ -175,14 +175,7 @@ public final class BeAFixResult {
         return this.message;
     }
 
-    public int getMaxIndex() throws IOException {
-        if (maxIndex > -1)
-            return maxIndex;
-        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getCounterexampleTests()));
-        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getUntrustedNegativeTests()));
-        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getTrustedNegativeTests()));
-        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getUntrustedPositiveTests()));
-        maxIndex = Math.max(maxIndex, getMaxIndexFrom(getTrustedPositiveTests()));
+    public int getMaxIndex() {
         return maxIndex;
     }
 
@@ -216,30 +209,35 @@ public final class BeAFixResult {
     public Collection<BeAFixTest> getCounterexampleTests() throws IOException {
         if (ceTests == null)
             ceTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(cetFile, TestType.COUNTEREXAMPLE);
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(ceTests));
         return ceTests;
     }
 
     public Collection<BeAFixTest> getUntrustedPositiveTests() throws IOException {
         if (uptTests == null)
             uptTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(uptFile, TestType.UNTRUSTED_POSITIVE);
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(uptTests));
         return uptTests;
     }
 
     public Collection<BeAFixTest> getUntrustedNegativeTests() throws IOException {
         if (untTests == null)
             untTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(untFile, TestType.UNTRUSTED_NEGATIVE);
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(untTests));
         return untTests;
     }
 
     public Collection<BeAFixTest> getTrustedPositiveTests() throws IOException {
         if (tptTests == null)
             tptTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(tptFile, TestType.TRUSTED_POSITIVE);
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(tptTests));
         return tptTests;
     }
 
     public Collection<BeAFixTest> getTrustedNegativeTests() throws IOException {
         if (tntTests == null)
             tntTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(tntFile, TestType.TRUSTED_NEGATIVE);
+        maxIndex = Math.max(maxIndex, getMaxIndexFrom(tntTests));
         return tntTests;
     }
 
@@ -302,18 +300,23 @@ public final class BeAFixResult {
                 break;
             }
             case TESTS: {
+                String ceTests = testsToString(TestType.COUNTEREXAMPLE);
+                String tpTests = testsToString(TestType.TRUSTED_POSITIVE);
+                String upTests = testsToString(TestType.UNTRUSTED_POSITIVE);
+                String tnTests = testsToString(TestType.TRUSTED_NEGATIVE);
+                String unTests = testsToString(TestType.UNTRUSTED_NEGATIVE);
                 rep += "Message: " + message;
                 rep += "\n\tMax index for test batch: " + maxIndex;
                 rep += "\n\tCounterexample tests:\n";
-                rep += testsToString(TestType.COUNTEREXAMPLE);
+                rep += ceTests;
                 rep += "\n\tPositive trusted tests:\n";
-                rep += testsToString(TestType.TRUSTED_POSITIVE);
+                rep += tpTests;
                 rep += "\n\tPositive untrusted tests:\n";
-                rep += testsToString(TestType.UNTRUSTED_POSITIVE);
+                rep += upTests;
                 rep += "\n\tNegative trusted tests:\n";
-                rep += testsToString(TestType.TRUSTED_NEGATIVE);
+                rep += tnTests;
                 rep += "\n\tNegative untrusted tests:\n";
-                rep += testsToString(TestType.UNTRUSTED_NEGATIVE);
+                rep += unTests;
                 rep += "}";
                 break;
             }

@@ -156,11 +156,9 @@ public class IterativeCEBasedAlloyRepair {
                         }
                         tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
                         logger.info("Total tests generated: " + tests);
-                        beAFix.testsStartingIndex(beAFixResult.getMaxIndex() + 1);
+                        beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
                     } else {
-                        logger.info("max laps reached (" + laps + "), ending search");
-                        Report report = Report.lapsReached(current, tests, beafixTimeCounter, arepairTimeCounter);
-                        writeReport(report);
+                        logger.info("max laps reached (" + laps + "), ending branch");
                     }
                 }
             } else if (aRepairResult.hasMessage()) {
@@ -202,6 +200,7 @@ public class IterativeCEBasedAlloyRepair {
             error.message(Utils.exceptionToString(e));
             return error;
         }
+        logger.info("Running ARepair with " + tests.size() + " tests");
         aRepair.testsPath(testsPath);
         return aRepair.run();
     }

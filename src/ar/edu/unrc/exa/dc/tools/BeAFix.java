@@ -104,6 +104,10 @@ public final class BeAFix {
         return this;
     }
 
+    public int testsStartingIndex() {
+        return testsStartingIndex;
+    }
+
     public BeAFix modelOverrides(boolean modelOverrides) {
         this.modelOverrides = modelOverrides;
         return this;
