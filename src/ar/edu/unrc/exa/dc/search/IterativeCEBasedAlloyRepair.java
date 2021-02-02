@@ -117,7 +117,7 @@ public class IterativeCEBasedAlloyRepair {
                     Report report = Report.repairFound(current, tests, beafixTimeCounter, arepairTimeCounter);
                     writeReport(report);
                     return Optional.of(repairCandidate);
-                } else {
+                } else if (current.depth() < laps) {
                     logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
                     beafixTimeCounter.clockStart();
                     BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS);
@@ -132,34 +132,32 @@ public class IterativeCEBasedAlloyRepair {
                         writeReport(report);
                         return Optional.empty();
                     }
-                    if (current.depth() < laps) {
-                        boolean noUntrustedTests = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
-                        boolean trustedTestsAdded;
-                        int newDepth = current.depth() + 1;
-                        trustedTestsAdded = trustedTests.addAll(beAFixResult.getCounterexampleTests());
-                        trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
-                        trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
-                        for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
-                            Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
-                            newTests.add(upTest);
-                            FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
-                            searchSpace.push(newCandidateFromUntrustedTest);
-                        }
-                        for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
-                            Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
-                            newTests.add(unTest);
-                            FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
-                            searchSpace.push(newCandidateFromUntrustedTest);
-                        }
-                        if (noUntrustedTests && trustedTestsAdded) {
-                            searchSpace.push(new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests()));
-                        }
-                        tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
-                        logger.info("Total tests generated: " + tests);
-                        beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
-                    } else {
-                        logger.info("max laps reached (" + laps + "), ending branch");
+                    boolean noUntrustedTests = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
+                    boolean trustedTestsAdded;
+                    int newDepth = current.depth() + 1;
+                    trustedTestsAdded = trustedTests.addAll(beAFixResult.getCounterexampleTests());
+                    trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
+                    trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
+                    for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
+                        Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
+                        newTests.add(upTest);
+                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
+                        searchSpace.push(newCandidateFromUntrustedTest);
                     }
+                    for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
+                        Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
+                        newTests.add(unTest);
+                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
+                        searchSpace.push(newCandidateFromUntrustedTest);
+                    }
+                    if (noUntrustedTests && trustedTestsAdded) {
+                        searchSpace.push(new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests()));
+                    }
+                    tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
+                    logger.info("Total tests generated: " + tests);
+                    beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
+                } else {
+                    logger.info("max laps reached (" + laps + "), ending branch");
                 }
             } else if (aRepairResult.hasMessage()) {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
