@@ -11,6 +11,7 @@ public class FixCandidate {
     private final Path modelToRepair;
     private final int depth;
     private final Collection<BeAFixTest> untrustedTests; //only untrusted tests
+    private int repairedProperties = 0;
 
     public FixCandidate(Path modelToRepair, int depth, Collection<BeAFixTest> untrustedTests) {
         if (!isValidPath(modelToRepair, PathCheck.ALS))
@@ -41,9 +42,17 @@ public class FixCandidate {
         return this.untrustedTests;
     }
 
+    public void repairedProperties(int repairedProperties) {
+        this.repairedProperties = repairedProperties;
+    }
+
+    public int repairedProperties() {
+        return repairedProperties;
+    }
+
     @Override
     public String toString() {
-        return "Model: " + modelToRepair.toString() + "\n" + "Depth: " + depth;
+        return "Model: " + modelToRepair.toString() + "\n" + "Depth: " + depth + "\n" + "Repaired properties: " + repairedProperties;
     }
 
 }

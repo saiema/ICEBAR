@@ -77,14 +77,20 @@ public class IterativeCEBasedAlloyRepair {
         this.initialTests = initialTests;
     }
 
+    private boolean usePriorization = false;
+    public void usePriorization(boolean usePriorization) {
+        this.usePriorization = usePriorization;
+    }
+
     public Optional<FixCandidate> repair() throws IOException {
         //watches for different time process recording
         TimeCounter arepairTimeCounter = new TimeCounter();
         TimeCounter beafixTimeCounter = new TimeCounter();
         //CEGAR process
-        Stack<FixCandidate> searchSpace = new Stack<>();
+        //Stack<FixCandidate> searchSpace = new Stack<>();
+        CandidateSpace searchSpace = usePriorization?CandidateSpace.priorityStack():CandidateSpace.normalStack();
         FixCandidate originalCandidate = new FixCandidate(modelToRepair, 0, null);
-        searchSpace.add(originalCandidate);
+        searchSpace.push(originalCandidate);
         int maxReachedLap = 0;
         while (!searchSpace.isEmpty()) {
             FixCandidate current = searchSpace.pop();
@@ -107,6 +113,7 @@ public class IterativeCEBasedAlloyRepair {
                 BeAFixResult beAFixCheckResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.CHECK);
                 beafixTimeCounter.clockEnd();
                 logger.info("BeAFix check finished\n" + beAFixCheckResult.toString());
+                int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
                 if (beAFixCheckResult.error()) {
                     logger.severe("BeAFix check ended in error, ending search");
                     Report report = Report.beafixCheckFailed(current, tests, beafixTimeCounter, arepairTimeCounter);
@@ -142,16 +149,20 @@ public class IterativeCEBasedAlloyRepair {
                         Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
                         newTests.add(upTest);
                         FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
+                        newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
                     for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
                         Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
                         newTests.add(unTest);
                         FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
+                        newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
                     if (noUntrustedTests && trustedTestsAdded) {
-                        searchSpace.push(new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests()));
+                        FixCandidate onlyTrustedTestsCandidate = new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests());
+                        onlyTrustedTestsCandidate.repairedProperties(repairedPropertiesForCurrent);
+                        searchSpace.push(onlyTrustedTestsCandidate);
                     }
                     tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
                     logger.info("Total tests generated: " + tests);

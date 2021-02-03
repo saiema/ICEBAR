@@ -51,9 +51,11 @@ public class CEGARProperties {
         },
         CEGAR_LAPS {
             @Override
-            public String getKey() {
-                return "cegar.laps";
-            }
+            public String getKey() { return "cegar.laps"; }
+        },
+        CEGAR_PRIORIZATION {
+            @Override
+            public String getKey() { return "cegar.priorization"; }
         }
         ;
         public abstract String getKey();
@@ -152,6 +154,7 @@ public class CEGARProperties {
 
     private boolean isBooleanKey(ConfigKey key) {
         switch (key) {
+            case CEGAR_PRIORIZATION:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case BEAFIX_INSTANCE_TESTS: return true;
             default: return false;

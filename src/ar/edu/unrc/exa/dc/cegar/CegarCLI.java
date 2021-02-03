@@ -15,7 +15,7 @@ import java.util.Optional;
 
 public class CegarCLI {
 
-    private static final String VERSION = "1.0.3";
+    private static final String VERSION = "1.1.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -57,6 +57,9 @@ public class CegarCLI {
             InitialTests initialTests = new InitialTests(CEGARExperiment.getInstance().initialTestsPath());
             iterativeCEBasedAlloyRepair.setInitialTests(initialTests);
             beafix.testsStartingIndex(initialTests.getMaxIndex() + 1);
+        }
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_PRIORIZATION)) {
+            iterativeCEBasedAlloyRepair.usePriorization(CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_PRIORIZATION));
         }
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {

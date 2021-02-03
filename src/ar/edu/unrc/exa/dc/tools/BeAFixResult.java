@@ -131,6 +131,14 @@ public final class BeAFixResult {
     private int maxIndex = -1;
     private ResultType resultType;
 
+    //only for checks
+    private int passingProperties = -1;
+    private int totalProperties = -1;
+
+    public int passingProperties() {
+        return passingProperties;
+    }
+
     private BeAFixResult() {}
 
     public static BeAFixResult tests() {
@@ -266,15 +274,27 @@ public final class BeAFixResult {
                 return error("No lines found in check file: " + checkLines.toString());
             }
             String firstLine = checkLines.get(0);
-            if (firstLine.compareTo(VALID) == 0) {
+            if (firstLine.startsWith(VALID)) {
                 beAFixResult.resultType = ResultType.CHECK;
                 beAFixResult.check = true;
                 beAFixResult.message("Valid model (" + checkFile.toString().replace(".verification", ".als") + ")");
-            } else if (firstLine.compareTo(INVALID) == 0) {
+            } else if (firstLine.startsWith(INVALID)) {
                 beAFixResult.resultType = ResultType.CHECK;
                 beAFixResult.check = false;
-                beAFixResult.message("Invalid model (" + checkFile.toString().replace(".verification", ".als") + ")");
-            } else if (firstLine.compareTo(EXCEPTION) == 0) {
+                if (firstLine.contains("(")) {
+                    String repairedAndTotalProperties = firstLine.substring(firstLine.indexOf("("));
+                    repairedAndTotalProperties = repairedAndTotalProperties.replace("(", "").replace(")", "");
+                    String[] values = repairedAndTotalProperties.split("/");
+                    int repaired = Integer.parseInt(values[0].trim());
+                    int total = Integer.parseInt(values[1].trim());
+                    beAFixResult.passingProperties = repaired;
+                    beAFixResult.totalProperties = total;
+                }
+                beAFixResult.message(
+                                "Invalid model (" + checkFile.toString().replace(".verification", ".als") + ")" +
+                                " passing properties: " + beAFixResult.passingProperties + "/" + beAFixResult.totalProperties
+                );
+            } else if (firstLine.startsWith(EXCEPTION)) {
                 beAFixResult.resultType = ResultType.ERROR;
                 StringBuilder exceptionMsg = new StringBuilder();
                 for (int i = 1; i < checkLines.size(); i++) {
