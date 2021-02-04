@@ -47,6 +47,15 @@ public class IterativeCEBasedAlloyRepair {
     private final int laps;
     private int tests;
 
+    public enum CegarSearch {
+        DFS, BFS
+    }
+
+    private CegarSearch search = CegarSearch.DFS;
+    public void setSearch(CegarSearch search) {
+        this.search = search;
+    }
+
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
             throw new IllegalArgumentException("Invalid model to repair path (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
@@ -87,8 +96,17 @@ public class IterativeCEBasedAlloyRepair {
         TimeCounter arepairTimeCounter = new TimeCounter();
         TimeCounter beafixTimeCounter = new TimeCounter();
         //CEGAR process
-        //Stack<FixCandidate> searchSpace = new Stack<>();
-        CandidateSpace searchSpace = usePriorization?CandidateSpace.priorityStack():CandidateSpace.normalStack();
+        CandidateSpace searchSpace = null;
+        switch (search) {
+            case DFS: {
+                searchSpace = usePriorization?CandidateSpace.priorityStack():CandidateSpace.normalStack();
+                break;
+            }
+            case BFS: {
+                searchSpace = usePriorization?CandidateSpace.priorityQueue():CandidateSpace.normalQueue();
+                break;
+            }
+        }
         FixCandidate originalCandidate = new FixCandidate(modelToRepair, 0, null);
         searchSpace.push(originalCandidate);
         int maxReachedLap = 0;

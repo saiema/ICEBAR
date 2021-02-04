@@ -56,6 +56,10 @@ public class CEGARProperties {
         CEGAR_PRIORIZATION {
             @Override
             public String getKey() { return "cegar.priorization"; }
+        },
+        CEGAR_SEARCH {
+            @Override
+            public String getKey() { return "cegar.search"; }
         }
         ;
         public abstract String getKey();
@@ -171,6 +175,7 @@ public class CEGARProperties {
 
     private boolean isStringKey(ConfigKey key) {
         switch (key) {
+            case CEGAR_SEARCH:
             case BEAFIX_JAR :
             case BEAFIX_MODEL_OVERRIDES_FOLDER :
             case BEAFIX_BUGGY_FUNCS_FILE :

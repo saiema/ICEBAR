@@ -15,7 +15,7 @@ import java.util.Optional;
 
 public class CegarCLI {
 
-    private static final String VERSION = "1.1.0";
+    private static final String VERSION = "1.2.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -60,6 +60,16 @@ public class CegarCLI {
         }
         if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_PRIORIZATION)) {
             iterativeCEBasedAlloyRepair.usePriorization(CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_PRIORIZATION));
+        }
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_SEARCH)) {
+            String search = CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.CEGAR_SEARCH);
+            if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.CegarSearch.DFS.toString()) == 0) {
+                iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.CegarSearch.DFS);
+            } else if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.CegarSearch.BFS.toString()) == 0) {
+                iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.CegarSearch.BFS);
+            } else {
+                throw new IllegalArgumentException("Invalid configuration value for " + CEGARProperties.ConfigKey.CEGAR_SEARCH.getKey() + " (" + search + ")");
+            }
         }
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {
