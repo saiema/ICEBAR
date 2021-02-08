@@ -10,7 +10,7 @@ public class FixCandidate {
 
     private final Path modelToRepair;
     private final int depth;
-    private final Collection<BeAFixTest> untrustedTests; //only untrusted tests
+    private final Collection<BeAFixTest> untrustedTests; //only untrusted testsEl
     private int repairedProperties = 0;
 
     public FixCandidate(Path modelToRepair, int depth, Collection<BeAFixTest> untrustedTests) {
@@ -48,6 +48,10 @@ public class FixCandidate {
 
     public int repairedProperties() {
         return repairedProperties;
+    }
+
+    public String modelName() {
+        return modelToRepair.getFileName().toString().replace(".als","");
     }
 
     @Override

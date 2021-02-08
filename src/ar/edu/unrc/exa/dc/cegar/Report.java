@@ -108,7 +108,7 @@ public class Report {
         return new Report(Status.EXHAUSTED_CANDIDATES, laps, tests, beafixTimer, arepairTimer);
     }
 
-    private static final String SEPARATOR = ";";
+    public static final String SEPARATOR = ";";
 
     @Override
     public String toString() {

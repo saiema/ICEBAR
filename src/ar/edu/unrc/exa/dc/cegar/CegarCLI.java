@@ -13,9 +13,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
+import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
+
 public class CegarCLI {
 
-    private static final String VERSION = "1.2.0";
+    private static final String VERSION = "1.3.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -71,6 +73,7 @@ public class CegarCLI {
                 throw new IllegalArgumentException("Invalid configuration value for " + CEGARProperties.ConfigKey.CEGAR_SEARCH.getKey() + " (" + search + ")");
             }
         }
+        startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {
             System.out.println("Fix found\n" + fix.get().toString() + "\n");

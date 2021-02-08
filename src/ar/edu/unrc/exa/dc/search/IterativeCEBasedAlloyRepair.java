@@ -117,6 +117,7 @@ public class IterativeCEBasedAlloyRepair {
             arepairTimeCounter.clockStart();
             ARepairResult aRepairResult = runARepairWithCurrentConfig(current);
             arepairTimeCounter.clockEnd();
+            writeCandidateInfo(current, trustedTests, aRepairResult);
             logger.info("ARepair finished\n" + aRepairResult.toString());
             if (aRepairResult.equals(ARepairResult.ERROR)) {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());

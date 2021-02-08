@@ -1,6 +1,8 @@
 package ar.edu.unrc.exa.dc.util;
 
 import ar.edu.unrc.exa.dc.cegar.Report;
+import ar.edu.unrc.exa.dc.search.FixCandidate;
+import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 
 import java.io.File;
@@ -146,6 +148,56 @@ public final class Utils {
             throw new Error("Couldn't create report file (" + reportFilePath.toString() + ")");
         }
         Files.write(reportFilePath, report.toString().getBytes(), StandardOpenOption.APPEND);
+    }
+
+    private static final String CANDIDATE_REPORT_HEADER =
+                    "MODEL" + Report.SEPARATOR +
+                    "DEPTH" + Report.SEPARATOR +
+                    "CE" + Report.SEPARATOR +
+                    "TP" + Report.SEPARATOR +
+                    "UP" + Report.SEPARATOR +
+                    "TN" + Report.SEPARATOR +
+                    "UN" + Report.SEPARATOR +
+                    "AREPAIR STATUS" + "\n"
+            ;
+    public static void startCandidateInfoFile() throws IOException {
+        String candidateInfoFileRaw = "cegar_arepair.info";
+        Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
+        File candidateInfoFile = candidateInfoFilePath.toFile();
+        if (candidateInfoFile.exists() && !candidateInfoFile.delete())
+            throw new Error("Candidate info file (" + candidateInfoFilePath.toString() + ") exists but couldn't be deleted");
+        if (!candidateInfoFile.createNewFile()) {
+            throw new Error("Couldn't create candidate info file (" + candidateInfoFilePath.toString() + ")");
+        }
+        Files.write(candidateInfoFilePath, CANDIDATE_REPORT_HEADER.getBytes(), StandardOpenOption.APPEND);
+    }
+
+    public static void writeCandidateInfo(FixCandidate candidate, Collection<BeAFixTest> trustedTests, ARepair.ARepairResult aRepairResult) throws IOException {
+        String candidateInfoFileRaw = "cegar_arepair.info";
+        Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
+        File candidateInfoFile = candidateInfoFilePath.toFile();
+        if (!candidateInfoFile.exists())
+            throw new Error("Candidate info file (" + candidateInfoFilePath.toString() + ") doesn't exists");
+        String candidateInfo =
+                        candidate.modelName() + Report.SEPARATOR +
+                        candidate.depth() + Report.SEPARATOR +
+                        (countTests(trustedTests, BeAFixTest.TestType.COUNTEREXAMPLE) + countTests(candidate.untrustedTests(), BeAFixTest.TestType.COUNTEREXAMPLE)) + Report.SEPARATOR +
+                        countTests(trustedTests, BeAFixTest.TestType.TRUSTED_POSITIVE) + Report.SEPARATOR +
+                        countTests(candidate.untrustedTests(), BeAFixTest.TestType.UNTRUSTED_POSITIVE) + Report.SEPARATOR +
+                        countTests(trustedTests, BeAFixTest.TestType.TRUSTED_NEGATIVE) + Report.SEPARATOR +
+                        countTests(candidate.untrustedTests(), BeAFixTest.TestType.UNTRUSTED_NEGATIVE) + Report.SEPARATOR +
+                        aRepairResult.name()  + "\n"
+                ;
+        Files.write(candidateInfoFilePath, candidateInfo.getBytes(), StandardOpenOption.APPEND);
+    }
+
+    private static int countTests(Collection<BeAFixTest> tests, BeAFixTest.TestType testType) {
+        int count = 0;
+        for (BeAFixTest test : tests) {
+            if (test.testType().equals(testType))
+                count++;
+        }
+        return count;
     }
 
     public static boolean validateTestsFile(Path tests) {
