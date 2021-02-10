@@ -60,6 +60,10 @@ public class CEGARProperties {
         CEGAR_SEARCH {
             @Override
             public String getKey() { return "cegar.search"; }
+        },
+        CEGAR_ENABLE_NOFACTS_GENERATION {
+            @Override
+            public String getKey() { return "cegar.allownofacts"; }
         }
         ;
         public abstract String getKey();
@@ -124,7 +128,7 @@ public class CEGARProperties {
     public boolean getBooleanArgument(ConfigKey key) {
         if (!isBooleanKey(key))
             throw new IllegalStateException("Config key is not boolean " + key.toString());
-        if (!isDefined(key))
+        if (isUndefined(key))
             return false;
         String propValue = prop.getProperty(key.getKey());
         if (propValue == null)
@@ -135,7 +139,7 @@ public class CEGARProperties {
     public int getIntArgument(ConfigKey key) {
         if (!isIntKey(key))
             throw new IllegalStateException("Config key is not int " + key.toString());
-        if (!isDefined(key))
+        if (isUndefined(key))
             return 0;
         String propValue = prop.getProperty(key.getKey());
         if (propValue == null)
@@ -146,18 +150,19 @@ public class CEGARProperties {
     public String getStringArgument(ConfigKey key) {
         if (!isStringKey(key))
             throw new IllegalStateException("Config key is not String " + key.toString());
-        if (!isDefined(key))
+        if (isUndefined(key))
             return "";
         return prop.getProperty(key.getKey(), "");
     }
 
-    private boolean isDefined(ConfigKey key) {
-        return prop.containsKey(key.getKey());
+    private boolean isUndefined(ConfigKey key) {
+        return !prop.containsKey(key.getKey());
     }
 
 
     private boolean isBooleanKey(ConfigKey key) {
         switch (key) {
+            case CEGAR_ENABLE_NOFACTS_GENERATION:
             case CEGAR_PRIORIZATION:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case BEAFIX_INSTANCE_TESTS: return true;

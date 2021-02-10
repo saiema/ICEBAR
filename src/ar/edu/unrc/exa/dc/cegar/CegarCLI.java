@@ -17,7 +17,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class CegarCLI {
 
-    private static final String VERSION = "1.3.0";
+    private static final String VERSION = "1.4.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -72,6 +72,10 @@ public class CegarCLI {
             } else {
                 throw new IllegalArgumentException("Invalid configuration value for " + CEGARProperties.ConfigKey.CEGAR_SEARCH.getKey() + " (" + search + ")");
             }
+        }
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_ENABLE_NOFACTS_GENERATION)) {
+            boolean allowNoFacts = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_ENABLE_NOFACTS_GENERATION);
+            iterativeCEBasedAlloyRepair.allowNoFacts(allowNoFacts);
         }
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
@@ -158,9 +162,10 @@ public class CegarCLI {
     }
 
     private static BeAFix beafix() {
-        BeAFix beAFix = new BeAFix().setBeAFixJar(Paths.get(CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.BEAFIX_JAR)))
-                .setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath())
-                .createOutDirIfNonExistent(true);
+        BeAFix beAFix = new BeAFix();
+        beAFix.setBeAFixJar(Paths.get(CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.BEAFIX_JAR)));
+        beAFix.setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath());
+        beAFix.createOutDirIfNonExistent(true);
         if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS))
             beAFix.instanceTests(CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS));
         if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_TESTS))
@@ -192,9 +197,11 @@ public class CegarCLI {
         classpath.add(aRepairJar);
         classpath.add(aRepairAParserJar);
         classpath.add(aRepairAlloyJar);
-        return new ARepair().setWorkingDirectory(aRepairRoot)
-                .setClasspath(classpath)
-                .setSatSolversPath(aRepairSatSolvers);
+        ARepair aRepair = new ARepair();
+        aRepair.setWorkingDirectory(aRepairRoot);
+        aRepair.setClasspath(classpath);
+        aRepair.setSatSolversPath(aRepairSatSolvers);
+        return aRepair;
     }
 
 }

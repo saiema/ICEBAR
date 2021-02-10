@@ -10,7 +10,7 @@ public class FixCandidate {
 
     private final Path modelToRepair;
     private final int depth;
-    private final Collection<BeAFixTest> untrustedTests; //only untrusted testsEl
+    private final Collection<BeAFixTest> untrustedTests; //only untrusted tests
     private int repairedProperties = 0;
 
     public FixCandidate(Path modelToRepair, int depth, Collection<BeAFixTest> untrustedTests) {

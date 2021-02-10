@@ -149,93 +149,74 @@ public final class ARepair {
         return executeARepair();
     }
 
-    public ARepair setMemory(int memory) {
+    public void setMemory(int memory) {
         if (memory <= 0)
             throw new IllegalArgumentException("non positive memory (" + memory + ")");
         this.memory = memory;
-        return this;
     }
 
-    public ARepair setSatSolversPath(Path satSolversPath) {
+    public void setSatSolversPath(Path satSolversPath) {
         this.satSolvers = satSolversPath;
-        return this;
     }
 
-    public ARepair setClasspath(List<Path> classpath) {
+    public void setClasspath(List<Path> classpath) {
         this.classpath = classpath;
-        return this;
     }
 
-    public ARepair addToClasspath(Path path) {
+    public void addToClasspath(Path path) {
         this.classpath.add(path);
-        return this;
     }
 
-    public ARepair modelToRepair(Path modelToRepair) {
+    public void modelToRepair(Path modelToRepair) {
         this.modelToRepair = modelToRepair;
-        return this;
     }
 
-    public ARepair testsPath(Path testsPath) {
+    public void testsPath(Path testsPath) {
         this.testsPath = testsPath;
-        return this;
     }
 
-    public ARepair setWorkingDirectory(Path workingDirectory) {
+    public void setWorkingDirectory(Path workingDirectory) {
         this.workingDirectory = workingDirectory;
-        return this;
     }
 
-    public ARepair searchStrategyToUse(SearchStrategy searchStrategy) {
+    public void searchStrategyToUse(SearchStrategy searchStrategy) {
         if (searchStrategy == null)
             throw new IllegalArgumentException("null search strategy");
         this.searchStrategy = searchStrategy;
-        return this;
     }
 
-    public ARepair setScope(int scope) {
+    public void setScope(int scope) {
         if (scope <= 0)
             throw new IllegalArgumentException("non positive scope (" + scope + ")");
         this.scope = scope;
-        return this;
     }
 
-    public ARepair setMinimumCost(int minimumCost) {
+    public void setMinimumCost(int minimumCost) {
         if (minimumCost <= 0)
             throw new IllegalArgumentException("non positive minimum cost (" + minimumCost + ")");
         this.minimumCost = minimumCost;
-        return this;
     }
 
-    public ARepair enableCache() {
-        this.enableCache = true;
-        return this;
+    public void cache(boolean enableCache) {
+        this.enableCache = enableCache;
     }
 
-    public ARepair disableCache() {
-        this.enableCache = false;
-        return this;
-    }
-
-    public ARepair setMaxTryPerHole(int maxTryPerHole) {
+    public void setMaxTryPerHole(int maxTryPerHole) {
         if (maxTryPerHole <= 0)
             throw new IllegalArgumentException("non positive max try per hole (" + maxTryPerHole + ")");
         this.maxTryPerHole = maxTryPerHole;
-        return this;
     }
 
-    public ARepair setPartitionNum(int partitionNum) {
+    public void setPartitionNum(int partitionNum) {
         if (partitionNum <= 0)
             throw new IllegalArgumentException("non positive partition number (" + partitionNum + ")");
         this.partitionNum = partitionNum;
-        return this;
     }
 
-    public ARepair setMaxTryPerDepth(int maxTryPerDepth) {
+    public void setMaxTryPerDepth(int maxTryPerDepth) {
         if (maxTryPerDepth <= 0)
             throw new IllegalArgumentException("non positive max try per depth (" + maxTryPerDepth + ")");
         this.maxTryPerDepth = maxTryPerDepth;
-        return this;
     }
 
     public boolean cleanFixDirectory() {

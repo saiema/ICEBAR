@@ -14,10 +14,7 @@ public class CandidateSpace {
         return new CandidateSpace(false, false);
     }
 
-    public static CandidateSpace priorityStack() {
-        return new CandidateSpace(true, false);
-
-    }
+    public static CandidateSpace priorityStack() { return new CandidateSpace(true, false); }
 
     public static CandidateSpace normalQueue() {
         return new CandidateSpace(false, true);

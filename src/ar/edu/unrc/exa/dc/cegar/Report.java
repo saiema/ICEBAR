@@ -14,14 +14,6 @@ public class Report {
             }
 
         },
-        LAPS_REACHED {
-
-            @Override
-            public String toString() {
-                return "Laps-OUT";
-            }
-
-        },
         AREPAIR_FAILED {
 
             @Override
@@ -61,14 +53,12 @@ public class Report {
 
     private final Status status;
     private final int tests;
-    private final FixCandidate candidate;
     private final int laps;
     private final TimeCounter beafixTimer;
     private final TimeCounter arepairTimer;
 
     private Report(Status status, FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
         this.status = status;
-        this.candidate = candidate;
         this.laps = candidate.depth();
         this.tests = tests;
         this.beafixTimer = beafixTimer;
@@ -77,7 +67,6 @@ public class Report {
 
     private Report(Status status, int laps, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
         this.status = status;
-        this.candidate = null;
         this.laps = laps;
         this.tests = tests;
         this.beafixTimer = beafixTimer;
@@ -86,10 +75,6 @@ public class Report {
 
     public static Report repairFound(FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
         return new Report(Status.REPAIR_FOUND, candidate, tests, beafixTimer, arepairTimer);
-    }
-
-    public static Report lapsReached(FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
-        return new Report(Status.LAPS_REACHED, candidate, tests, beafixTimer, arepairTimer);
     }
 
     public static Report arepairFailed(FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {

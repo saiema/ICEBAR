@@ -57,16 +57,20 @@ public final class Test {
         classpath.add(aRepairJar);
         classpath.add(aRepairAParserJar);
         classpath.add(aRepairAlloyJar);
-        return new ARepair().setWorkingDirectory(aRepairRoot)
-                .setClasspath(classpath)
-                .setSatSolversPath(aRepairSatSolvers)
-                .testsPath(tests);
+        ARepair aRepair = new ARepair();
+        aRepair.setWorkingDirectory(aRepairRoot);
+        aRepair.setClasspath(classpath);
+        aRepair.setSatSolversPath(aRepairSatSolvers);
+        aRepair.testsPath(tests);
+        return aRepair;
     }
 
     private static BeAFix beafix() {
-        return new BeAFix().setBeAFixJar(BEAFIX_JAR)
-                .setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath())
-                .createOutDirIfNonExistent(true);
+        BeAFix beAFix = new BeAFix();
+        beAFix.setBeAFixJar(BEAFIX_JAR);
+        beAFix.setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath());
+        beAFix.createOutDirIfNonExistent(true);
+        return beAFix;
     }
 
     private static void testARepair() {
@@ -80,13 +84,12 @@ public final class Test {
         classpath.add(aRepairAParserJar);
         classpath.add(aRepairAlloyJar);
         ARepair aRepair = new ARepair();
-        ARepairResult aRepairResult = aRepair
-                .setWorkingDirectory(aRepairRoot)
-                .setClasspath(classpath)
-                .setSatSolversPath(aRepairSatSolvers)
-                .modelToRepair(model)
-                .testsPath(tests)
-                .run();
+        aRepair.setWorkingDirectory(aRepairRoot);
+        aRepair.setClasspath(classpath);
+        aRepair.setSatSolversPath(aRepairSatSolvers);
+        aRepair.modelToRepair(model);
+        aRepair.testsPath(tests);
+        ARepairResult aRepairResult = aRepair.run();
         System.out.println(aRepairResult.toString());
     }
 
@@ -97,12 +100,12 @@ public final class Test {
         }
         Utils.mergeFiles(model, oracle, modelWithOracle);
         BeAFix beAFix = new BeAFix();
-        BeAFixResult beAFixResult = beAFix
-                .setBeAFixJar(BEAFIX_JAR)
-                .pathToModel(modelWithOracle)
-                .setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath())
-                .createOutDirIfNonExistent(true)
-                .runTestGeneration();
+        beAFix.setBeAFixJar(BEAFIX_JAR);
+        beAFix.pathToModel(modelWithOracle);
+        beAFix.setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath());
+        beAFix.createOutDirIfNonExistent(true);
+        beAFix.runTestGeneration();
+        BeAFixResult beAFixResult = beAFix.runTestGeneration();
         System.out.println(beAFixResult.toString());
     }
 

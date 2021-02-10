@@ -25,6 +25,7 @@ public final class BeAFix {
     public static final Path MODEL_OVERRIDES_FOLDER_DEFAULT = null;
     public static final boolean INSTANCE_TESTS_DEFAULT = true;
     public static final Path BUGGY_FUNCTIONS_DEFAULT = null;
+    public static final boolean NOFACTS_DEFAULT = false;
 
 
     private Path beAFixJar;
@@ -40,92 +41,84 @@ public final class BeAFix {
     private Path modelOverridesFolder = MODEL_OVERRIDES_FOLDER_DEFAULT;
     private boolean instanceTests = INSTANCE_TESTS_DEFAULT;
     private Path buggyFunctions = BUGGY_FUNCTIONS_DEFAULT;
+    private boolean noFactsGeneration = NOFACTS_DEFAULT;
 
     public BeAFixResult runTestGeneration() {
-        if (!readyToRun())
+        if (invalidPaths())
             throw new IllegalArgumentException("Missing or invalid path related arguments\n" + pathsInformation());
         return executeBeAFix();
     }
 
     public BeAFixResult runModelCheck() {
-        if (!readyToRun())
+        if (invalidPaths())
             throw new IllegalArgumentException("Missing or invalid path related arguments\n" + pathsInformation());
         return executeBeAFixCheck();
     }
 
-    public BeAFix setBeAFixJar(Path beAFixJar) {
+    public void setBeAFixJar(Path beAFixJar) {
         this.beAFixJar = beAFixJar;
-        return this;
     }
 
-    public BeAFix pathToModel(Path pathToModel) {
+    public void pathToModel(Path pathToModel) {
         this.pathToModel = pathToModel;
-        return this;
     }
 
-    public BeAFix setOutputDir(Path outputDirectory) {
+    public void setOutputDir(Path outputDirectory) {
         this.outputDirectory = outputDirectory;
-        return this;
     }
 
-    public BeAFix createOutDirIfNonExistent(boolean createOutDirIfNonExistent) {
+    public void createOutDirIfNonExistent(boolean createOutDirIfNonExistent) {
         this.createOutDirIfNonExistent = createOutDirIfNonExistent;
-        return this;
     }
 
-    public BeAFix testsToGenerate(int testsToGenerate) {
+    public void testsToGenerate(int testsToGenerate) {
         if (testsToGenerate < 1)
             throw new IllegalArgumentException("Test to generate less than 1 (" + testsToGenerate + ")");
         this.testsToGenerate = testsToGenerate;
-        return this;
     }
 
-    public BeAFix aRepairCompatibility(boolean aRepairCompatibility) {
+    public void aRepairCompatibility(boolean aRepairCompatibility) {
         this.aRepairCompatibility = aRepairCompatibility;
-        return this;
     }
 
-    public BeAFix aRepairCompatibilityRelaxedMode(boolean aRepairCompatibilityRelaxedMode) {
+    public void aRepairCompatibilityRelaxedMode(boolean aRepairCompatibilityRelaxedMode) {
         this.aRepairCompatibilityRelaxedMode = aRepairCompatibilityRelaxedMode;
-        return this;
     }
 
-    public BeAFix baseTestsName(String baseTestsName) {
+    public void baseTestsName(String baseTestsName) {
         if (baseTestsName == null || baseTestsName.trim().isEmpty())
             throw new IllegalArgumentException("null or empty base name for tests");
         this.baseTestsName = baseTestsName;
-        return this;
     }
 
-    public BeAFix testsStartingIndex(int testsStartingIndex) {
+    public void testsStartingIndex(int testsStartingIndex) {
         if (testsStartingIndex < 0)
             throw new IllegalArgumentException("negative value for tests starting index (" + testsStartingIndex + ")");
         this.testsStartingIndex = testsStartingIndex;
-        return this;
     }
 
     public int testsStartingIndex() {
         return testsStartingIndex;
     }
 
-    public BeAFix modelOverrides(boolean modelOverrides) {
+    public void modelOverrides(boolean modelOverrides) {
         this.modelOverrides = modelOverrides;
-        return this;
     }
 
-    public BeAFix modelOverridesFolder(Path modelOverridesFolder) {
+    public void modelOverridesFolder(Path modelOverridesFolder) {
         this.modelOverridesFolder = modelOverridesFolder;
-        return this;
     }
 
-    public BeAFix instanceTests(boolean instanceTests) {
+    public void instanceTests(boolean instanceTests) {
         this.instanceTests = instanceTests;
-        return this;
     }
 
-    public BeAFix buggyFunctions(Path buggyFunctions) {
+    public void buggyFunctions(Path buggyFunctions) {
         this.buggyFunctions = buggyFunctions;
-        return this;
+    }
+
+    public void noFactsGeneration(boolean noFactsGeneration) {
+        this.noFactsGeneration = noFactsGeneration;
     }
 
     public boolean cleanOutputDir() throws IOException {
@@ -215,24 +208,24 @@ public final class BeAFix {
         return testsResults;
     }
 
-    private boolean readyToRun() {
+    private boolean invalidPaths() {
         if (outputDirectory != null && !outputDirectory.toFile().exists() && createOutDirIfNonExistent) {
             try {
                 Files.createDirectory(outputDirectory);
             } catch (IOException e) {
                 e.printStackTrace();
-                return false;
+                return true;
             }
         }
         if (!isValidPath(beAFixJar, Utils.PathCheck.JAR))
-            return false;
+            return true;
         if (!isValidPath(pathToModel, Utils.PathCheck.ALS))
-            return false;
+            return true;
         if (outputDirectory != null && !isValidPath(outputDirectory, Utils.PathCheck.DIR))
-            return false;
+            return true;
         if (modelOverridesFolder != null && !isValidPath(modelOverridesFolder, Utils.PathCheck.DIR))
-            return false;
-        return buggyFunctions == null || isValidPath(buggyFunctions, Utils.PathCheck.FILE);
+            return true;
+        return buggyFunctions != null && !isValidPath(buggyFunctions, Utils.PathCheck.FILE);
     }
 
     private String pathsInformation() {
@@ -246,7 +239,7 @@ public final class BeAFix {
     }
 
     private String[] getBeAFixCommand() {
-        String[] args = new String[25];
+        String[] args = new String[27];
         args[0] = "java";
         args[1] = "-jar"; args[2] = beAFixJar.toString();
         args[3] = pathToModel.toString();
@@ -261,6 +254,7 @@ public final class BeAFix {
         args[19] = "--mofolder"; args[20] = (modelOverridesFolder == null?"\" \"":modelOverridesFolder.toString());
         args[21] = "--itests"; args[22] = Boolean.toString(instanceTests);
         args[23] = "--buggyfuncs"; args[24] = (buggyFunctions == null?"\" \"":buggyFunctions.toString());
+        args[25] = "--nofacts"; args[26] = Boolean.toString(noFactsGeneration);
         return args;
     }
 
