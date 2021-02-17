@@ -17,7 +17,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class CegarCLI {
 
-    private static final String VERSION = "1.5.0";
+    private static final String VERSION = "1.5.1";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -80,6 +80,10 @@ public class CegarCLI {
         if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_GLOBAL_TRUSTED_TESTS)) {
             boolean globalTrustedTests = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_GLOBAL_TRUSTED_TESTS);
             iterativeCEBasedAlloyRepair.globalTrustedTests(globalTrustedTests);
+        }
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_ENABLE_FORCE_ASSERTION_TESTS)) {
+            boolean forceAssertionsTests = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_ENABLE_FORCE_ASSERTION_TESTS);
+            iterativeCEBasedAlloyRepair.forceAssertionGeneration(forceAssertionsTests);
         }
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
