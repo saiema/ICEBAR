@@ -25,6 +25,9 @@ public final class BeAFixResult {
         private String command;
         private String predicate;
         private int index;
+        private static final int NOT_RELATED = -1;
+        private int relatedTest;
+        private BeAFixTest relatedBeAFixTest;
 
         public BeAFixTest(String test, TestType testType) {
             if (test == null || test.trim().isEmpty())
@@ -49,8 +52,29 @@ public final class BeAFixResult {
 
         public int getIndex() { return index; }
 
+        public boolean isRelated() { return relatedTest != NOT_RELATED; }
+
+        public int relatedTestID() { return relatedTest; }
+
+        public BeAFixTest relatedBeAFixTest() {
+            if (!isRelated())
+                throw new IllegalStateException("This test is not related to another");
+            return relatedBeAFixTest;
+        }
+
+        public void relatedBeAFixTest(BeAFixTest relatedBeAFixTest) {
+            if (!isRelated())
+                throw new IllegalStateException("This test is not related to anyone");
+            if (!relatedBeAFixTest.isRelated())
+                throw new IllegalArgumentException("Argument test is not related to anyone");
+            if (relatedBeAFixTest.relatedTestID() != relatedTestID())
+                throw new IllegalArgumentException("This test is related to (" + relatedTestID() + ") but argument test is related to (" + relatedBeAFixTest.relatedTestID() + ")");
+            this.relatedBeAFixTest = relatedBeAFixTest;
+        }
+
         private static final String PREDICATE_START_DELIMITER = "--TEST START\n";
         private static final String PREDICATE_END_DELIMITER = "--TEST FINISH\n";
+        private static final String RELATED_TO_KEYWORD = "relTo_";
         private void parseTest(final String test) {
             this.predicate = Utils.getBetweenStrings(test, PREDICATE_START_DELIMITER, PREDICATE_END_DELIMITER);
             if (predicate.isEmpty())
@@ -63,6 +87,14 @@ public final class BeAFixResult {
             if (commandSegments.length != 4)
                 throw new IllegalArgumentException("Command was expected to have 4 words, but got " + commandSegments.length + " instead ( " + Arrays.toString(commandSegments) + ")");
             String commandsPredicate = commandSegments[1].trim();
+            if (commandsPredicate.contains(RELATED_TO_KEYWORD)) {
+                String[] commandPredicateSegments = commandsPredicate.split(RELATED_TO_KEYWORD);
+                commandsPredicate = commandPredicateSegments[0];
+                String relatedToRaw = commandPredicateSegments[1].replaceAll("\\D+", "");
+                this.relatedTest = Integer.parseInt(relatedToRaw);
+            } else {
+                this.relatedTest = NOT_RELATED;
+            }
             String indexRaw = commandsPredicate.replaceAll("\\D+","");
             this.index = Integer.parseInt(indexRaw);
         }
@@ -123,13 +155,14 @@ public final class BeAFixResult {
     private String message;
     private boolean check;
 
-    private Collection<BeAFixTest> ceTests;
-    private Collection<BeAFixTest> uptTests;
-    private Collection<BeAFixTest> untTests;
-    private Collection<BeAFixTest> tptTests;
-    private Collection<BeAFixTest> tntTests;
+    private List<BeAFixTest> ceTests;
+    private List<BeAFixTest> uptTests;
+    private List<BeAFixTest> untTests;
+    private List<BeAFixTest> tptTests;
+    private List<BeAFixTest> tntTests;
     private int maxIndex = -1;
     private ResultType resultType;
+    private int generatedTests = 0;
 
     //only for checks
     private int passingProperties = -1;
@@ -162,6 +195,20 @@ public final class BeAFixResult {
         return parseCheckFile(checkFile);
     }
 
+    public void mergeWith(BeAFixResult other) throws IOException {
+        if (other.getMaxIndex() < this.getMaxIndex())
+            other.mergeWith(this);
+        if (generatedTests() > 0 && other.generatedTests() > 0 && this.getMaxIndex() == other.getMaxIndex())
+            throw new IllegalArgumentException("Test index overlap");
+        getCounterexampleTests().addAll(other.getCounterexampleTests());
+        getTrustedPositiveTests().addAll(other.getTrustedPositiveTests());
+        getTrustedNegativeTests().addAll(other.getTrustedNegativeTests());
+        getUntrustedPositiveTests().addAll(other.getUntrustedPositiveTests());
+        getUntrustedNegativeTests().addAll(other.getUntrustedNegativeTests());
+        maxIndex = Math.max(maxIndex, other.getMaxIndex());
+        generatedTests += other.generatedTests;
+    }
+
     public boolean isCheck() { return this.resultType.equals(ResultType.CHECK); }
 
     public boolean checkResult() {
@@ -185,6 +232,10 @@ public final class BeAFixResult {
 
     public int getMaxIndex() {
         return maxIndex;
+    }
+
+    public int generatedTests() {
+        return generatedTests;
     }
 
     int getMaxIndexFrom(Collection<BeAFixTest> tests) {
@@ -214,45 +265,100 @@ public final class BeAFixResult {
 
     public void trustedNegativeTests(Path tntFile) {this.tntFile = tntFile;}
 
-    public Collection<BeAFixTest> getCounterexampleTests() throws IOException {
+    public List<BeAFixTest> getCounterexampleTests() throws IOException {
         if (ceTests == null)
             ceTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(cetFile, TestType.COUNTEREXAMPLE);
         maxIndex = Math.max(maxIndex, getMaxIndexFrom(ceTests));
         return ceTests;
     }
 
-    public Collection<BeAFixTest> getUntrustedPositiveTests() throws IOException {
+    public List<BeAFixTest> getUntrustedPositiveTests() throws IOException {
         if (uptTests == null)
             uptTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(uptFile, TestType.UNTRUSTED_POSITIVE);
         maxIndex = Math.max(maxIndex, getMaxIndexFrom(uptTests));
         return uptTests;
     }
 
-    public Collection<BeAFixTest> getUntrustedNegativeTests() throws IOException {
+    public List<BeAFixTest> getUntrustedNegativeTests() throws IOException {
         if (untTests == null)
             untTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(untFile, TestType.UNTRUSTED_NEGATIVE);
         maxIndex = Math.max(maxIndex, getMaxIndexFrom(untTests));
         return untTests;
     }
 
-    public Collection<BeAFixTest> getTrustedPositiveTests() throws IOException {
+    public List<BeAFixTest> getTrustedPositiveTests() throws IOException {
         if (tptTests == null)
             tptTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(tptFile, TestType.TRUSTED_POSITIVE);
         maxIndex = Math.max(maxIndex, getMaxIndexFrom(tptTests));
         return tptTests;
     }
 
-    public Collection<BeAFixTest> getTrustedNegativeTests() throws IOException {
+    public List<BeAFixTest> getTrustedNegativeTests() throws IOException {
         if (tntTests == null)
             tntTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(tntFile, TestType.TRUSTED_NEGATIVE);
         maxIndex = Math.max(maxIndex, getMaxIndexFrom(tntTests));
         return tntTests;
     }
 
-    static Collection<BeAFixTest> parseTestsFrom(Path file, TestType testType) throws IOException {
+    public void parseAllTests() throws IOException {
+        if (!isCheck() && !error()) {
+            List<BeAFixTest> ceTests = new LinkedList<>(getCounterexampleTests());
+            List<BeAFixTest> upTests = new LinkedList<>(getUntrustedPositiveTests());
+            List<BeAFixTest> unTests = new LinkedList<>(getUntrustedNegativeTests());
+            List<BeAFixTest> tpTests = new LinkedList<>(getTrustedPositiveTests());
+            List<BeAFixTest> tnTests = new LinkedList<>(getTrustedNegativeTests());
+            generatedTests = ceTests.size() + upTests.size() + unTests.size() + tpTests.size() + tnTests.size();
+            mergeRelated(ceTests, tnTests, tpTests);
+            mergeRelated(upTests, unTests);
+        }
+    }
+
+    @SafeVarargs
+    private final void mergeRelated(List<BeAFixTest>... tests) {
+        if (tests == null || tests.length == 0)
+            throw new IllegalArgumentException("null or empty tests");
+        boolean merged = true;
+        while (merged) {
+            merged = false;
+            for (int t = 0; t < tests[0].size(); t++) {
+                BeAFixTest currentTest = tests[0].get(t);
+                if (!currentTest.isRelated())
+                    continue;
+                if (currentTest.relatedBeAFixTest() != null)
+                    continue;
+                for (List<BeAFixTest> otherTests : tests) {
+                    Optional<BeAFixTest> relatedTest = searchAndRemoveRelatedTest(currentTest, otherTests);
+                    if (relatedTest.isPresent()) {
+                        currentTest.relatedBeAFixTest(relatedTest.get());
+                        merged = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private Optional<BeAFixTest> searchAndRemoveRelatedTest(BeAFixTest test, List<BeAFixTest> from) {
+        if (!test.isRelated())
+            throw new IllegalArgumentException("test is not related to anyone");
+        for (int t = 0; t < from.size(); t++) {
+            BeAFixTest other = from.get(t);
+            if (!other.isRelated())
+                continue;
+            if (test.relatedTestID() != other.relatedTestID())
+                continue;
+            if (test.command().compareTo(other.command()) == 0)
+                continue;
+            from.remove(t);
+            return Optional.of(other);
+        }
+        return Optional.empty();
+    }
+
+    static List<BeAFixTest> parseTestsFrom(Path file, TestType testType) throws IOException {
         if (!validateTestsFile(file))
             throw new IllegalArgumentException("Invalid tests file: " + file.toString());
-        Collection<BeAFixTest> tests = new LinkedList<>();
+        List<BeAFixTest> tests = new LinkedList<>();
         String[] rawTests = Files.lines(file).collect(Collectors.joining("\n")).split(TEST_SEPARATOR);
         for (String rawTest : rawTests) {
             if (rawTest.trim().isEmpty())

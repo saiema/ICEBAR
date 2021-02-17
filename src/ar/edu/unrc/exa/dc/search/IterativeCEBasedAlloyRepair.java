@@ -56,8 +56,14 @@ public class IterativeCEBasedAlloyRepair {
         this.search = search;
     }
 
-    private boolean allowNoFacts = false;
-    public void allowNoFacts(boolean allowNoFacts) { this.allowNoFacts = allowNoFacts; }
+    private boolean allowFactsRelaxation = false;
+    public void allowFactsRelaxation(boolean allowFactsRelaxation) { this.allowFactsRelaxation = allowFactsRelaxation; }
+
+    private boolean globalTrustedTests = true;
+    public void globalTrustedTests(boolean globalTrustedTests) { this.globalTrustedTests = globalTrustedTests; }
+
+    private boolean forceAssertionGeneration = false;
+    public void forceAssertionGeneration(boolean forceAssertionGeneration) { this.forceAssertionGeneration = forceAssertionGeneration; }
 
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
@@ -85,14 +91,13 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     private InitialTests initialTests;
-    public void setInitialTests(InitialTests initialTests) {
-        this.initialTests = initialTests;
-    }
+    public void setInitialTests(InitialTests initialTests) { this.initialTests = initialTests; }
 
     private boolean usePriorization = false;
     public void usePriorization(boolean usePriorization) {
         this.usePriorization = usePriorization;
     }
+
 
     public Optional<FixCandidate> repair() throws IOException {
         //watches for different time process recording
@@ -124,70 +129,89 @@ public class IterativeCEBasedAlloyRepair {
             logger.info("ARepair finished\n" + aRepairResult.toString());
             if (aRepairResult.equals(ARepairResult.ERROR)) {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
-                Report report = Report.arepairFailed(current, tests, arepairTimeCounter, beafixTimeCounter);
+                Report report = Report.arepairFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), arepairTimeCounter, beafixTimeCounter);
                 writeReport(report);
                 return Optional.empty();
             }
             if (aRepairResult.hasRepair() || aRepairResult.equals(ARepairResult.NO_TESTS)) {
-                FixCandidate repairCandidate = aRepairResult.equals(ARepairResult.NO_TESTS)?current:new FixCandidate(aRepairResult.repair(), current.depth(), null);
+                boolean fromOriginal = aRepairResult.equals(ARepairResult.NO_TESTS);
+                FixCandidate repairCandidate = fromOriginal?current:new FixCandidate(aRepairResult.repair(), current.depth(), null);
                 logger.info("Validating current candidate with BeAFix");
                 beafixTimeCounter.clockStart();
-                BeAFixResult beAFixCheckResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.CHECK, false);
+                BeAFixResult beAFixCheckResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.CHECK, false, false);
                 beafixTimeCounter.clockEnd();
                 logger.info("BeAFix check finished\n" + beAFixCheckResult.toString());
                 int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
                 if (beAFixCheckResult.error()) {
                     logger.severe("BeAFix check ended in error, ending search");
-                    Report report = Report.beafixCheckFailed(current, tests, beafixTimeCounter, arepairTimeCounter);
+                    Report report = Report.beafixCheckFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), beafixTimeCounter, arepairTimeCounter);
                     writeReport(report);
                     return Optional.empty();
                 } else if (beAFixCheckResult.checkResult()) {
                     logger.info("BeAFix validated the repair, fix found");
-                    Report report = Report.repairFound(current, tests, beafixTimeCounter, arepairTimeCounter);
+                    Report report = Report.repairFound(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), beafixTimeCounter, arepairTimeCounter);
                     writeReport(report);
                     return Optional.of(repairCandidate);
                 } else if (current.depth() < laps) {
                     logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
                     beafixTimeCounter.clockStart();
-                    BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false);
+                    BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);
                     beafixTimeCounter.clockEnd();
                     if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                         return Optional.empty();
+                    beAFixResult.parseAllTests();
                     boolean noUntrustedTestsGenerated = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
                     boolean noTrustedTestsGenerated = beAFixResult.getTrustedPositiveTests().isEmpty() && beAFixResult.getTrustedNegativeTests().isEmpty() && beAFixResult.getCounterexampleTests().isEmpty();
-                    if (allowNoFacts && noUntrustedTestsGenerated && noTrustedTestsGenerated && trustedTests.isEmpty() && current.untrustedTests().isEmpty() && searchSpace.isEmpty()) {
-                        logger.info("No tests available, generating with no facts...");
+                    if (allowFactsRelaxation && noUntrustedTestsGenerated && noTrustedTestsGenerated && trustedTests.isEmpty() && current.untrustedTests().isEmpty() && searchSpace.isEmpty()) {
+                        logger.info("No tests available, generating with relaxed facts...");
                         beafixTimeCounter.clockStart();
-                        beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, true);
+                        beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, true, false);
                         beafixTimeCounter.clockEnd();
                         if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                             return Optional.empty();
+                        beAFixResult.parseAllTests();
+                        if (forceAssertionGeneration) {
+                            logger.info("Generating with assertion forced test generation...");
+                            beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
+                            beafixTimeCounter.clockStart();
+                            BeAFixResult beAFixResult_forcedAssertionTestGeneration = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, true);
+                            beafixTimeCounter.clockEnd();
+                            if (checkIfInvalidAndReportBeAFixResults(beAFixResult_forcedAssertionTestGeneration, current, beafixTimeCounter, arepairTimeCounter))
+                                return Optional.empty();
+                            beAFixResult.mergeWith(beAFixResult_forcedAssertionTestGeneration);
+                        }
                     }
                     boolean trustedTestsAdded;
                     int newDepth = current.depth() + 1;
-                    trustedTestsAdded = trustedTests.addAll(beAFixResult.getCounterexampleTests());
-                    trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
-                    trustedTestsAdded |= trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
+                    Set<BeAFixTest> trustedTests = new HashSet<>();
+                    trustedTests.addAll(beAFixResult.getCounterexampleTests());
+                    trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
+                    trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
+                    if (globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty())) {
+                        trustedTestsAdded = this.trustedTests.addAll(trustedTests);
+                    } else { //local trusted tests except from original
+                        trustedTestsAdded = !trustedTests.isEmpty();
+                    }
                     for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
-                        Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
+                        Set<BeAFixTest> newTests = new HashSet<>(current.untrustedTests());
                         newTests.add(upTest);
-                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
+                        FixCandidate newCandidateFromUntrustedTest = globalTrustedTests?new FixCandidate(modelToRepair, newDepth, newTests):new FixCandidate(modelToRepair, newDepth, newTests, trustedTests);
                         newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
                     for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
-                        Collection<BeAFixTest> newTests = new LinkedList<>(current.untrustedTests());
+                        Set<BeAFixTest> newTests = new HashSet<>(current.untrustedTests());
                         newTests.add(unTest);
-                        FixCandidate newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
+                        FixCandidate newCandidateFromUntrustedTest = globalTrustedTests?new FixCandidate(modelToRepair, newDepth, newTests):new FixCandidate(modelToRepair, newDepth, newTests, trustedTests);
                         newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
                     if (noUntrustedTestsGenerated && trustedTestsAdded) {
-                        FixCandidate onlyTrustedTestsCandidate = new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests());
+                        FixCandidate onlyTrustedTestsCandidate = globalTrustedTests?new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests()):new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests(), trustedTests);
                         onlyTrustedTestsCandidate.repairedProperties(repairedPropertiesForCurrent);
                         searchSpace.push(onlyTrustedTestsCandidate);
                     }
-                    tests = trustedTests.size() + beAFixResult.getUntrustedNegativeTests().size() + beAFixResult.getUntrustedPositiveTests().size();
+                    tests += beAFixResult.generatedTests();
                     logger.info("Total tests generated: " + tests);
                     beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
                 } else {
@@ -223,6 +247,7 @@ public class IterativeCEBasedAlloyRepair {
             logger.warning("There was a problem cleaning ARepair .hidden folder, will keep going (cross your fingers)");
         Collection<BeAFixTest> tests = new LinkedList<>(trustedTests);
         tests.addAll(candidate.untrustedTests());
+        tests.addAll(candidate.trustedTests());
         if (tests.isEmpty())
             return ARepairResult.NO_TESTS;
         Path testsPath = Paths.get(modelToRepair.toAbsolutePath().toString().replace(".als", "_tests.als"));
@@ -252,7 +277,7 @@ public class IterativeCEBasedAlloyRepair {
 
     private enum BeAFixMode {TESTS, CHECK}
 
-    private BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate, BeAFixMode mode, boolean noFacts) {
+    private BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate, BeAFixMode mode, boolean relaxedFacts, boolean forceAssertionGeneration) {
         try {
             if (!beAFix.cleanOutputDir()) {
                 return BeAFixResult.error("Couldn't delete BeAFix output directory");
@@ -277,7 +302,8 @@ public class IterativeCEBasedAlloyRepair {
         }
         BeAFixResult beAFixResult = null;
         beAFix.pathToModel(modelToCheckWithOraclePath);
-        beAFix.noFactsGeneration(noFacts);
+        beAFix.factsRelaxationGeneration(relaxedFacts);
+        beAFix.forceAssertionTestsGeneration(forceAssertionGeneration);
         switch (mode) {
             case TESTS: {
                 beAFixResult = beAFix.runTestGeneration();

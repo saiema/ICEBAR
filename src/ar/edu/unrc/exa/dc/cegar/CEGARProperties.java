@@ -61,9 +61,17 @@ public class CEGARProperties {
             @Override
             public String getKey() { return "cegar.search"; }
         },
-        CEGAR_ENABLE_NOFACTS_GENERATION {
+        CEGAR_ENABLE_RELAXEDFACTS_GENERATION {
             @Override
-            public String getKey() { return "cegar.allownofacts"; }
+            public String getKey() { return "cegar.allowrelaxedfacts"; }
+        },
+        CEGAR_ENABLE_FORCE_ASSERTION_TESTS {
+            @Override
+            public String getKey() { return "cegar.forceassertiontests"; }
+        },
+        CEGAR_GLOBAL_TRUSTED_TESTS {
+            @Override
+            public String getKey() { return "cegar.globaltrustedtests"; }
         }
         ;
         public abstract String getKey();
@@ -162,8 +170,10 @@ public class CEGARProperties {
 
     private boolean isBooleanKey(ConfigKey key) {
         switch (key) {
-            case CEGAR_ENABLE_NOFACTS_GENERATION:
+            case CEGAR_GLOBAL_TRUSTED_TESTS:
+            case CEGAR_ENABLE_RELAXEDFACTS_GENERATION:
             case CEGAR_PRIORIZATION:
+            case CEGAR_ENABLE_FORCE_ASSERTION_TESTS:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case BEAFIX_INSTANCE_TESTS: return true;
             default: return false;

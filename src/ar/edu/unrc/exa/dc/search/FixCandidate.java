@@ -11,9 +11,14 @@ public class FixCandidate {
     private final Path modelToRepair;
     private final int depth;
     private final Collection<BeAFixTest> untrustedTests; //only untrusted tests
+    private final Collection<BeAFixTest> trustedTests; //only trusted tests
     private int repairedProperties = 0;
 
     public FixCandidate(Path modelToRepair, int depth, Collection<BeAFixTest> untrustedTests) {
+        this(modelToRepair, depth, untrustedTests, null);
+    }
+
+    public FixCandidate(Path modelToRepair, int depth, Collection<BeAFixTest> untrustedTests, Collection<BeAFixTest> trustedTests) {
         if (!isValidPath(modelToRepair, PathCheck.ALS))
             throw new IllegalArgumentException("Invalid model to repair (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
         if (depth < 0)
@@ -28,6 +33,7 @@ public class FixCandidate {
         this.modelToRepair = modelToRepair;
         this.depth = depth;
         this.untrustedTests = untrustedTests==null?new LinkedList<>():untrustedTests;
+        this.trustedTests = trustedTests==null?new LinkedList<>():trustedTests;
     }
 
     public Path modelToRepair() {
@@ -40,6 +46,10 @@ public class FixCandidate {
 
     public Collection<BeAFixTest> untrustedTests() {
         return this.untrustedTests;
+    }
+
+    public Collection<BeAFixTest> trustedTests() {
+        return this.trustedTests;
     }
 
     public void repairedProperties(int repairedProperties) {

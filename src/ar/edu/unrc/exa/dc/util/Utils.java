@@ -78,6 +78,14 @@ public final class Utils {
         Files.write(output, "\n".getBytes(), StandardOpenOption.APPEND);
         for (BeAFixTest test : tests) {
             Files.write(output, ("--" + test.testType().toString() + "\n" + test.predicate() + "\n" + test.command() + "\n").getBytes(), StandardOpenOption.APPEND);
+            if (test.isRelated()) {
+                Files.write(output,
+                        ("--" + test.relatedBeAFixTest().testType().toString() + "\n" +
+                                test.relatedBeAFixTest().predicate() + "\n" +
+                                test.relatedBeAFixTest().command() + "\n")
+                                .getBytes(),
+                        StandardOpenOption.APPEND);
+            }
         }
     }
 
