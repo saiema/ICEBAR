@@ -65,6 +65,9 @@ public class IterativeCEBasedAlloyRepair {
     private boolean forceAssertionGeneration = false;
     public void forceAssertionGeneration(boolean forceAssertionGeneration) { this.forceAssertionGeneration = forceAssertionGeneration; }
 
+    private long timeout = 0;
+    public void timeout(long timeout) { this.timeout = timeout; }
+
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
             throw new IllegalArgumentException("Invalid model to repair path (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
@@ -103,6 +106,7 @@ public class IterativeCEBasedAlloyRepair {
         //watches for different time process recording
         TimeCounter arepairTimeCounter = new TimeCounter();
         TimeCounter beafixTimeCounter = new TimeCounter();
+        TimeCounter totalTime = new TimeCounter();
         //CEGAR process
         CandidateSpace searchSpace = null;
         switch (search) {
@@ -118,6 +122,7 @@ public class IterativeCEBasedAlloyRepair {
         FixCandidate originalCandidate = new FixCandidate(modelToRepair, 0, null);
         searchSpace.push(originalCandidate);
         int maxReachedLap = 0;
+        totalTime.clockStart();
         while (!searchSpace.isEmpty()) {
             FixCandidate current = searchSpace.pop();
             maxReachedLap = Math.max(maxReachedLap, current.depth());
@@ -153,6 +158,15 @@ public class IterativeCEBasedAlloyRepair {
                     writeReport(report);
                     return Optional.of(repairCandidate);
                 } else if (current.depth() < laps) {
+                    if (timeout > 0) {
+                        totalTime.updateTotalTime();
+                        if (totalTime.toMinutes() >= timeout) {
+                            logger.info("CEGAR timeout (" + timeout + " minutes) reached");
+                            Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), beafixTimeCounter, arepairTimeCounter);
+                            writeReport(report);
+                            return Optional.empty();
+                        }
+                    }
                     logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
                     beafixTimeCounter.clockStart();
                     BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);

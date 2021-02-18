@@ -45,6 +45,14 @@ public class Report {
                 return "exhausted";
             }
 
+        },
+        TIMEOUT {
+
+            @Override
+            public String toString() {
+                return "timeout";
+            }
+
         }
         ;
         @Override
@@ -91,6 +99,10 @@ public class Report {
 
     public static Report exhaustedSearchSpace(int laps, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
         return new Report(Status.EXHAUSTED_CANDIDATES, laps, tests, beafixTimer, arepairTimer);
+    }
+
+    public static Report timeout(FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
+        return new Report(Status.TIMEOUT, candidate, tests, beafixTimer, arepairTimer);
     }
 
     public static final String SEPARATOR = ";";

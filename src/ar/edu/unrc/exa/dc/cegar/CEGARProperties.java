@@ -72,6 +72,10 @@ public class CEGARProperties {
         CEGAR_GLOBAL_TRUSTED_TESTS {
             @Override
             public String getKey() { return "cegar.globaltrustedtests"; }
+        },
+        CEGAR_TIMEOUT {
+            @Override
+            public String getKey() { return "cegar.timeout"; }
         }
         ;
         public abstract String getKey();
@@ -183,6 +187,7 @@ public class CEGARProperties {
     private boolean isIntKey(ConfigKey key) {
         switch (key) {
             case BEAFIX_TESTS :
+            case CEGAR_TIMEOUT:
             case CEGAR_LAPS : return true;
             default : return false;
         }

@@ -15,6 +15,14 @@ public class TimeCounter {
         this.running = true;
     }
 
+    public void updateTotalTime() {
+        if (!running)
+            throw new IllegalStateException("Time counter is not running");
+        long currentTime = System.nanoTime();
+        this.totalTime += currentTime - this.time;
+        this.time = currentTime;
+    }
+
     public void clockEnd() {
         if (!running)
             throw new IllegalStateException("Time counter is not running");
@@ -29,5 +37,7 @@ public class TimeCounter {
     public long toMilliSeconds() {
         return TimeUnit.NANOSECONDS.toMillis(totalTime);
     }
+
+    public long toMinutes() { return TimeUnit.NANOSECONDS.toMinutes(totalTime); }
 
 }
