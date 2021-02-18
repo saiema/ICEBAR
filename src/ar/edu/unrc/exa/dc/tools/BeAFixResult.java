@@ -67,9 +67,10 @@ public final class BeAFixResult {
                 throw new IllegalStateException("This test is not related to anyone");
             if (!relatedBeAFixTest.isRelated())
                 throw new IllegalArgumentException("Argument test is not related to anyone");
-            if (relatedBeAFixTest.relatedTestID().compareTo(relatedTestID()) == 0)
+            if (relatedBeAFixTest.relatedTestID().compareTo(relatedTestID()) != 0)
                 throw new IllegalArgumentException("This test is related to (" + relatedTestID() + ") but argument test is related to (" + relatedBeAFixTest.relatedTestID() + ")");
             this.relatedBeAFixTest = relatedBeAFixTest;
+            relatedBeAFixTest.relatedBeAFixTest = this;
         }
 
         private static final String PREDICATE_START_DELIMITER = "--TEST START\n";
@@ -301,11 +302,11 @@ public final class BeAFixResult {
 
     public void parseAllTests() throws IOException {
         if (!isCheck() && !error()) {
-            List<BeAFixTest> ceTests = new LinkedList<>(getCounterexampleTests());
-            List<BeAFixTest> upTests = new LinkedList<>(getUntrustedPositiveTests());
-            List<BeAFixTest> unTests = new LinkedList<>(getUntrustedNegativeTests());
-            List<BeAFixTest> tpTests = new LinkedList<>(getTrustedPositiveTests());
-            List<BeAFixTest> tnTests = new LinkedList<>(getTrustedNegativeTests());
+            List<BeAFixTest> ceTests = getCounterexampleTests();
+            List<BeAFixTest> upTests = getUntrustedPositiveTests();
+            List<BeAFixTest> unTests = getUntrustedNegativeTests();
+            List<BeAFixTest> tpTests = getTrustedPositiveTests();
+            List<BeAFixTest> tnTests = getTrustedNegativeTests();
             generatedTests = ceTests.size() + upTests.size() + unTests.size() + tpTests.size() + tnTests.size();
             mergeRelated(ceTests, tnTests, tpTests);
             mergeRelated(upTests, unTests);

@@ -201,27 +201,42 @@ public class IterativeCEBasedAlloyRepair {
                     trustedTests.addAll(beAFixResult.getCounterexampleTests());
                     trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
                     trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
+                    boolean addLocalTrustedTests;
                     if (globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty())) {
                         trustedTestsAdded = this.trustedTests.addAll(trustedTests);
+                        addLocalTrustedTests = false;
                     } else { //local trusted tests except from original
                         trustedTestsAdded = !trustedTests.isEmpty();
+                        addLocalTrustedTests = true;
                     }
                     for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
                         Set<BeAFixTest> newTests = new HashSet<>(current.untrustedTests());
                         newTests.add(upTest);
-                        FixCandidate newCandidateFromUntrustedTest = globalTrustedTests?new FixCandidate(modelToRepair, newDepth, newTests):new FixCandidate(modelToRepair, newDepth, newTests, trustedTests);
+                        FixCandidate newCandidateFromUntrustedTest;
+                        if (!globalTrustedTests && addLocalTrustedTests)
+                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests, trustedTests);
+                        else
+                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
                         newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
                     for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
                         Set<BeAFixTest> newTests = new HashSet<>(current.untrustedTests());
                         newTests.add(unTest);
-                        FixCandidate newCandidateFromUntrustedTest = globalTrustedTests?new FixCandidate(modelToRepair, newDepth, newTests):new FixCandidate(modelToRepair, newDepth, newTests, trustedTests);
+                        FixCandidate newCandidateFromUntrustedTest;
+                        if (!globalTrustedTests && addLocalTrustedTests)
+                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests, trustedTests);
+                        else
+                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
                         newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
                     if (noUntrustedTestsGenerated && trustedTestsAdded) {
-                        FixCandidate onlyTrustedTestsCandidate = globalTrustedTests?new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests()):new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests(), trustedTests);
+                        FixCandidate onlyTrustedTestsCandidate;
+                        if (!globalTrustedTests && addLocalTrustedTests)
+                            onlyTrustedTestsCandidate = new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests(), trustedTests);
+                        else
+                            onlyTrustedTestsCandidate = new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests());
                         onlyTrustedTestsCandidate.repairedProperties(repairedPropertiesForCurrent);
                         searchSpace.push(onlyTrustedTestsCandidate);
                     }
