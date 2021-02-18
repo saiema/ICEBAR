@@ -25,8 +25,8 @@ public final class BeAFixResult {
         private String command;
         private String predicate;
         private int index;
-        private static final int NOT_RELATED = -1;
-        private int relatedTest;
+        private static final String NOT_RELATED = null;
+        private String relatedTest;
         private BeAFixTest relatedBeAFixTest;
 
         public BeAFixTest(String test, TestType testType) {
@@ -52,9 +52,9 @@ public final class BeAFixResult {
 
         public int getIndex() { return index; }
 
-        public boolean isRelated() { return relatedTest != NOT_RELATED; }
+        public boolean isRelated() { return relatedTest != null && !relatedTest.isEmpty(); }
 
-        public int relatedTestID() { return relatedTest; }
+        public String relatedTestID() { return relatedTest; }
 
         public BeAFixTest relatedBeAFixTest() {
             if (!isRelated())
@@ -67,7 +67,7 @@ public final class BeAFixResult {
                 throw new IllegalStateException("This test is not related to anyone");
             if (!relatedBeAFixTest.isRelated())
                 throw new IllegalArgumentException("Argument test is not related to anyone");
-            if (relatedBeAFixTest.relatedTestID() != relatedTestID())
+            if (relatedBeAFixTest.relatedTestID().compareTo(relatedTestID()) == 0)
                 throw new IllegalArgumentException("This test is related to (" + relatedTestID() + ") but argument test is related to (" + relatedBeAFixTest.relatedTestID() + ")");
             this.relatedBeAFixTest = relatedBeAFixTest;
         }
@@ -90,8 +90,7 @@ public final class BeAFixResult {
             if (commandsPredicate.contains(RELATED_TO_KEYWORD)) {
                 String[] commandPredicateSegments = commandsPredicate.split(RELATED_TO_KEYWORD);
                 commandsPredicate = commandPredicateSegments[0];
-                String relatedToRaw = commandPredicateSegments[1].replaceAll("\\D+", "");
-                this.relatedTest = Integer.parseInt(relatedToRaw);
+                this.relatedTest = commandPredicateSegments[1].trim();
             } else {
                 this.relatedTest = NOT_RELATED;
             }
@@ -345,7 +344,7 @@ public final class BeAFixResult {
             BeAFixTest other = from.get(t);
             if (!other.isRelated())
                 continue;
-            if (test.relatedTestID() != other.relatedTestID())
+            if (test.relatedTestID().compareTo(other.relatedTestID()) != 0)
                 continue;
             if (test.command().compareTo(other.command()) == 0)
                 continue;
