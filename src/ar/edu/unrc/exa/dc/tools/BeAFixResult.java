@@ -10,11 +10,11 @@ import java.util.stream.Collectors;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.TestType;
 import ar.edu.unrc.exa.dc.util.Utils;
 
-import static ar.edu.unrc.exa.dc.util.Utils.validateTestsFile;
+import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
 
 public final class BeAFixResult {
 
-    static final String TEST_SEPARATOR = "===TEST===\n";
+    public static final String TEST_SEPARATOR = "===TEST===";
 
     public enum ResultType {TESTS, CHECK, ERROR}
 
@@ -73,20 +73,21 @@ public final class BeAFixResult {
             relatedBeAFixTest.relatedBeAFixTest = this;
         }
 
-        private static final String PREDICATE_START_DELIMITER = "--TEST START\n";
-        private static final String PREDICATE_END_DELIMITER = "--TEST FINISH\n";
+        public static final String PREDICATE_START_DELIMITER = "--TEST START\n";
+        public static final String PREDICATE_END_DELIMITER = "--TEST FINISH\n";
         private static final String RELATED_TO_KEYWORD = "relTo_";
         private void parseTest(final String test) {
-            this.predicate = Utils.getBetweenStrings(test, PREDICATE_START_DELIMITER, PREDICATE_END_DELIMITER);
+            String filteredRawTest = test.replaceAll(TEST_SEPARATOR, "");
+            this.predicate = Utils.getBetweenStrings(filteredRawTest, PREDICATE_START_DELIMITER, PREDICATE_END_DELIMITER);
             if (predicate.isEmpty())
-                throw new IllegalArgumentException("Predicate not found in:\n" + test);
-            int runIdx = test.indexOf("run");
+                throw new IllegalArgumentException("Predicate not found in:\n" + filteredRawTest);
+            int runIdx = filteredRawTest.indexOf("run");
             if (runIdx < 0)
-                throw new IllegalArgumentException("Command not found in:\n" + test);
-            this.command = test.substring(runIdx, test.indexOf("\n", runIdx));
+                throw new IllegalArgumentException("Command not found in:\n" + filteredRawTest);
+            this.command = filteredRawTest.endsWith("\n")?filteredRawTest.substring(runIdx, filteredRawTest.indexOf("\n", runIdx)):filteredRawTest.substring(runIdx);
             String[] commandSegments = this.command.split(" ");
-            if (commandSegments.length != 4)
-                throw new IllegalArgumentException("Command was expected to have 4 words, but got " + commandSegments.length + " instead ( " + Arrays.toString(commandSegments) + ")");
+            if (commandSegments.length < 2)
+                throw new IllegalArgumentException("Command was expected to have at least 2 words, but got " + commandSegments.length + " instead ( " + Arrays.toString(commandSegments) + ")");
             String commandsPredicate = commandSegments[1].trim();
             if (commandsPredicate.contains(RELATED_TO_KEYWORD)) {
                 String[] commandPredicateSegments = commandsPredicate.split(RELATED_TO_KEYWORD);
@@ -356,7 +357,7 @@ public final class BeAFixResult {
     }
 
     static List<BeAFixTest> parseTestsFrom(Path file, TestType testType) throws IOException {
-        if (!validateTestsFile(file))
+        if (!isValidPath(file, Utils.PathCheck.TESTS))
             throw new IllegalArgumentException("Invalid tests file: " + file.toString());
         List<BeAFixTest> tests = new LinkedList<>();
         String[] rawTests = Files.lines(file).collect(Collectors.joining("\n")).split(TEST_SEPARATOR);

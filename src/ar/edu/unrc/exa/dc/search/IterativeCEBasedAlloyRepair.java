@@ -277,7 +277,7 @@ public class IterativeCEBasedAlloyRepair {
         Collection<BeAFixTest> tests = new LinkedList<>(trustedTests);
         tests.addAll(candidate.untrustedTests());
         tests.addAll(candidate.trustedTests());
-        if (tests.isEmpty())
+        if (tests.isEmpty() && (initialTests == null || initialTests.getInitialTests().isEmpty()))
             return ARepairResult.NO_TESTS;
         Path testsPath = Paths.get(modelToRepair.toAbsolutePath().toString().replace(".als", "_tests.als"));
         File testsFile = testsPath.toFile();

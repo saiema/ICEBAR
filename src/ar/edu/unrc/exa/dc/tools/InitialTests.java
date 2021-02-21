@@ -1,11 +1,13 @@
 package ar.edu.unrc.exa.dc.tools;
 
+import ar.edu.unrc.exa.dc.util.Utils;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
-import static ar.edu.unrc.exa.dc.util.Utils.validateTestsFile;
+import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
 
 public final class InitialTests {
 
@@ -14,7 +16,7 @@ public final class InitialTests {
     private final Collection<BeAFixResult.BeAFixTest> initialTests;
 
     public InitialTests(Path initialTestsPath) {
-        if (!validateTestsFile(initialTestsPath))
+        if (!isValidPath(initialTestsPath, Utils.PathCheck.TESTS))
             throw new IllegalArgumentException("Initial tests file is not valid (" + (initialTestsPath == null?"NULL":initialTestsPath.toString()) + ")");
         try {
             this.initialTestsPath = initialTestsPath;

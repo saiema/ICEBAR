@@ -23,7 +23,7 @@ public final class Utils {
     }
 
     public enum PathCheck {
-        DIR, ALS, JAR, FILE, EXISTS
+        DIR, ALS, JAR, FILE, EXISTS, PROPERTIES, TESTS
     }
 
     public static boolean isValidPath(String pathToCheck, PathCheck check) {
@@ -41,6 +41,8 @@ public final class Utils {
             case DIR: return pathToCheck.toFile().isDirectory();
             case ALS: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".als");
             case JAR: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".jar");
+            case PROPERTIES: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".properties");
+            case TESTS: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".tests");
             case FILE: return pathToCheck.toFile().isFile();
             case EXISTS: return true;
         }
@@ -206,16 +208,6 @@ public final class Utils {
                 count++;
         }
         return count;
-    }
-
-    public static boolean validateTestsFile(Path tests) {
-        if (tests == null)
-            return false;
-        if (!tests.toFile().exists())
-            return false;
-        if (!tests.toFile().isFile())
-            return false;
-        return tests.toString().endsWith(".tests");
     }
 
 }

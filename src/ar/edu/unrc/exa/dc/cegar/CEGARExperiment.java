@@ -34,13 +34,13 @@ public final class CEGARExperiment {
     }
 
     public void propertiesPath(Path propertiesPath) {
-        if (!Utils.isValidPath(propertiesPath, Utils.PathCheck.FILE))
+        if (!Utils.isValidPath(propertiesPath, Utils.PathCheck.PROPERTIES))
             throw new IllegalArgumentException("invalid properties path (" + propertiesPath + ")");
         this.propertiesPath = propertiesPath;
     }
 
     public void initialTestsPath(Path initialTestsPath) {
-        if (!Utils.isValidPath(initialTestsPath, Utils.PathCheck.ALS))
+        if (!Utils.isValidPath(initialTestsPath, Utils.PathCheck.TESTS))
             throw new IllegalArgumentException("invalid initial tests path (" + initialTestsPath + ")");
         this.initialTestsPath = initialTestsPath;
     }

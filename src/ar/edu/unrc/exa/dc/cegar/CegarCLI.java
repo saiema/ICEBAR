@@ -4,6 +4,7 @@ import ar.edu.unrc.exa.dc.search.FixCandidate;
 import ar.edu.unrc.exa.dc.search.IterativeCEBasedAlloyRepair;
 import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.BeAFix;
+import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.tools.InitialTests;
 
 import java.io.IOException;
@@ -17,7 +18,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class CegarCLI {
 
-    private static final String VERSION = "1.6.2";
+    private static final String VERSION = "1.6.3";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -164,14 +165,18 @@ public class CegarCLI {
         String help = "CEGAR CLI\nVERSION " + VERSION + "\n" +
                 "CounterExample Guided Alloy Repair\n" +
                 "Usage:\n" +
-                "\t--help                                             :  Shows this message\n" +
-                "\t--" + MODEL_KEY + "<path to .als file>             :  The path to the model to repair (anything in this file can be modified to repair) (*).\n" +
-                "\t--" + ORACLE_KEY + "<path to .als file>            :  The path to the oracle (containing predicates, assertions, and anything related to those which can't be modified to repair) (*).\n" +
-                "\t--" + PROPERTIES_KEY + "<path to .properties file> :  CEGAR properties, please look at 'cegar_stein.properties' as an example (**).\n" +
-                "\t--" + INITIAL_TESTS_KEY + "<path to .als file>     :  Initial tests set which will be used in conjunction with counterexample based tests (***).\n" +
+                "\t--help                                   :  Shows this message\n" +
+                "\t--" + MODEL_KEY + "<path to .als file>               :  The path to the model to repair (anything in this file can be modified to repair) (*).\n" +
+                "\t--" + ORACLE_KEY + "<path to .als file>              :  The path to the oracle (containing predicates, assertions, and anything related to those which can't be modified to repair) (*).\n" +
+                "\t--" + PROPERTIES_KEY + "<path to .properties file>   :  CEGAR properties, please look at 'cegar_stein.properties' as an example (**).\n" +
+                "\t--" + INITIAL_TESTS_KEY + "<path to .tests file>      :  Initial tests set which will be used in conjunction with counterexample based tests (***).\n" +
                 "(*)   : This is a required argument.\n" +
                 "(**)  : Default properties will be used instead (from cegar.properties).\n" +
-                "(***) : Optional argument, default is no initial tests.\n";
+                "(***) : Optional argument, default is no initial tests.\n" +
+                "About initial tests:\n" +
+                "A test is defined as a predicate and a run <predicate's name> expect (0|1) command\n" +
+                "Each test must be separated by a line containing " + BeAFixResult.TEST_SEPARATOR + "\n" +
+                "Each predicate must be between a line with " + BeAFixResult.BeAFixTest.PREDICATE_START_DELIMITER.replace("\n", "")  + " and a line with " + BeAFixResult.BeAFixTest.PREDICATE_END_DELIMITER;
         System.out.println(help);
     }
 
