@@ -68,7 +68,8 @@ public final class Utils {
         }
     }
 
-    public static void generateTestsFile(Collection<BeAFixTest> tests, Path output) throws IOException {
+    public static int generateTestsFile(Collection<BeAFixTest> tests, Path output) throws IOException {
+        int testCount = 0;
         if (tests == null || tests.isEmpty())
             throw new IllegalArgumentException("null or empty tests");
         if (output == null || output.toFile().exists())
@@ -80,6 +81,7 @@ public final class Utils {
         Files.write(output, "\n".getBytes(), StandardOpenOption.APPEND);
         for (BeAFixTest test : tests) {
             Files.write(output, ("--" + test.testType().toString() + "\n" + test.predicate() + "\n" + test.command() + "\n").getBytes(), StandardOpenOption.APPEND);
+            testCount++;
             if (test.isRelated()) {
                 Files.write(output,
                         ("--" + test.relatedBeAFixTest().testType().toString() + "\n" +
@@ -87,8 +89,10 @@ public final class Utils {
                                 test.relatedBeAFixTest().command() + "\n")
                                 .getBytes(),
                         StandardOpenOption.APPEND);
+                testCount++;
             }
         }
+        return testCount;
     }
 
     /**

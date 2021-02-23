@@ -125,9 +125,10 @@ public final class BeAFixResult {
             if (!(other instanceof BeAFixTest))
                 return false;
             BeAFixTest otherAsTest = (BeAFixTest) other;
-            if (!testType.equals(otherAsTest.testType))
-                return false;
-            return getPredicateBody().compareTo(((BeAFixTest) other).getPredicateBody()) == 0;
+            return hashCode() == otherAsTest.hashCode();
+//            if (!testType.equals(otherAsTest.testType))
+//                return false;
+//            return getPredicateBody().compareTo(((BeAFixTest) other).getPredicateBody()) == 0;
         }
 
         private String getPredicateBody() {

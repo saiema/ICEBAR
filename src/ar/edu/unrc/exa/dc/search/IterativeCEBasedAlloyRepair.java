@@ -210,22 +210,28 @@ public class IterativeCEBasedAlloyRepair {
                         addLocalTrustedTests = true;
                     }
                     for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
+                        Set<BeAFixTest> newTrustedTests = new HashSet<>(current.trustedTests());
+                        boolean localTrustedTestsAdded = newTrustedTests.addAll(trustedTests);
                         Set<BeAFixTest> newTests = new HashSet<>(current.untrustedTests());
-                        newTests.add(upTest);
+                        if (!newTests.add(upTest) && !trustedTestsAdded && !localTrustedTestsAdded)
+                            continue;
                         FixCandidate newCandidateFromUntrustedTest;
                         if (!globalTrustedTests && addLocalTrustedTests)
-                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests, trustedTests);
+                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests, newTrustedTests);
                         else
                             newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
                         newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
                         searchSpace.push(newCandidateFromUntrustedTest);
                     }
                     for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
+                        Set<BeAFixTest> newTrustedTests = new HashSet<>(current.trustedTests());
+                        boolean localTrustedTestsAdded = newTrustedTests.addAll(trustedTests);
                         Set<BeAFixTest> newTests = new HashSet<>(current.untrustedTests());
-                        newTests.add(unTest);
+                        if (!newTests.add(unTest) && !trustedTestsAdded && !localTrustedTestsAdded)
+                            continue;
                         FixCandidate newCandidateFromUntrustedTest;
                         if (!globalTrustedTests && addLocalTrustedTests)
-                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests, trustedTests);
+                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests, newTrustedTests);
                         else
                             newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
                         newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
@@ -289,17 +295,18 @@ public class IterativeCEBasedAlloyRepair {
                 return error;
             }
         }
+        int testCount = 0;
         try {
             if (initialTests != null)
                 tests.addAll(initialTests.getInitialTests());
-            generateTestsFile(tests, testsPath);
+            testCount = generateTestsFile(tests, testsPath);
         } catch (IOException e) {
             logger.severe("An exception occurred while trying to generate tests file\n" + Utils.exceptionToString(e) + "\n");
             ARepairResult error = ARepairResult.ERROR;
             error.message(Utils.exceptionToString(e));
             return error;
         }
-        logger.info("Running ARepair with " + tests.size() + " tests");
+        logger.info("Running ARepair with " + testCount + " tests");
         aRepair.testsPath(testsPath);
         return aRepair.run();
     }
