@@ -250,4 +250,14 @@ public final class Utils {
         return currentScope;
     }
 
+    public static boolean findNullPointerExceptionInLog(Path log) throws IOException {
+        if (!isValidPath(log, PathCheck.FILE))
+            throw new IllegalArgumentException("Invalid log file " + (log==null?"NULL":log.toString()));
+        for (String aLine : Files.readAllLines(log)) {
+            if (aLine.trim().startsWith("Exception"))
+                return aLine.contains("java.lang.NullPointerException");
+        }
+        return false;
+    }
+
 }

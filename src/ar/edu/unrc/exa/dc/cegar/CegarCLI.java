@@ -19,7 +19,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class CegarCLI {
 
-    private static final String VERSION = "1.7.0";
+    private static final String VERSION = "1.8.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -98,6 +98,10 @@ public class CegarCLI {
             if (timeout < 0)
                 throw new IllegalArgumentException("invalid value for " + CEGARProperties.ConfigKey.CEGAR_TIMEOUT + " (" + timeout + ")");
             iterativeCEBasedAlloyRepair.timeout(timeout);
+        }
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_KEEP_GOING_ON_AREPAIR_NPE)) {
+            boolean keepGoingAfterARepairNPE = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_KEEP_GOING_ON_AREPAIR_NPE);
+            iterativeCEBasedAlloyRepair.keepGoingAfterARepairNPE(keepGoingAfterARepairNPE);
         }
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();

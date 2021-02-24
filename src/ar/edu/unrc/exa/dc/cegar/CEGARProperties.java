@@ -80,6 +80,10 @@ public class CEGARProperties {
         CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE {
             @Override
             public String getKey() { return "cegar.updatescopefromoracle"; }
+        },
+        CEGAR_KEEP_GOING_ON_AREPAIR_NPE {
+            @Override
+            public String getKey() { return "cegar.keepgoingarepairnpe"; }
         }
         ;
         public abstract String getKey();
@@ -183,6 +187,7 @@ public class CEGARProperties {
             case CEGAR_PRIORIZATION:
             case CEGAR_ENABLE_FORCE_ASSERTION_TESTS:
             case CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE:
+            case CEGAR_KEEP_GOING_ON_AREPAIR_NPE:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case BEAFIX_INSTANCE_TESTS: return true;
             default: return false;

@@ -9,8 +9,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static ar.edu.unrc.exa.dc.util.Utils.exceptionToString;
-import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
+import static ar.edu.unrc.exa.dc.util.Utils.*;
 
 public final class ARepair {
 
@@ -23,6 +22,7 @@ public final class ARepair {
 
         private String message = null;
         private Path repair = null;
+        private boolean npeFound = false;
 
         public String message() {
             return message;
@@ -46,6 +46,14 @@ public final class ARepair {
 
         public boolean hasRepair() {
             return repair != null;
+        }
+
+        public void npeFound() {
+            this.npeFound = true;
+        }
+
+        public boolean nullPointerExceptionFound() {
+            return npeFound;
         }
 
         @Override
@@ -256,6 +264,8 @@ public final class ARepair {
                 aRepairResult = ARepairResult.ERROR;
                 aRepairResult.message("ARepair ended with exit code " + exitCode + " but no exception was caught");
                 aRepairResult.repair(null);
+                if (findNullPointerExceptionInLog(errorLog.toPath()))
+                    aRepairResult.npeFound();
             } else {
                 aRepairResult = checkFix();
             }

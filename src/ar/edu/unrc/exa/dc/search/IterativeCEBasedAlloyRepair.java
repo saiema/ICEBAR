@@ -68,6 +68,9 @@ public class IterativeCEBasedAlloyRepair {
     private long timeout = 0;
     public void timeout(long timeout) { this.timeout = timeout; }
 
+    private boolean keepGoingAfterARepairNPE = false;
+    public void keepGoingAfterARepairNPE(boolean keepGoingAfterARepairNPE) { this.keepGoingAfterARepairNPE =keepGoingAfterARepairNPE; }
+
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
             throw new IllegalArgumentException("Invalid model to repair path (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
@@ -134,6 +137,10 @@ public class IterativeCEBasedAlloyRepair {
             logger.info("ARepair finished\n" + aRepairResult.toString());
             if (aRepairResult.equals(ARepairResult.ERROR)) {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
+                if (aRepairResult.nullPointerExceptionFound() && keepGoingAfterARepairNPE) {
+                    logger.warning("ARepair ended with a NullPointerException but we are going to ignore that and hope for the best");
+                    continue;
+                }
                 Report report = Report.arepairFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), arepairTimeCounter, beafixTimeCounter);
                 writeReport(report);
                 return Optional.empty();
