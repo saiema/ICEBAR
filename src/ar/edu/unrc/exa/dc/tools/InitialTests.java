@@ -5,6 +5,7 @@ import ar.edu.unrc.exa.dc.util.Utils;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.stream.Collectors;
 
 import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
@@ -14,6 +15,7 @@ public final class InitialTests {
     private final Path initialTestsPath;
     private final int maxIndex;
     private final Collection<BeAFixResult.BeAFixTest> initialTests;
+    private final int maxScope;
 
     public InitialTests(Path initialTestsPath) {
         if (!isValidPath(initialTestsPath, Utils.PathCheck.TESTS))
@@ -22,6 +24,7 @@ public final class InitialTests {
             this.initialTestsPath = initialTestsPath;
             initialTests = BeAFixResult.parseTestsFrom(initialTestsPath, BeAFixResult.BeAFixTest.TestType.INITIAL);
             maxIndex = BeAFixResult.tests().getMaxIndexFrom(initialTests);
+            maxScope = initialTests.stream().map(BeAFixResult.BeAFixTest::getMaxScope).max((o1, o2) -> o1 >= o2?o1:o2).orElse(BeAFixResult.BeAFixTest.NO_SCOPE);
         } catch (IOException e) {
             throw new IllegalArgumentException("Failed to parse initial tests", e);
         }
@@ -30,6 +33,8 @@ public final class InitialTests {
     public int getMaxIndex() {
         return maxIndex;
     }
+
+    public int getMaxScope() { return maxScope; }
 
     public Collection<BeAFixResult.BeAFixTest> getInitialTests() {
         return initialTests;

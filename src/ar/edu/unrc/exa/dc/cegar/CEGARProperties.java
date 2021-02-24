@@ -76,6 +76,10 @@ public class CEGARProperties {
         CEGAR_TIMEOUT {
             @Override
             public String getKey() { return "cegar.timeout"; }
+        },
+        CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE {
+            @Override
+            public String getKey() { return "cegar.updatescopefromoracle"; }
         }
         ;
         public abstract String getKey();
@@ -178,6 +182,7 @@ public class CEGARProperties {
             case CEGAR_ENABLE_RELAXEDFACTS_GENERATION:
             case CEGAR_PRIORIZATION:
             case CEGAR_ENABLE_FORCE_ASSERTION_TESTS:
+            case CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case BEAFIX_INSTANCE_TESTS: return true;
             default: return false;

@@ -191,6 +191,10 @@ public final class ARepair {
         this.scope = scope;
     }
 
+    public int scope() {
+        return scope;
+    }
+
     public void setMinimumCost(int minimumCost) {
         if (minimumCost <= 0)
             throw new IllegalArgumentException("non positive minimum cost (" + minimumCost + ")");
@@ -302,6 +306,10 @@ public final class ARepair {
         pinfo += "model to repair   : " + (modelToRepair==null?"NULL":modelToRepair.toString()) + "\n";
         pinfo += "tests path        : " + (testsPath==null?"NULL":testsPath.toString()) + "\n";
         return pinfo;
+    }
+
+    public String aRepairCommandToString() {
+        return String.join(" ", getARepairCommand());
     }
 
     private String[] getARepairCommand() {

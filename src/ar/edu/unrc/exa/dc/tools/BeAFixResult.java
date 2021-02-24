@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.TestType;
 import ar.edu.unrc.exa.dc.util.Utils;
 
+import static ar.edu.unrc.exa.dc.util.Utils.getMaxScopeFromCommandSegments;
 import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
 
 public final class BeAFixResult {
@@ -28,6 +29,8 @@ public final class BeAFixResult {
         private static final String NOT_RELATED = null;
         private String relatedTest;
         private BeAFixTest relatedBeAFixTest;
+        public static int NO_SCOPE = -1;
+        private int maxScope = NO_SCOPE;
 
         public BeAFixTest(String test, TestType testType) {
             if (test == null || test.trim().isEmpty())
@@ -51,6 +54,8 @@ public final class BeAFixResult {
         }
 
         public int getIndex() { return index; }
+
+        public int getMaxScope() { return maxScope; }
 
         public boolean isRelated() { return relatedTest != null && !relatedTest.isEmpty(); }
 
@@ -98,6 +103,7 @@ public final class BeAFixResult {
             }
             String indexRaw = commandsPredicate.replaceAll("\\D+","");
             this.index = Integer.parseInt(indexRaw);
+            this.maxScope = getMaxScopeFromCommandSegments(commandSegments);
         }
 
         @Override
@@ -126,9 +132,6 @@ public final class BeAFixResult {
                 return false;
             BeAFixTest otherAsTest = (BeAFixTest) other;
             return hashCode() == otherAsTest.hashCode();
-//            if (!testType.equals(otherAsTest.testType))
-//                return false;
-//            return getPredicateBody().compareTo(((BeAFixTest) other).getPredicateBody()) == 0;
         }
 
         private String getPredicateBody() {

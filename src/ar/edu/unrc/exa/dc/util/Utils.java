@@ -13,6 +13,8 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 
+import static ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.NO_SCOPE;
+
 public final class Utils {
 
     public static String exceptionToString(Exception e) {
@@ -210,8 +212,42 @@ public final class Utils {
         for (BeAFixTest test : tests) {
             if (test.testType().equals(testType))
                 count++;
+            else if (test.isRelated() && test.relatedBeAFixTest().testType().equals(testType))
+                count++;
         }
         return count;
+    }
+
+    public static int getMaxScopeFromAlsFile(Path alsFile) throws IOException {
+        if (!isValidPath(alsFile, PathCheck.ALS))
+            throw new IllegalArgumentException("Expecting an .als file but got " + alsFile.toString() + " instead");
+        int maxScope = NO_SCOPE;
+        for (String aLine : Files.readAllLines(alsFile)) {
+            if (aLine.trim().startsWith("run "))
+                maxScope = Math.max(maxScope, getMaxScopeFromCommandSegments(aLine.split(" ")));
+        }
+        return maxScope;
+    }
+
+    public static int getMaxScopeFromCommandSegments(String[] segments) {
+        int currentScope = NO_SCOPE;
+        int idx = 0;
+        while(idx < segments.length && segments[idx].compareTo("for") != 0) idx++;
+        if (idx < segments.length) {
+            while (idx < segments.length && segments[idx].compareTo("expect") != 0) {
+                String numberData = segments[idx].replaceAll("\\D+", "");
+                if (!numberData.trim().isEmpty()) {
+                    try {
+                        int scope = Integer.parseInt(numberData);
+                        currentScope = Math.max(currentScope, scope);
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Error while parsing scope value from " + String.join(" ", segments) + "@" + idx + "\n" + Utils.exceptionToString(e));
+                    }
+                }
+                idx++;
+            }
+        }
+        return currentScope;
     }
 
 }

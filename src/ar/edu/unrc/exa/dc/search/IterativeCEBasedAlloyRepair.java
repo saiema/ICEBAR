@@ -308,6 +308,7 @@ public class IterativeCEBasedAlloyRepair {
         }
         logger.info("Running ARepair with " + testCount + " tests");
         aRepair.testsPath(testsPath);
+        logger.info("Executing ARepair:\n" + aRepair.aRepairCommandToString());
         return aRepair.run();
     }
 

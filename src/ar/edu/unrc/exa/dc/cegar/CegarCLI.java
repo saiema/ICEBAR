@@ -14,11 +14,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
+import static ar.edu.unrc.exa.dc.util.Utils.getMaxScopeFromAlsFile;
 import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class CegarCLI {
 
-    private static final String VERSION = "1.6.4";
+    private static final String VERSION = "1.7.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -56,10 +57,16 @@ public class CegarCLI {
                 beafix,
                 laps
         );
+        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE)) {
+            boolean updateScopeFromOracle = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE);
+            if (updateScopeFromOracle)
+                arepair.setScope(Math.max(arepair.scope(), getMaxScopeFromAlsFile(CEGARExperiment.getInstance().oraclePath())));
+        }
         if (CEGARExperiment.getInstance().hasInitialTests()) {
             InitialTests initialTests = new InitialTests(CEGARExperiment.getInstance().initialTestsPath());
             iterativeCEBasedAlloyRepair.setInitialTests(initialTests);
             beafix.testsStartingIndex(initialTests.getMaxIndex() + 1);
+            arepair.setScope(Math.max(arepair.scope(), initialTests.getMaxScope()));
         }
         if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_PRIORIZATION)) {
             iterativeCEBasedAlloyRepair.usePriorization(CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_PRIORIZATION));
