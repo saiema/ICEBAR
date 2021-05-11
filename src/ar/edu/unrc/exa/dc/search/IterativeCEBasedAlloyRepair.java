@@ -1,6 +1,6 @@
 package ar.edu.unrc.exa.dc.search;
 
-import ar.edu.unrc.exa.dc.cegar.Report;
+import ar.edu.unrc.exa.dc.icebar.Report;
 import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.ARepair.ARepairResult;
 import ar.edu.unrc.exa.dc.tools.BeAFix;
@@ -129,7 +129,7 @@ public class IterativeCEBasedAlloyRepair {
         while (!searchSpace.isEmpty()) {
             FixCandidate current = searchSpace.pop();
             maxReachedLap = Math.max(maxReachedLap, current.depth());
-            logger.info("Repairing current candidate\n" + current.toString());
+            logger.info("Repairing current candidate\n" + current);
             arepairTimeCounter.clockStart();
             ARepairResult aRepairResult = runARepairWithCurrentConfig(current);
             arepairTimeCounter.clockEnd();
@@ -273,7 +273,7 @@ public class IterativeCEBasedAlloyRepair {
     private boolean checkIfInvalidAndReportBeAFixResults(BeAFixResult beAFixResult, FixCandidate current, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {
         if (!beAFixResult.error()) {
             String beafixMsg = "BeAFix finished\n";
-            beafixMsg += beAFixResult.toString() + "\n";
+            beafixMsg += beAFixResult + "\n";
             logger.info(beafixMsg);
             return false;
         } else {
@@ -296,13 +296,13 @@ public class IterativeCEBasedAlloyRepair {
         File testsFile = testsPath.toFile();
         if (testsFile.exists()) {
             if (!testsFile.delete()) {
-                logger.severe("Couldn't delete tests file (" + testsFile.toString() + ")");
+                logger.severe("Couldn't delete tests file (" + testsFile + ")");
                 ARepairResult error = ARepairResult.ERROR;
-                error.message("Couldn't delete tests file (" + testsFile.toString() + ")");
+                error.message("Couldn't delete tests file (" + testsFile + ")");
                 return error;
             }
         }
-        int testCount = 0;
+        int testCount;
         try {
             if (initialTests != null)
                 tests.addAll(initialTests.getInitialTests());
@@ -334,8 +334,8 @@ public class IterativeCEBasedAlloyRepair {
         File modelToCheckWithOracleFile = modelToCheckWithOraclePath.toFile();
         if (modelToCheckWithOracleFile.exists()) {
             if (!modelToCheckWithOracleFile.delete()) {
-                logger.severe("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile.toString()) + ")");
-                return BeAFixResult.error("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile.toString()) + ")");
+                logger.severe("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile) + ")");
+                return BeAFixResult.error("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile) + ")");
             }
         }
         try {

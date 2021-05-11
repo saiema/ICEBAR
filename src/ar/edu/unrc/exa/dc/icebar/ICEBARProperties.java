@@ -1,9 +1,9 @@
-package ar.edu.unrc.exa.dc.cegar;
+package ar.edu.unrc.exa.dc.icebar;
 
 import java.io.*;
 import java.util.Properties;
 
-public class CEGARProperties {
+public class ICEBARProperties {
 
     private static final String BEAFIX_PREFIX = "cegar.tools.beafix";
     private static final String AREPAIR_PREFIX = "cegar.tools.arepair";
@@ -92,20 +92,20 @@ public class CEGARProperties {
     /**
      * The path to a default .properties file
      */
-    public static final String DEFAULT_PROPERTIES = "cegar.properties";
+    public static final String DEFAULT_PROPERTIES = "icebar.properties";
 
     /**
-     * The {@code ExperimentProperties} instance that will be returned by {@link CEGARProperties#getInstance()}
+     * The {@code ExperimentProperties} instance that will be returned by {@link ICEBARProperties#getInstance()}
      */
-    private static CEGARProperties instance = null;
+    private static ICEBARProperties instance = null;
 
     /**
      * @return a previously built instance or construct a new instance using {@code ExperimentProperties#DEFAULT_PROPERTIES}
      */
-    public static CEGARProperties getInstance() {
+    public static ICEBARProperties getInstance() {
         if (instance == null) {
             try {
-                instance = new CEGARProperties();
+                instance = new ICEBARProperties();
             } catch (IOException e) {
                 throw new IllegalStateException("Exception when trying to load properties");
             }
@@ -113,7 +113,7 @@ public class CEGARProperties {
         return instance;
     }
 
-    private CEGARProperties() throws IOException {
+    private ICEBARProperties() throws IOException {
         prop = new Properties();
         loadPropertiesFromFile(null);
     }
@@ -147,7 +147,7 @@ public class CEGARProperties {
 
     public boolean getBooleanArgument(ConfigKey key) {
         if (!isBooleanKey(key))
-            throw new IllegalStateException("Config key is not boolean " + key.toString());
+            throw new IllegalStateException("Config key is not boolean " + key);
         if (isUndefined(key))
             return false;
         String propValue = prop.getProperty(key.getKey());
@@ -158,7 +158,7 @@ public class CEGARProperties {
 
     public int getIntArgument(ConfigKey key) {
         if (!isIntKey(key))
-            throw new IllegalStateException("Config key is not int " + key.toString());
+            throw new IllegalStateException("Config key is not int " + key);
         if (isUndefined(key))
             return 0;
         String propValue = prop.getProperty(key.getKey());
@@ -169,7 +169,7 @@ public class CEGARProperties {
 
     public String getStringArgument(ConfigKey key) {
         if (!isStringKey(key))
-            throw new IllegalStateException("Config key is not String " + key.toString());
+            throw new IllegalStateException("Config key is not String " + key);
         if (isUndefined(key))
             return "";
         return prop.getProperty(key.getKey(), "");

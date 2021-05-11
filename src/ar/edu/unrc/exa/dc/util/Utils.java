@@ -1,6 +1,6 @@
 package ar.edu.unrc.exa.dc.util;
 
-import ar.edu.unrc.exa.dc.cegar.Report;
+import ar.edu.unrc.exa.dc.icebar.Report;
 import ar.edu.unrc.exa.dc.search.FixCandidate;
 import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
@@ -12,6 +12,7 @@ import java.io.StringWriter;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
+import java.util.Optional;
 
 import static ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.NO_SCOPE;
 
@@ -60,7 +61,7 @@ public final class Utils {
             throw new IllegalArgumentException("result path is either null or points to an existing file (" + (result==null?"NULL":result.toString()) + ")");
         File rFile = result.toFile();
         if (!rFile.createNewFile())
-            throw new Error("Couldn't create result file (" + (result.toString()) + ")");
+            throw new Error("Couldn't create result file (" + (result) + ")");
         for (String aLine : Files.readAllLines(a)) {
             Files.write(result, (aLine + "\n").getBytes(), StandardOpenOption.APPEND);
         }
@@ -78,7 +79,7 @@ public final class Utils {
             throw new IllegalArgumentException("output path is either null or points to an existing file (" + (output==null?"NULL":output.toString()) + ")");
         File testsFile = output.toFile();
         if (!testsFile.createNewFile()) {
-            throw new Error("Couldn't create tests file (" + (testsFile.toString()) + ")");
+            throw new Error("Couldn't create tests file (" + (testsFile) + ")");
         }
         Files.write(output, "\n".getBytes(), StandardOpenOption.APPEND);
         for (BeAFixTest test : tests) {
@@ -159,9 +160,9 @@ public final class Utils {
         Path reportFilePath = Paths.get(reportFileRaw);
         File reportFile = reportFilePath.toFile();
         if (reportFile.exists() && !reportFile.delete())
-            throw new Error("Report file (" + reportFilePath.toString() + ") exists but couldn't be deleted");
+            throw new Error("Report file (" + reportFilePath + ") exists but couldn't be deleted");
         if (!reportFile.createNewFile()) {
-            throw new Error("Couldn't create report file (" + reportFilePath.toString() + ")");
+            throw new Error("Couldn't create report file (" + reportFilePath + ")");
         }
         Files.write(reportFilePath, report.toString().getBytes(), StandardOpenOption.APPEND);
     }
@@ -181,9 +182,9 @@ public final class Utils {
         Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (candidateInfoFile.exists() && !candidateInfoFile.delete())
-            throw new Error("Candidate info file (" + candidateInfoFilePath.toString() + ") exists but couldn't be deleted");
+            throw new Error("Candidate info file (" + candidateInfoFilePath + ") exists but couldn't be deleted");
         if (!candidateInfoFile.createNewFile()) {
-            throw new Error("Couldn't create candidate info file (" + candidateInfoFilePath.toString() + ")");
+            throw new Error("Couldn't create candidate info file (" + candidateInfoFilePath + ")");
         }
         Files.write(candidateInfoFilePath, CANDIDATE_REPORT_HEADER.getBytes(), StandardOpenOption.APPEND);
     }
@@ -193,7 +194,7 @@ public final class Utils {
         Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (!candidateInfoFile.exists())
-            throw new Error("Candidate info file (" + candidateInfoFilePath.toString() + ") doesn't exists");
+            throw new Error("Candidate info file (" + candidateInfoFilePath + ") doesn't exists");
         String candidateInfo =
                         candidate.modelName() + Report.SEPARATOR +
                         candidate.depth() + Report.SEPARATOR +
@@ -258,6 +259,17 @@ public final class Utils {
                 return aLine.contains("java.lang.NullPointerException");
         }
         return false;
+    }
+
+    public static Optional<String> findStringInFile(Path f, String target) throws IOException {
+        if (!isValidPath(f, PathCheck.FILE))
+            throw new IllegalArgumentException("Invalid file " + (f==null?"NULL":f.toString()));
+        for (String aLine : Files.readAllLines(f)) {
+            if (aLine.contains(target)) {
+                return Optional.of(aLine.trim());
+            }
+        }
+        return Optional.empty();
     }
 
 }

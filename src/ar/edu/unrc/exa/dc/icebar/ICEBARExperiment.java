@@ -1,25 +1,25 @@
-package ar.edu.unrc.exa.dc.cegar;
+package ar.edu.unrc.exa.dc.icebar;
 
 import ar.edu.unrc.exa.dc.util.Utils;
 
 import java.nio.file.Path;
 
-public final class CEGARExperiment {
+public final class ICEBARExperiment {
 
     private Path modelPath;
     private Path oraclePath;
     private Path propertiesPath;
     private Path initialTestsPath;
 
-    private static CEGARExperiment instance;
+    private static ICEBARExperiment instance;
 
-    public static CEGARExperiment getInstance() {
+    public static ICEBARExperiment getInstance() {
         if (instance == null)
-            instance = new CEGARExperiment();
+            instance = new ICEBARExperiment();
         return instance;
     }
 
-    private CEGARExperiment() {}
+    private ICEBARExperiment() {}
 
     public void modelPath(Path modelPath) {
         if (!Utils.isValidPath(modelPath, Utils.PathCheck.ALS))

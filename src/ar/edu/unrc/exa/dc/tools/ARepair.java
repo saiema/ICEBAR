@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static ar.edu.unrc.exa.dc.util.Utils.*;
@@ -64,7 +65,7 @@ public final class ARepair {
                     rep += "\n\tMessage: " + message;
                 }
                 if (hasRepair()) {
-                    rep += "\n\tRepair found: " + repair.toAbsolutePath().toString();
+                    rep += "\n\tRepair found: " + repair.toAbsolutePath();
                 }
             }
             rep += "\n}";
@@ -244,19 +245,25 @@ public final class ARepair {
 
     //AUXILIARY METHODS
 
+    private static final File aRepairStdOut = new File("aRepairExternalOutput.log");
+    private static final File aRepairStdErr = new File("aRepairExternalError.log");
+    private static final String NO_FIX_FOUND = "[INFO] Cannot fix the model";
+    private static final String FIX_FOUND = "[INFO] Fixed by";
+    private static final String ALL_TESTS_PASS = "[INFO] All tests pass";
+
     private ARepairResult executeARepair() {
         ARepairResult aRepairResult;
         try {
             String[] args = getARepairCommand();
             ProcessBuilder pb = new ProcessBuilder(args);
             pb.directory(workingDirectory.toFile());
-            File errorLog = new File("aRepairExternalError.log");
+            File errorLog = aRepairStdErr;
             if (errorLog.exists() && !errorLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + errorLog.toString());
+                throw new IllegalStateException("An error occurred while trying to delete " + errorLog);
             pb.redirectError(ProcessBuilder.Redirect.appendTo(errorLog));
-            File outputLog = new File("aRepairExternalOutput.log");
+            File outputLog = aRepairStdOut;
             if (outputLog.exists() && !outputLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + outputLog.toString());
+                throw new IllegalStateException("An error occurred while trying to delete " + outputLog);
             pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLog));
             Process p = pb.start();
             int exitCode = p.waitFor();
@@ -281,11 +288,36 @@ public final class ARepair {
         ARepairResult result;
         if (!repair.exists()) {
             result = ARepairResult.NOT_REPAIRED;
-            result.message("No fix found in " + repair.toString());
-        } else {
+            result.message("No fix file found in " + repair);
+            return result;
+        }
+        Optional<String> fixNotFound;
+        Optional<String> fixFound;
+        Optional<String> allTestsPass;
+        try {
+            fixNotFound = findStringInFile(aRepairStdOut.toPath(), NO_FIX_FOUND);
+            fixFound = findStringInFile(aRepairStdOut.toPath(), FIX_FOUND);
+            allTestsPass = findStringInFile(aRepairStdOut.toPath(), ALL_TESTS_PASS);
+        } catch (IOException e) {
+            result = ARepairResult.ERROR;
+            result.message("Error while reading output log:\n" + exceptionToString(e));
+            return result;
+        }
+        if (fixNotFound.isPresent()) {
+            result = ARepairResult.NOT_REPAIRED;
+            result.message("No fix found");
+        } else if (fixFound.isPresent() || allTestsPass.isPresent()) {
             result = ARepairResult.REPAIRED;
-            result.message("Fix found in " + repair.toString());
+            if (!fixFound.isPresent())
+                result.message("All tests passed with no modifications required");
+            else {
+                String repairFoundBy = fixFound.get().replace(FIX_FOUND, "");
+                result.message("Fix found (" + repairFoundBy + ") in " + repair);
+            }
             result.repair(repair.toPath());
+        } else {
+            result = ARepairResult.ERROR;
+            result.message("No 'fix found'/'fix not found' line found in ARepair's output log");
         }
         return result;
     }
@@ -311,7 +343,7 @@ public final class ARepair {
     private String pathsInformation() {
         String pinfo = "";
         pinfo += "working directory : " + (workingDirectory==null?"NULL":workingDirectory.toAbsolutePath().toString()) + "\n";
-        pinfo += "sat-solvers path  : " + (satSolvers==null?"NULL":satSolvers.toString() + " (this directory is relative to the working directory)") + "\n";
+        pinfo += "sat-solvers path  : " + (satSolvers==null?"NULL": satSolvers + " (this directory is relative to the working directory)") + "\n";
         pinfo += "classpath         : " + (classpath==null?"NULL":classpath.stream().map(Path::toString).collect(Collectors.joining(","))) + "\n";
         pinfo += "model to repair   : " + (modelToRepair==null?"NULL":modelToRepair.toString()) + "\n";
         pinfo += "tests path        : " + (testsPath==null?"NULL":testsPath.toString()) + "\n";

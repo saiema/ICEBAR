@@ -196,7 +196,7 @@ public final class BeAFixResult {
         if (checkFile == null)
             throw new IllegalArgumentException("checkFile is null");
         if (!checkFile.toFile().exists())
-            return error("No check file found at: " + checkFile.toString());
+            return error("No check file found at: " + checkFile);
         return parseCheckFile(checkFile);
     }
 
@@ -382,7 +382,7 @@ public final class BeAFixResult {
         try {
             List<String> checkLines = Files.lines(checkFile).collect(Collectors.toList());
             if (checkLines.isEmpty()) {
-                return error("No lines found in check file: " + checkLines.toString());
+                return error("No lines found in check file: " + checkLines);
             }
             String firstLine = checkLines.get(0);
             if (firstLine.startsWith(VALID)) {
@@ -413,11 +413,11 @@ public final class BeAFixResult {
                 }
                 beAFixResult.message("Error validating model (" + checkFile.toString().replace(".verification", ".als") +  ")\n" + exceptionMsg);
             } else {
-                return error("Invalid validation file (" + checkFile.toString() + ")" + "\n" + String.join("\n", checkLines));
+                return error("Invalid validation file (" + checkFile + ")" + "\n" + String.join("\n", checkLines));
             }
         } catch (IOException e) {
             e.printStackTrace();
-            return error("Error while parsing check file (" + checkFile.toString() + ")" + "\n" + Utils.exceptionToString(e));
+            return error("Error while parsing check file (" + checkFile + ")" + "\n" + Utils.exceptionToString(e));
         }
         return beAFixResult;
     }

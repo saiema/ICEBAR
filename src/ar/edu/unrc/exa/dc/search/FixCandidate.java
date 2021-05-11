@@ -26,7 +26,7 @@ public class FixCandidate {
         if (untrustedTests != null) {
             for (BeAFixTest uTest : untrustedTests) {
                 if (uTest.testType().equals(BeAFixTest.TestType.COUNTEREXAMPLE) || uTest.testType().equals(BeAFixTest.TestType.TRUSTED_POSITIVE)) {
-                    throw new IllegalArgumentException("trusted or counterexample found in untrusted tests (" + uTest.testType().toString() + ")");
+                    throw new IllegalArgumentException("trusted or counterexample found in untrusted tests (" + uTest.testType() + ")");
                 }
             }
         }

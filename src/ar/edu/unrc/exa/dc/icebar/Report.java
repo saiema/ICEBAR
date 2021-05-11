@@ -1,4 +1,4 @@
-package ar.edu.unrc.exa.dc.cegar;
+package ar.edu.unrc.exa.dc.icebar;
 
 import ar.edu.unrc.exa.dc.search.FixCandidate;
 import ar.edu.unrc.exa.dc.util.TimeCounter;

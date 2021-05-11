@@ -149,11 +149,11 @@ public final class BeAFix {
             ProcessBuilder pb = new ProcessBuilder(args);
             File errorLog = new File("beAFixExternalError.log");
             if (errorLog.exists() && !errorLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + errorLog.toString());
+                throw new IllegalStateException("An error occurred while trying to delete " + errorLog);
             pb.redirectError(ProcessBuilder.Redirect.appendTo(errorLog));
             File outputLog = new File("beAFixExternalOutput.log");
             if (outputLog.exists() && !outputLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + outputLog.toString());
+                throw new IllegalStateException("An error occurred while trying to delete " + outputLog);
             pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLog));
             Process p = pb.start();
             int exitCode = p.waitFor();
@@ -175,11 +175,11 @@ public final class BeAFix {
             ProcessBuilder pb = new ProcessBuilder(args);
             File errorLog = new File("beAFixExternalError.log");
             if (errorLog.exists() && !errorLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + errorLog.toString());
+                throw new IllegalStateException("An error occurred while trying to delete " + errorLog);
             pb.redirectError(ProcessBuilder.Redirect.appendTo(errorLog));
             File outputLog = new File("beAFixExternalOutput.log");
             if (outputLog.exists() && !outputLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + outputLog.toString());
+                throw new IllegalStateException("An error occurred while trying to delete " + outputLog);
             pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLog));
             Process p = pb.start();
             int exitCode = p.waitFor();

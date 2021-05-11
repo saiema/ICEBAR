@@ -1,4 +1,4 @@
-package ar.edu.unrc.exa.dc.cegar;
+package ar.edu.unrc.exa.dc.icebar;
 
 import ar.edu.unrc.exa.dc.search.FixCandidate;
 import ar.edu.unrc.exa.dc.search.IterativeCEBasedAlloyRepair;
@@ -17,9 +17,9 @@ import java.util.Optional;
 import static ar.edu.unrc.exa.dc.util.Utils.getMaxScopeFromAlsFile;
 import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
-public class CegarCLI {
+public class ICEBAR {
 
-    private static final String VERSION = "1.8.0";
+    private static final String VERSION = "1.9.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -40,75 +40,75 @@ public class CegarCLI {
             return;
         }
         parseCommandLine(args);
-        CEGARProperties.getInstance().loadConfig(
-                CEGARExperiment.getInstance().hasProperties()?
-                        CEGARExperiment.getInstance().propertiesPath().toString():
-                        CEGARProperties.DEFAULT_PROPERTIES
+        ICEBARProperties.getInstance().loadConfig(
+                ICEBARExperiment.getInstance().hasProperties()?
+                        ICEBARExperiment.getInstance().propertiesPath().toString():
+                        ICEBARProperties.DEFAULT_PROPERTIES
         );
         BeAFix beafix = beafix();
         ARepair arepair = arepair();
         int laps = IterativeCEBasedAlloyRepair.LAPS_DEFAULT;
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_LAPS))
-            laps = CEGARProperties.getInstance().getIntArgument(CEGARProperties.ConfigKey.CEGAR_LAPS);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_LAPS))
+            laps = ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.CEGAR_LAPS);
         IterativeCEBasedAlloyRepair iterativeCEBasedAlloyRepair = new IterativeCEBasedAlloyRepair(
-                CEGARExperiment.getInstance().modelPath(),
-                CEGARExperiment.getInstance().oraclePath(),
+                ICEBARExperiment.getInstance().modelPath(),
+                ICEBARExperiment.getInstance().oraclePath(),
                 arepair,
                 beafix,
                 laps
         );
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE)) {
-            boolean updateScopeFromOracle = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE)) {
+            boolean updateScopeFromOracle = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE);
             if (updateScopeFromOracle)
-                arepair.setScope(Math.max(arepair.scope(), getMaxScopeFromAlsFile(CEGARExperiment.getInstance().oraclePath())));
+                arepair.setScope(Math.max(arepair.scope(), getMaxScopeFromAlsFile(ICEBARExperiment.getInstance().oraclePath())));
         }
-        if (CEGARExperiment.getInstance().hasInitialTests()) {
-            InitialTests initialTests = new InitialTests(CEGARExperiment.getInstance().initialTestsPath());
+        if (ICEBARExperiment.getInstance().hasInitialTests()) {
+            InitialTests initialTests = new InitialTests(ICEBARExperiment.getInstance().initialTestsPath());
             iterativeCEBasedAlloyRepair.setInitialTests(initialTests);
             beafix.testsStartingIndex(initialTests.getMaxIndex() + 1);
             arepair.setScope(Math.max(arepair.scope(), initialTests.getMaxScope()));
         }
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_PRIORIZATION)) {
-            iterativeCEBasedAlloyRepair.usePriorization(CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_PRIORIZATION));
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_PRIORIZATION)) {
+            iterativeCEBasedAlloyRepair.usePriorization(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_PRIORIZATION));
         }
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_SEARCH)) {
-            String search = CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.CEGAR_SEARCH);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_SEARCH)) {
+            String search = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.CEGAR_SEARCH);
             if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.CegarSearch.DFS.toString()) == 0) {
                 iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.CegarSearch.DFS);
             } else if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.CegarSearch.BFS.toString()) == 0) {
                 iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.CegarSearch.BFS);
             } else {
-                throw new IllegalArgumentException("Invalid configuration value for " + CEGARProperties.ConfigKey.CEGAR_SEARCH.getKey() + " (" + search + ")");
+                throw new IllegalArgumentException("Invalid configuration value for " + ICEBARProperties.ConfigKey.CEGAR_SEARCH.getKey() + " (" + search + ")");
             }
         }
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_ENABLE_RELAXEDFACTS_GENERATION)) {
-            boolean allowNoFacts = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_ENABLE_RELAXEDFACTS_GENERATION);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_ENABLE_RELAXEDFACTS_GENERATION)) {
+            boolean allowNoFacts = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_ENABLE_RELAXEDFACTS_GENERATION);
             iterativeCEBasedAlloyRepair.allowFactsRelaxation(allowNoFacts);
         }
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_GLOBAL_TRUSTED_TESTS)) {
-            boolean globalTrustedTests = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_GLOBAL_TRUSTED_TESTS);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_GLOBAL_TRUSTED_TESTS)) {
+            boolean globalTrustedTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_GLOBAL_TRUSTED_TESTS);
             iterativeCEBasedAlloyRepair.globalTrustedTests(globalTrustedTests);
         }
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_ENABLE_FORCE_ASSERTION_TESTS)) {
-            boolean forceAssertionsTests = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_ENABLE_FORCE_ASSERTION_TESTS);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_ENABLE_FORCE_ASSERTION_TESTS)) {
+            boolean forceAssertionsTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_ENABLE_FORCE_ASSERTION_TESTS);
             iterativeCEBasedAlloyRepair.forceAssertionGeneration(forceAssertionsTests);
         }
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_TIMEOUT)) {
-            long timeout = CEGARProperties.getInstance().getIntArgument(CEGARProperties.ConfigKey.CEGAR_TIMEOUT);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_TIMEOUT)) {
+            long timeout = ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.CEGAR_TIMEOUT);
             if (timeout < 0)
-                throw new IllegalArgumentException("invalid value for " + CEGARProperties.ConfigKey.CEGAR_TIMEOUT + " (" + timeout + ")");
+                throw new IllegalArgumentException("invalid value for " + ICEBARProperties.ConfigKey.CEGAR_TIMEOUT + " (" + timeout + ")");
             iterativeCEBasedAlloyRepair.timeout(timeout);
         }
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.CEGAR_KEEP_GOING_ON_AREPAIR_NPE)) {
-            boolean keepGoingAfterARepairNPE = CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.CEGAR_KEEP_GOING_ON_AREPAIR_NPE);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_KEEP_GOING_ON_AREPAIR_NPE)) {
+            boolean keepGoingAfterARepairNPE = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_KEEP_GOING_ON_AREPAIR_NPE);
             iterativeCEBasedAlloyRepair.keepGoingAfterARepairNPE(keepGoingAfterARepairNPE);
         }
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {
-            System.out.println("Fix found\n" + fix.get().toString() + "\n");
+            System.out.println("Fix found\n" + fix.get() + "\n");
         } else {
-            System.out.println("No Fix Found for model: " + CEGARExperiment.getInstance().modelPath().toString() + "\n");
+            System.out.println("No Fix Found for model: " + ICEBARExperiment.getInstance().modelPath().toString() + "\n");
         }
     }
 
@@ -141,31 +141,31 @@ public class CegarCLI {
     private static void setConfig(String key, String value) {
         switch (key.toLowerCase()) {
             case MODEL_KEY: {
-                if (CEGARExperiment.getInstance().hasModel())
-                    throw new IllegalArgumentException("Already a model path has been defined (current: " + CEGARExperiment.getInstance().modelPath().toString() + " | new: " + value + ")");
+                if (ICEBARExperiment.getInstance().hasModel())
+                    throw new IllegalArgumentException("Already a model path has been defined (current: " + ICEBARExperiment.getInstance().modelPath().toString() + " | new: " + value + ")");
                 Path modelPath = Paths.get(value).toAbsolutePath();
-                CEGARExperiment.getInstance().modelPath(modelPath);
+                ICEBARExperiment.getInstance().modelPath(modelPath);
                 break;
             }
             case ORACLE_KEY: {
-                if (CEGARExperiment.getInstance().hasOracle())
-                    throw new IllegalArgumentException("Already an oracle path has been defined (current: " + CEGARExperiment.getInstance().oraclePath().toString() + " | new: " + value + ")");
+                if (ICEBARExperiment.getInstance().hasOracle())
+                    throw new IllegalArgumentException("Already an oracle path has been defined (current: " + ICEBARExperiment.getInstance().oraclePath().toString() + " | new: " + value + ")");
                 Path oraclePath = Paths.get(value).toAbsolutePath();
-                CEGARExperiment.getInstance().oraclePath(oraclePath);
+                ICEBARExperiment.getInstance().oraclePath(oraclePath);
                 break;
             }
             case PROPERTIES_KEY: {
-                if (CEGARExperiment.getInstance().hasProperties())
-                    throw new IllegalArgumentException("Already a properties path has been defined (current: " + CEGARExperiment.getInstance().propertiesPath().toString() + " | new: " + value + ")");
+                if (ICEBARExperiment.getInstance().hasProperties())
+                    throw new IllegalArgumentException("Already a properties path has been defined (current: " + ICEBARExperiment.getInstance().propertiesPath().toString() + " | new: " + value + ")");
                 Path propertiesPath = Paths.get(value).toAbsolutePath();
-                CEGARExperiment.getInstance().propertiesPath(propertiesPath);
+                ICEBARExperiment.getInstance().propertiesPath(propertiesPath);
                 break;
             }
             case INITIAL_TESTS_KEY: {
-                if (CEGARExperiment.getInstance().hasInitialTests())
-                    throw new IllegalArgumentException("Already an initial tests path has been defined (current: " + CEGARExperiment.getInstance().initialTestsPath().toString() + " | new: " + value + ")");
+                if (ICEBARExperiment.getInstance().hasInitialTests())
+                    throw new IllegalArgumentException("Already an initial tests path has been defined (current: " + ICEBARExperiment.getInstance().initialTestsPath().toString() + " | new: " + value + ")");
                 Path initialTestsPath = Paths.get(value).toAbsolutePath();
-                CEGARExperiment.getInstance().initialTestsPath(initialTestsPath);
+                ICEBARExperiment.getInstance().initialTestsPath(initialTestsPath);
                 break;
             }
             default : throw new IllegalArgumentException("Invalid configuration key (" + key + ")");
@@ -173,16 +173,16 @@ public class CegarCLI {
     }
 
     private static void help() {
-        String help = "CEGAR CLI\nVERSION " + VERSION + "\n" +
-                "CounterExample Guided Alloy Repair\n" +
+        String help = "ICEBAR CLI\nVERSION " + VERSION + "\n" +
+                "Iterative Counter Example-Based Alloy Repair\n" +
                 "Usage:\n" +
                 "\t--help                                   :  Shows this message\n" +
                 "\t--" + MODEL_KEY + "<path to .als file>               :  The path to the model to repair (anything in this file can be modified to repair) (*).\n" +
                 "\t--" + ORACLE_KEY + "<path to .als file>              :  The path to the oracle (containing predicates, assertions, and anything related to those which can't be modified to repair) (*).\n" +
-                "\t--" + PROPERTIES_KEY + "<path to .properties file>   :  CEGAR properties, please look at 'cegar_stein.properties' as an example (**).\n" +
+                "\t--" + PROPERTIES_KEY + "<path to .properties file>   :  ICEBAR properties, please look at 'icebar_stein.properties' as an example (**).\n" +
                 "\t--" + INITIAL_TESTS_KEY + "<path to .tests file>      :  Initial tests set which will be used in conjunction with counterexample based tests (***).\n" +
                 "(*)   : This is a required argument.\n" +
-                "(**)  : Default properties will be used instead (from cegar.properties).\n" +
+                "(**)  : Default properties will be used instead (from icebar.properties).\n" +
                 "(***) : Optional argument, default is no initial tests.\n" +
                 "About initial tests:\n" +
                 "A test is defined as a predicate and a run <predicate's name> expect (0|1) command\n" +
@@ -193,33 +193,33 @@ public class CegarCLI {
 
     private static BeAFix beafix() {
         BeAFix beAFix = new BeAFix();
-        beAFix.setBeAFixJar(Paths.get(CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.BEAFIX_JAR)));
+        beAFix.setBeAFixJar(Paths.get(ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.BEAFIX_JAR)));
         beAFix.setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath());
         beAFix.createOutDirIfNonExistent(true);
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS))
-            beAFix.instanceTests(CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS));
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_TESTS))
-            beAFix.testsToGenerate(CEGARProperties.getInstance().getIntArgument(CEGARProperties.ConfigKey.BEAFIX_TESTS));
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_MODEL_OVERRIDES_FOLDER)) {
-            String modelOverridesFolderValue = CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.BEAFIX_MODEL_OVERRIDES_FOLDER);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS))
+            beAFix.instanceTests(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS));
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_TESTS))
+            beAFix.testsToGenerate(ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.BEAFIX_TESTS));
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_MODEL_OVERRIDES_FOLDER)) {
+            String modelOverridesFolderValue = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.BEAFIX_MODEL_OVERRIDES_FOLDER);
             Path modelOverridesFolder = modelOverridesFolderValue.trim().isEmpty()?null:Paths.get(modelOverridesFolderValue);
             beAFix.modelOverridesFolder(modelOverridesFolder);
             beAFix.modelOverrides(modelOverridesFolder != null);
         }
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_BUGGY_FUNCS_FILE)) {
-            String buggyFuncsFileValue = CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.BEAFIX_BUGGY_FUNCS_FILE);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_BUGGY_FUNCS_FILE)) {
+            String buggyFuncsFileValue = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.BEAFIX_BUGGY_FUNCS_FILE);
             Path buggyFuncsFile = buggyFuncsFileValue.trim().isEmpty()?null:Paths.get(buggyFuncsFileValue);
             beAFix.buggyFunctions(buggyFuncsFile);
         }
-        if (CEGARProperties.getInstance().argumentExist(CEGARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE)) {
-            beAFix.aRepairCompatibilityRelaxedMode(CEGARProperties.getInstance().getBooleanArgument(CEGARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE));
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE)) {
+            beAFix.aRepairCompatibilityRelaxedMode(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE));
         }
         return beAFix;
     }
 
     private static ARepair arepair() {
         List<Path> classpath = new LinkedList<>();
-        Path aRepairRoot = Paths.get(CEGARProperties.getInstance().getStringArgument(CEGARProperties.ConfigKey.AREPAIR_ROOT));
+        Path aRepairRoot = Paths.get(ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.AREPAIR_ROOT));
         Path aRepairSatSolvers = Paths.get(AREPAIR_SAT_SOLVERS);
         Path aRepairAlloyJar = Paths.get(aRepairRoot.toString(), AREPAIR_LIBS_ROOT, ALLOY_JAR);
         Path aRepairAParserJar = Paths.get(aRepairRoot.toString(), AREPAIR_LIBS_ROOT, APARSER_JAR);
