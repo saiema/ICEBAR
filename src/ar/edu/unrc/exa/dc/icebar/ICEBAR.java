@@ -48,8 +48,8 @@ public class ICEBAR {
         BeAFix beafix = beafix();
         ARepair arepair = arepair();
         int laps = IterativeCEBasedAlloyRepair.LAPS_DEFAULT;
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_LAPS))
-            laps = ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.CEGAR_LAPS);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_LAPS))
+            laps = ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.ICEBAR_LAPS);
         IterativeCEBasedAlloyRepair iterativeCEBasedAlloyRepair = new IterativeCEBasedAlloyRepair(
                 ICEBARExperiment.getInstance().modelPath(),
                 ICEBARExperiment.getInstance().oraclePath(),
@@ -57,8 +57,8 @@ public class ICEBAR {
                 beafix,
                 laps
         );
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE)) {
-            boolean updateScopeFromOracle = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE)) {
+            boolean updateScopeFromOracle = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE);
             if (updateScopeFromOracle)
                 arepair.setScope(Math.max(arepair.scope(), getMaxScopeFromAlsFile(ICEBARExperiment.getInstance().oraclePath())));
         }
@@ -68,39 +68,39 @@ public class ICEBAR {
             beafix.testsStartingIndex(initialTests.getMaxIndex() + 1);
             arepair.setScope(Math.max(arepair.scope(), initialTests.getMaxScope()));
         }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_PRIORIZATION)) {
-            iterativeCEBasedAlloyRepair.usePriorization(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_PRIORIZATION));
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRIORIZATION)) {
+            iterativeCEBasedAlloyRepair.usePriorization(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRIORIZATION));
         }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_SEARCH)) {
-            String search = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.CEGAR_SEARCH);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_SEARCH)) {
+            String search = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.ICEBAR_SEARCH);
             if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.CegarSearch.DFS.toString()) == 0) {
                 iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.CegarSearch.DFS);
             } else if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.CegarSearch.BFS.toString()) == 0) {
                 iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.CegarSearch.BFS);
             } else {
-                throw new IllegalArgumentException("Invalid configuration value for " + ICEBARProperties.ConfigKey.CEGAR_SEARCH.getKey() + " (" + search + ")");
+                throw new IllegalArgumentException("Invalid configuration value for " + ICEBARProperties.ConfigKey.ICEBAR_SEARCH.getKey() + " (" + search + ")");
             }
         }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_ENABLE_RELAXEDFACTS_GENERATION)) {
-            boolean allowNoFacts = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_ENABLE_RELAXEDFACTS_GENERATION);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_ENABLE_RELAXEDFACTS_GENERATION)) {
+            boolean allowNoFacts = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_ENABLE_RELAXEDFACTS_GENERATION);
             iterativeCEBasedAlloyRepair.allowFactsRelaxation(allowNoFacts);
         }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_GLOBAL_TRUSTED_TESTS)) {
-            boolean globalTrustedTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_GLOBAL_TRUSTED_TESTS);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_GLOBAL_TRUSTED_TESTS)) {
+            boolean globalTrustedTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_GLOBAL_TRUSTED_TESTS);
             iterativeCEBasedAlloyRepair.globalTrustedTests(globalTrustedTests);
         }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_ENABLE_FORCE_ASSERTION_TESTS)) {
-            boolean forceAssertionsTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_ENABLE_FORCE_ASSERTION_TESTS);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_ENABLE_FORCE_ASSERTION_TESTS)) {
+            boolean forceAssertionsTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_ENABLE_FORCE_ASSERTION_TESTS);
             iterativeCEBasedAlloyRepair.forceAssertionGeneration(forceAssertionsTests);
         }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_TIMEOUT)) {
-            long timeout = ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.CEGAR_TIMEOUT);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_TIMEOUT)) {
+            long timeout = ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.ICEBAR_TIMEOUT);
             if (timeout < 0)
-                throw new IllegalArgumentException("invalid value for " + ICEBARProperties.ConfigKey.CEGAR_TIMEOUT + " (" + timeout + ")");
+                throw new IllegalArgumentException("invalid value for " + ICEBARProperties.ConfigKey.ICEBAR_TIMEOUT + " (" + timeout + ")");
             iterativeCEBasedAlloyRepair.timeout(timeout);
         }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.CEGAR_KEEP_GOING_ON_AREPAIR_NPE)) {
-            boolean keepGoingAfterARepairNPE = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.CEGAR_KEEP_GOING_ON_AREPAIR_NPE);
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_KEEP_GOING_ON_AREPAIR_NPE)) {
+            boolean keepGoingAfterARepairNPE = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_KEEP_GOING_ON_AREPAIR_NPE);
             iterativeCEBasedAlloyRepair.keepGoingAfterARepairNPE(keepGoingAfterARepairNPE);
         }
         startCandidateInfoFile();

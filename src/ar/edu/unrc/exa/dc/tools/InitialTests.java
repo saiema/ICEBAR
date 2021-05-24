@@ -5,7 +5,6 @@ import ar.edu.unrc.exa.dc.util.Utils;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;

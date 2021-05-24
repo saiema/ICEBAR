@@ -38,6 +38,12 @@ public class Report {
             }
 
         },
+        ICEBAR_INTERNAL_ERROR {
+
+            @Override
+            public String toString() { return "ICEBAR_INTERNAL_ERROR"; }
+
+        },
         EXHAUSTED_CANDIDATES {
 
             @Override
@@ -95,6 +101,10 @@ public class Report {
 
     public static Report beafixGenFailed(FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
         return new Report(Status.BEAFIX_GEN_FAILED, candidate, tests, beafixTimer, arepairTimer);
+    }
+
+    public static Report icebarInternError(FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {
+        return new Report(Status.ICEBAR_INTERNAL_ERROR, candidate, tests, beafixTimer, arepairTimer);
     }
 
     public static Report exhaustedSearchSpace(int laps, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer) {

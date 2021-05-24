@@ -5,8 +5,8 @@ import java.util.Properties;
 
 public class ICEBARProperties {
 
-    private static final String BEAFIX_PREFIX = "cegar.tools.beafix";
-    private static final String AREPAIR_PREFIX = "cegar.tools.arepair";
+    private static final String BEAFIX_PREFIX = "icebar.tools.beafix";
+    private static final String AREPAIR_PREFIX = "icebar.tools.arepair";
     
     public enum ConfigKey {
         BEAFIX_JAR {
@@ -49,41 +49,41 @@ public class ICEBARProperties {
                 return AREPAIR_PREFIX + ".root";
             }
         },
-        CEGAR_LAPS {
+        ICEBAR_LAPS {
             @Override
-            public String getKey() { return "cegar.laps"; }
+            public String getKey() { return "icebar.laps"; }
         },
-        CEGAR_PRIORIZATION {
+        ICEBAR_PRIORIZATION {
             @Override
-            public String getKey() { return "cegar.priorization"; }
+            public String getKey() { return "icebar.priorization"; }
         },
-        CEGAR_SEARCH {
+        ICEBAR_SEARCH {
             @Override
-            public String getKey() { return "cegar.search"; }
+            public String getKey() { return "icebar.search"; }
         },
-        CEGAR_ENABLE_RELAXEDFACTS_GENERATION {
+        ICEBAR_ENABLE_RELAXEDFACTS_GENERATION {
             @Override
-            public String getKey() { return "cegar.allowrelaxedfacts"; }
+            public String getKey() { return "icebar.allowrelaxedfacts"; }
         },
-        CEGAR_ENABLE_FORCE_ASSERTION_TESTS {
+        ICEBAR_ENABLE_FORCE_ASSERTION_TESTS {
             @Override
-            public String getKey() { return "cegar.forceassertiontests"; }
+            public String getKey() { return "icebar.forceassertiontests"; }
         },
-        CEGAR_GLOBAL_TRUSTED_TESTS {
+        ICEBAR_GLOBAL_TRUSTED_TESTS {
             @Override
-            public String getKey() { return "cegar.globaltrustedtests"; }
+            public String getKey() { return "icebar.globaltrustedtests"; }
         },
-        CEGAR_TIMEOUT {
+        ICEBAR_TIMEOUT {
             @Override
-            public String getKey() { return "cegar.timeout"; }
+            public String getKey() { return "icebar.timeout"; }
         },
-        CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE {
+        ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE {
             @Override
-            public String getKey() { return "cegar.updatescopefromoracle"; }
+            public String getKey() { return "icebar.updatescopefromoracle"; }
         },
-        CEGAR_KEEP_GOING_ON_AREPAIR_NPE {
+        ICEBAR_KEEP_GOING_ON_AREPAIR_NPE {
             @Override
-            public String getKey() { return "cegar.keepgoingarepairnpe"; }
+            public String getKey() { return "icebar.keepgoingarepairnpe"; }
         }
         ;
         public abstract String getKey();
@@ -182,12 +182,12 @@ public class ICEBARProperties {
 
     private boolean isBooleanKey(ConfigKey key) {
         switch (key) {
-            case CEGAR_GLOBAL_TRUSTED_TESTS:
-            case CEGAR_ENABLE_RELAXEDFACTS_GENERATION:
-            case CEGAR_PRIORIZATION:
-            case CEGAR_ENABLE_FORCE_ASSERTION_TESTS:
-            case CEGAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE:
-            case CEGAR_KEEP_GOING_ON_AREPAIR_NPE:
+            case ICEBAR_GLOBAL_TRUSTED_TESTS:
+            case ICEBAR_ENABLE_RELAXEDFACTS_GENERATION:
+            case ICEBAR_PRIORIZATION:
+            case ICEBAR_ENABLE_FORCE_ASSERTION_TESTS:
+            case ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE:
+            case ICEBAR_KEEP_GOING_ON_AREPAIR_NPE:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case BEAFIX_INSTANCE_TESTS: return true;
             default: return false;
@@ -197,15 +197,15 @@ public class ICEBARProperties {
     private boolean isIntKey(ConfigKey key) {
         switch (key) {
             case BEAFIX_TESTS :
-            case CEGAR_TIMEOUT:
-            case CEGAR_LAPS : return true;
+            case ICEBAR_TIMEOUT:
+            case ICEBAR_LAPS: return true;
             default : return false;
         }
     }
 
     private boolean isStringKey(ConfigKey key) {
         switch (key) {
-            case CEGAR_SEARCH:
+            case ICEBAR_SEARCH:
             case BEAFIX_JAR :
             case BEAFIX_MODEL_OVERRIDES_FOLDER :
             case BEAFIX_BUGGY_FUNCS_FILE :

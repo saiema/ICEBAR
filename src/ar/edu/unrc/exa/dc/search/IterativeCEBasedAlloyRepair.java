@@ -168,7 +168,7 @@ public class IterativeCEBasedAlloyRepair {
                     if (timeout > 0) {
                         totalTime.updateTotalTime();
                         if (totalTime.toMinutes() >= timeout) {
-                            logger.info("CEGAR timeout (" + timeout + " minutes) reached");
+                            logger.info("ICEBAR timeout (" + timeout + " minutes) reached");
                             Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), beafixTimeCounter, arepairTimeCounter);
                             writeReport(report);
                             return Optional.empty();
@@ -181,9 +181,12 @@ public class IterativeCEBasedAlloyRepair {
                     if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                         return Optional.empty();
                     beAFixResult.parseAllTests();
-                    boolean noUntrustedTestsGenerated = beAFixResult.getUntrustedPositiveTests().isEmpty() && beAFixResult.getUntrustedNegativeTests().isEmpty();
-                    boolean noTrustedTestsGenerated = beAFixResult.getTrustedPositiveTests().isEmpty() && beAFixResult.getTrustedNegativeTests().isEmpty() && beAFixResult.getCounterexampleTests().isEmpty();
-                    if (allowFactsRelaxation && noUntrustedTestsGenerated && noTrustedTestsGenerated && trustedTests.isEmpty() && current.untrustedTests().isEmpty() && searchSpace.isEmpty()) {
+                    List<BeAFixTest> counterexampleTests = beAFixResult.getCounterexampleTests();
+                    List<BeAFixTest> counterexampleUntrustedTests = beAFixCheckResult.getCounterExampleUntrustedTests();
+                    List<BeAFixTest> predicateTests = beAFixResult.getPredicateTests();
+                    List<BeAFixTest> relaxedPredicateTests = null;
+                    List<BeAFixTest> relaxedAssertionsTests = null;
+                    if (allowFactsRelaxation && counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty() && predicateTests.isEmpty()) {
                         logger.info("No tests available, generating with relaxed facts...");
                         beafixTimeCounter.clockStart();
                         beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, true, false);
@@ -191,6 +194,7 @@ public class IterativeCEBasedAlloyRepair {
                         if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                             return Optional.empty();
                         beAFixResult.parseAllTests();
+                        relaxedPredicateTests = beAFixResult.getPredicateTests();
                         if (forceAssertionGeneration) {
                             logger.info("Generating with assertion forced test generation...");
                             beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
@@ -199,59 +203,43 @@ public class IterativeCEBasedAlloyRepair {
                             beafixTimeCounter.clockEnd();
                             if (checkIfInvalidAndReportBeAFixResults(beAFixResult_forcedAssertionTestGeneration, current, beafixTimeCounter, arepairTimeCounter))
                                 return Optional.empty();
-                            beAFixResult.mergeWith(beAFixResult_forcedAssertionTestGeneration);
+                            beAFixResult_forcedAssertionTestGeneration.parseAllTests();
+                            relaxedAssertionsTests = beAFixResult_forcedAssertionTestGeneration.getPredicateTests();
                         }
                     }
-                    boolean trustedTestsAdded;
                     int newDepth = current.depth() + 1;
-                    Set<BeAFixTest> trustedTests = new HashSet<>();
-                    trustedTests.addAll(beAFixResult.getCounterexampleTests());
-                    trustedTests.addAll(beAFixResult.getTrustedPositiveTests());
-                    trustedTests.addAll(beAFixResult.getTrustedNegativeTests());
+                    boolean trustedTestsAdded;
                     boolean addLocalTrustedTests;
                     if (globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty())) {
-                        trustedTestsAdded = this.trustedTests.addAll(trustedTests);
+                        trustedTestsAdded = this.trustedTests.addAll(counterexampleTests);
                         addLocalTrustedTests = false;
                     } else { //local trusted tests except from original
                         trustedTestsAdded = !trustedTests.isEmpty();
                         addLocalTrustedTests = true;
                     }
-                    for (BeAFixTest upTest : beAFixResult.getUntrustedPositiveTests()) {
-                        Set<BeAFixTest> newTrustedTests = new HashSet<>(current.trustedTests());
-                        boolean localTrustedTestsAdded = newTrustedTests.addAll(trustedTests);
-                        Set<BeAFixTest> newTests = new HashSet<>(current.untrustedTests());
-                        if (!newTests.add(upTest) && !trustedTestsAdded && !localTrustedTestsAdded)
-                            continue;
-                        FixCandidate newCandidateFromUntrustedTest;
-                        if (!globalTrustedTests && addLocalTrustedTests)
-                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests, newTrustedTests);
-                        else
-                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
-                        newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
-                        searchSpace.push(newCandidateFromUntrustedTest);
-                    }
-                    for (BeAFixTest unTest : beAFixResult.getUntrustedNegativeTests()) {
-                        Set<BeAFixTest> newTrustedTests = new HashSet<>(current.trustedTests());
-                        boolean localTrustedTestsAdded = newTrustedTests.addAll(trustedTests);
-                        Set<BeAFixTest> newTests = new HashSet<>(current.untrustedTests());
-                        if (!newTests.add(unTest) && !trustedTestsAdded && !localTrustedTestsAdded)
-                            continue;
-                        FixCandidate newCandidateFromUntrustedTest;
-                        if (!globalTrustedTests && addLocalTrustedTests)
-                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests, newTrustedTests);
-                        else
-                            newCandidateFromUntrustedTest = new FixCandidate(modelToRepair, newDepth, newTests);
-                        newCandidateFromUntrustedTest.repairedProperties(repairedPropertiesForCurrent);
-                        searchSpace.push(newCandidateFromUntrustedTest);
-                    }
-                    if (noUntrustedTestsGenerated && trustedTestsAdded) {
-                        FixCandidate onlyTrustedTestsCandidate;
-                        if (!globalTrustedTests && addLocalTrustedTests)
-                            onlyTrustedTestsCandidate = new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests(), trustedTests);
-                        else
-                            onlyTrustedTestsCandidate = new FixCandidate(current.modelToRepair(), newDepth, current.untrustedTests());
-                        onlyTrustedTestsCandidate.repairedProperties(repairedPropertiesForCurrent);
-                        searchSpace.push(onlyTrustedTestsCandidate);
+                    if (!counterexampleTests.isEmpty()) {
+                        Set<BeAFixTest> localTrustedTests = new HashSet<>(current.trustedTests());
+                        Set<BeAFixTest> localUntrustedTests = new HashSet<>(current.untrustedTests());
+                        if (addLocalTrustedTests) {
+                            localTrustedTests.addAll(counterexampleTests);
+                        }
+                        if (trustedTestsAdded) {
+                            FixCandidate newCandidate = new FixCandidate(modelToRepair, newDepth, localUntrustedTests, localTrustedTests);
+                            newCandidate.repairedProperties(repairedPropertiesForCurrent);
+                            searchSpace.push(newCandidate);
+                        }
+                    } else if (!counterexampleUntrustedTests.isEmpty()) {
+                        if (!createBranches(current, counterexampleUntrustedTests, true, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter))
+                            return Optional.empty();
+                    } else if (!predicateTests.isEmpty()) {
+                        if (!createBranches(current, predicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter))
+                            return Optional.empty();
+                    } else if (relaxedPredicateTests != null && !relaxedPredicateTests.isEmpty()) {
+                        if (!createBranches(current, relaxedPredicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter))
+                            return Optional.empty();
+                    } else if (relaxedAssertionsTests != null && !relaxedAssertionsTests.isEmpty()) {
+                        if (!createBranches(current, relaxedAssertionsTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter))
+                            return Optional.empty();
                     }
                     tests += beAFixResult.generatedTests();
                     logger.info("Total tests generated: " + tests);
@@ -263,12 +251,31 @@ public class IterativeCEBasedAlloyRepair {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
             }
         }
-        logger.info("CEGAR ended with no more candidates");
+        logger.info("ICEBAR ended with no more candidates");
         Report report = Report.exhaustedSearchSpace(maxReachedLap, tests, beafixTimeCounter, arepairTimeCounter);
         writeReport(report);
         return Optional.empty();
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private boolean createBranches(FixCandidate current, List<BeAFixTest> fromTests, boolean multipleBranches, int newDepth, CandidateSpace searchSpace, int repairedPropertiesForCurrent, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {
+        BeAFixTest branchingTest = fromTests.get(0);
+        if ((multipleBranches && !branchingTest.isMultipleBranch()) || (!multipleBranches && !branchingTest.isPositiveAndNegativeBranch())) {
+            logger.severe(multipleBranches?"An untrusted counterexample test must have at least two alternate cases":"A predicate test must have a positive and negative branch");
+            Report report = Report.icebarInternError(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), beafixTimeCounter, arepairTimeCounter);
+            writeReport(report);
+            return false;
+        }
+        for (BeAFixTest branch : multipleBranches?branchingTest.getAlternateBranches():branchingTest.getPositiveAndNegativeBranches().asSet()) {
+            Set<BeAFixTest> localTrustedTests = new HashSet<>(current.trustedTests());
+            Set<BeAFixTest> localUntrustedTests = new HashSet<>(current.untrustedTests());
+            localUntrustedTests.add(branch);
+            FixCandidate newCandidate = new FixCandidate(modelToRepair, newDepth, localUntrustedTests, localTrustedTests);
+            newCandidate.repairedProperties(repairedPropertiesForCurrent);
+            searchSpace.push(newCandidate);
+        }
+        return true;
+    }
 
     private boolean checkIfInvalidAndReportBeAFixResults(BeAFixResult beAFixResult, FixCandidate current, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {
         if (!beAFixResult.error()) {

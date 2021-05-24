@@ -156,7 +156,7 @@ public final class Utils {
     }
 
     public static void writeReport(Report report) throws IOException {
-        String reportFileRaw = "cegar.info";
+        String reportFileRaw = "icebar.info";
         Path reportFilePath = Paths.get(reportFileRaw);
         File reportFile = reportFilePath.toFile();
         if (reportFile.exists() && !reportFile.delete())
@@ -170,15 +170,14 @@ public final class Utils {
     private static final String CANDIDATE_REPORT_HEADER =
                     "MODEL" + Report.SEPARATOR +
                     "DEPTH" + Report.SEPARATOR +
-                    "CE" + Report.SEPARATOR +
-                    "TP" + Report.SEPARATOR +
-                    "UP" + Report.SEPARATOR +
-                    "TN" + Report.SEPARATOR +
-                    "UN" + Report.SEPARATOR +
+                    "CE_GLOBAL" + Report.SEPARATOR +
+                    "TRUSTED_GLOBAL" + Report.SEPARATOR +
+                    "TRUSTED_LOCAL" + Report.SEPARATOR +
+                    "UNTRUSTED_LOCAL" + Report.SEPARATOR +
                     "AREPAIR STATUS" + "\n"
             ;
     public static void startCandidateInfoFile() throws IOException {
-        String candidateInfoFileRaw = "cegar_arepair.info";
+        String candidateInfoFileRaw = "icebar_arepair.info";
         Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (candidateInfoFile.exists() && !candidateInfoFile.delete())
@@ -198,11 +197,10 @@ public final class Utils {
         String candidateInfo =
                         candidate.modelName() + Report.SEPARATOR +
                         candidate.depth() + Report.SEPARATOR +
-                        (countTests(trustedTests, BeAFixTest.TestType.COUNTEREXAMPLE) + countTests(candidate.untrustedTests(), BeAFixTest.TestType.COUNTEREXAMPLE)) + Report.SEPARATOR +
-                        countTests(trustedTests, BeAFixTest.TestType.TRUSTED_POSITIVE) + Report.SEPARATOR +
-                        countTests(candidate.untrustedTests(), BeAFixTest.TestType.UNTRUSTED_POSITIVE) + Report.SEPARATOR +
-                        countTests(trustedTests, BeAFixTest.TestType.TRUSTED_NEGATIVE) + Report.SEPARATOR +
-                        countTests(candidate.untrustedTests(), BeAFixTest.TestType.UNTRUSTED_NEGATIVE) + Report.SEPARATOR +
+                        countTests(trustedTests, BeAFixTest.TestType.COUNTEREXAMPLE) + Report.SEPARATOR +
+                        countTests(trustedTests, BeAFixTest.TestType.TRUSTED) + Report.SEPARATOR +
+                        countTests(candidate.trustedTests(), BeAFixTest.TestType.TRUSTED) + Report.SEPARATOR +
+                        countTests(candidate.untrustedTests(), BeAFixTest.TestType.UNTRUSTED) + Report.SEPARATOR +
                         aRepairResult.name()  + "\n"
                 ;
         Files.write(candidateInfoFilePath, candidateInfo.getBytes(), StandardOpenOption.APPEND);

@@ -195,22 +195,16 @@ public final class BeAFix {
     }
 
     private static final String CE_POSTFIX = "_counterexamples.tests";
-    private static final String POS_TRUSTED_POSTFIX = "_positive_trusted.tests";
-    private static final String POS_UNTRUSTED_POSTFIX = "_positive_untrusted.tests";
-    private static final String NEG_TRUSTED_POSTFIX = "_negative_trusted.tests";
-    private static final String NEG_UNTRUSTED_POSTFIX = "_negative_untrusted.tests";
+    private static final String TRUSTED_POSTFIX = "_trusted.tests";
+    private static final String UNTRUSTED_POSTFIX = "_untrusted.tests";
     private BeAFixResult getResults() {
         Path ceTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", CE_POSTFIX));
-        Path nuTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", NEG_UNTRUSTED_POSTFIX));
-        Path ntTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", NEG_TRUSTED_POSTFIX));
-        Path puTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", POS_UNTRUSTED_POSTFIX));
-        Path ptTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", POS_TRUSTED_POSTFIX));
+        Path ttTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", TRUSTED_POSTFIX));
+        Path utTests = Paths.get(outputDirectory.toString(), pathToModel.getFileName().toString().replace(".als", UNTRUSTED_POSTFIX));
         BeAFixResult testsResults = BeAFixResult.tests();
-        if (ceTests.toFile().exists()) testsResults.counterexampleTests(ceTests);
-        if (nuTests.toFile().exists()) testsResults.untrustedNegativeTests(nuTests);
-        if (ntTests.toFile().exists()) testsResults.trustedNegativeTests(ntTests);
-        if (puTests.toFile().exists()) testsResults.untrustedPositiveTests(puTests);
-        if (ptTests.toFile().exists()) testsResults.trustedPositiveTests(ptTests);
+        if (ceTests.toFile().exists()) testsResults.counterexampleTestsFile(ceTests);
+        if (ttTests.toFile().exists()) testsResults.trustedTestsFile(ttTests);
+        if (utTests.toFile().exists()) testsResults.untrustedTestsFile(utTests);
         return testsResults;
     }
 
