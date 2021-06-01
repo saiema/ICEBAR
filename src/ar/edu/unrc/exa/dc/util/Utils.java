@@ -196,8 +196,11 @@ public final class Utils {
                     "PREDICATE_LOCAL" + Report.SEPARATOR +
                     "AREPAIR STATUS" + "\n"
             ;
+    
+    private static final String CANDIDATE_FILE = "icebar_arepair.info";
+    
     public static void startCandidateInfoFile() throws IOException {
-        String candidateInfoFileRaw = "icebar_arepair.info";
+        String candidateInfoFileRaw = CANDIDATE_FILE;
         Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (candidateInfoFile.exists() && !candidateInfoFile.delete())
@@ -209,7 +212,7 @@ public final class Utils {
     }
 
     public static void writeCandidateInfo(FixCandidate candidate, Collection<BeAFixTest> globalCounterexampleTests, ARepair.ARepairResult aRepairResult) throws IOException {
-        String candidateInfoFileRaw = "cegar_arepair.info";
+        String candidateInfoFileRaw = CANDIDATE_FILE;
         Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (!candidateInfoFile.exists())
