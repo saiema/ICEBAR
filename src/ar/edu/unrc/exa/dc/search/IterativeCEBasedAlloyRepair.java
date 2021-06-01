@@ -7,6 +7,8 @@ import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 import ar.edu.unrc.exa.dc.tools.InitialTests;
+import ar.edu.unrc.exa.dc.util.OneTypePair;
+import ar.edu.unrc.exa.dc.util.TestHashes;
 import ar.edu.unrc.exa.dc.util.TimeCounter;
 import ar.edu.unrc.exa.dc.util.Utils;
 
@@ -24,11 +26,12 @@ import static ar.edu.unrc.exa.dc.util.Utils.*;
 public class IterativeCEBasedAlloyRepair {
 
     private static final Logger logger = Logger.getLogger(IterativeCEBasedAlloyRepair.class.getName());
+    private static final Path logFile = Paths.get("Repair.log");
 
     static {
         try {
             // This block configure the logger with handler and formatter
-            FileHandler fh = new FileHandler("Repair.log");
+            FileHandler fh = new FileHandler(logFile.toString());
             logger.addHandler(fh);
             SimpleFormatter formatter = new SimpleFormatter();
             fh.setFormatter(formatter);
@@ -41,18 +44,19 @@ public class IterativeCEBasedAlloyRepair {
 
     private final ARepair aRepair;
     private final BeAFix beAFix;
-    private final Set<BeAFixTest> trustedTests; //this should be a hash set
+    private final Set<BeAFixTest> trustedCounterexampleTests;
     private final Path modelToRepair;
     private final Path oracle;
     private final int laps;
     private int tests;
+    private int arepairCalls;
 
-    public enum CegarSearch {
+    public enum ICEBARSearch {
         DFS, BFS
     }
 
-    private CegarSearch search = CegarSearch.DFS;
-    public void setSearch(CegarSearch search) {
+    private ICEBARSearch search = ICEBARSearch.DFS;
+    public void setSearch(ICEBARSearch search) {
         this.search = search;
     }
 
@@ -85,11 +89,12 @@ public class IterativeCEBasedAlloyRepair {
         this.aRepair = aRepair;
         this.aRepair.modelToRepair(modelToRepair);
         this.beAFix = beAFix;
-        this.trustedTests = new HashSet<>();
+        this.trustedCounterexampleTests = new HashSet<>();
         this.modelToRepair = modelToRepair;
         this.oracle = oracle;
         this.laps = laps;
         this.tests = 0;
+        this.arepairCalls = 0;
     }
 
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix) {
@@ -133,7 +138,7 @@ public class IterativeCEBasedAlloyRepair {
             arepairTimeCounter.clockStart();
             ARepairResult aRepairResult = runARepairWithCurrentConfig(current);
             arepairTimeCounter.clockEnd();
-            writeCandidateInfo(current, trustedTests, aRepairResult);
+            writeCandidateInfo(current, trustedCounterexampleTests, aRepairResult);
             logger.info("ARepair finished\n" + aRepairResult.toString());
             if (aRepairResult.equals(ARepairResult.ERROR)) {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
@@ -141,7 +146,7 @@ public class IterativeCEBasedAlloyRepair {
                     logger.warning("ARepair ended with a NullPointerException but we are going to ignore that and hope for the best");
                     continue;
                 }
-                Report report = Report.arepairFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), arepairTimeCounter, beafixTimeCounter);
+                Report report = Report.arepairFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), arepairTimeCounter, beafixTimeCounter, arepairCalls);
                 writeReport(report);
                 return Optional.empty();
             }
@@ -156,12 +161,12 @@ public class IterativeCEBasedAlloyRepair {
                 int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
                 if (beAFixCheckResult.error()) {
                     logger.severe("BeAFix check ended in error, ending search");
-                    Report report = Report.beafixCheckFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), beafixTimeCounter, arepairTimeCounter);
+                    Report report = Report.beafixCheckFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
                     writeReport(report);
                     return Optional.empty();
                 } else if (beAFixCheckResult.checkResult()) {
                     logger.info("BeAFix validated the repair, fix found");
-                    Report report = Report.repairFound(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), beafixTimeCounter, arepairTimeCounter);
+                    Report report = Report.repairFound(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
                     writeReport(report);
                     return Optional.of(repairCandidate);
                 } else if (current.depth() < laps) {
@@ -169,7 +174,7 @@ public class IterativeCEBasedAlloyRepair {
                         totalTime.updateTotalTime();
                         if (totalTime.toMinutes() >= timeout) {
                             logger.info("ICEBAR timeout (" + timeout + " minutes) reached");
-                            Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), beafixTimeCounter, arepairTimeCounter);
+                            Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
                             writeReport(report);
                             return Optional.empty();
                         }
@@ -180,9 +185,9 @@ public class IterativeCEBasedAlloyRepair {
                     beafixTimeCounter.clockEnd();
                     if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                         return Optional.empty();
-                    beAFixResult.parseAllTests();
+                    //beAFixResult.parseAllTests();
                     List<BeAFixTest> counterexampleTests = beAFixResult.getCounterexampleTests();
-                    List<BeAFixTest> counterexampleUntrustedTests = beAFixCheckResult.getCounterExampleUntrustedTests();
+                    List<BeAFixTest> counterexampleUntrustedTests = beAFixResult.getCounterExampleUntrustedTests();
                     List<BeAFixTest> predicateTests = beAFixResult.getPredicateTests();
                     List<BeAFixTest> relaxedPredicateTests = null;
                     List<BeAFixTest> relaxedAssertionsTests = null;
@@ -193,7 +198,7 @@ public class IterativeCEBasedAlloyRepair {
                         beafixTimeCounter.clockEnd();
                         if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                             return Optional.empty();
-                        beAFixResult.parseAllTests();
+                        //beAFixResult.parseAllTests();
                         relaxedPredicateTests = beAFixResult.getPredicateTests();
                         if (forceAssertionGeneration) {
                             logger.info("Generating with assertion forced test generation...");
@@ -203,20 +208,21 @@ public class IterativeCEBasedAlloyRepair {
                             beafixTimeCounter.clockEnd();
                             if (checkIfInvalidAndReportBeAFixResults(beAFixResult_forcedAssertionTestGeneration, current, beafixTimeCounter, arepairTimeCounter))
                                 return Optional.empty();
-                            beAFixResult_forcedAssertionTestGeneration.parseAllTests();
-                            relaxedAssertionsTests = beAFixResult_forcedAssertionTestGeneration.getPredicateTests();
+                            //beAFixResult_forcedAssertionTestGeneration.parseAllTests();
+                            relaxedAssertionsTests = beAFixResult_forcedAssertionTestGeneration.getCounterExampleUntrustedTests();
                         }
                     }
                     int newDepth = current.depth() + 1;
                     boolean trustedTestsAdded;
                     boolean addLocalTrustedTests;
                     if (globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty())) {
-                        trustedTestsAdded = this.trustedTests.addAll(counterexampleTests);
+                        trustedTestsAdded = this.trustedCounterexampleTests.addAll(counterexampleTests);
                         addLocalTrustedTests = false;
                     } else { //local trusted tests except from original
-                        trustedTestsAdded = !trustedTests.isEmpty();
+                        trustedTestsAdded = !trustedCounterexampleTests.isEmpty();
                         addLocalTrustedTests = true;
                     }
+                    int newBranches = 0;
                     if (!counterexampleTests.isEmpty()) {
                         Set<BeAFixTest> localTrustedTests = new HashSet<>(current.trustedTests());
                         Set<BeAFixTest> localUntrustedTests = new HashSet<>(current.untrustedTests());
@@ -227,22 +233,25 @@ public class IterativeCEBasedAlloyRepair {
                             FixCandidate newCandidate = new FixCandidate(modelToRepair, newDepth, localUntrustedTests, localTrustedTests);
                             newCandidate.repairedProperties(repairedPropertiesForCurrent);
                             searchSpace.push(newCandidate);
+                            newBranches = 1;
                         }
+                        TestHashes.getInstance().undoLatestExceptFor(counterexampleTests);
                     } else if (!counterexampleUntrustedTests.isEmpty()) {
-                        if (!createBranches(current, counterexampleUntrustedTests, true, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter))
+                        if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter)) == BRANCHING_ERROR)
                             return Optional.empty();
                     } else if (!predicateTests.isEmpty()) {
-                        if (!createBranches(current, predicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter))
+                        if ((newBranches = createBranches(current, predicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter)) == BRANCHING_ERROR)
                             return Optional.empty();
                     } else if (relaxedPredicateTests != null && !relaxedPredicateTests.isEmpty()) {
-                        if (!createBranches(current, relaxedPredicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter))
+                        if ((newBranches = createBranches(current, relaxedPredicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter)) == BRANCHING_ERROR)
                             return Optional.empty();
                     } else if (relaxedAssertionsTests != null && !relaxedAssertionsTests.isEmpty()) {
-                        if (!createBranches(current, relaxedAssertionsTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter))
+                        if ((newBranches = createBranches(current, relaxedAssertionsTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter)) == BRANCHING_ERROR)
                             return Optional.empty();
                     }
                     tests += beAFixResult.generatedTests();
                     logger.info("Total tests generated: " + tests);
+                    logger.info("Generated branches: " + newBranches);
                     beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
                 } else {
                     logger.info("max laps reached (" + laps + "), ending branch");
@@ -252,40 +261,63 @@ public class IterativeCEBasedAlloyRepair {
             }
         }
         logger.info("ICEBAR ended with no more candidates");
-        Report report = Report.exhaustedSearchSpace(maxReachedLap, tests, beafixTimeCounter, arepairTimeCounter);
+        Report report = Report.exhaustedSearchSpace(maxReachedLap, tests, beafixTimeCounter, arepairTimeCounter, arepairCalls);
         writeReport(report);
         return Optional.empty();
     }
 
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    private boolean createBranches(FixCandidate current, List<BeAFixTest> fromTests, boolean multipleBranches, int newDepth, CandidateSpace searchSpace, int repairedPropertiesForCurrent, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {
+
+    private static final int BRANCHING_ERROR = -1;
+    private int createBranches(FixCandidate current, List<BeAFixTest> fromTests, boolean multipleBranches, int newDepth, CandidateSpace searchSpace, int repairedPropertiesForCurrent, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {
         BeAFixTest branchingTest = fromTests.get(0);
         if ((multipleBranches && !branchingTest.isMultipleBranch()) || (!multipleBranches && !branchingTest.isPositiveAndNegativeBranch())) {
             logger.severe(multipleBranches?"An untrusted counterexample test must have at least two alternate cases":"A predicate test must have a positive and negative branch");
-            Report report = Report.icebarInternError(current, current.untrustedTests().size() + current.trustedTests().size() + trustedTests.size(), beafixTimeCounter, arepairTimeCounter);
+            Report report = Report.icebarInternError(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
             writeReport(report);
-            return false;
+            return BRANCHING_ERROR;
         }
-        for (BeAFixTest branch : multipleBranches?branchingTest.getAlternateBranches():branchingTest.getPositiveAndNegativeBranches().asSet()) {
+        Collection<BeAFixTest> branches;
+        if (multipleBranches)
+            branches = branchingTest.getAlternateBranches();
+        else {
+            branches = new HashSet<>();
+            OneTypePair<BeAFixTest> positiveAndNegativeBranch = branchingTest.getPositiveAndNegativeBranches();
+            BeAFixTest positive = positiveAndNegativeBranch.fst();
+            if (positive.isMultipleBranch())
+                branches.addAll(positive.getAlternateBranches());
+            else
+                branches.add(positive);
+            BeAFixTest negative = positiveAndNegativeBranch.snd();
+            if (negative.isMultipleBranch())
+                branches.addAll(negative.getAlternateBranches());
+            else
+                branches.add(negative);
+        }
+        for (BeAFixTest branch : branches) {
             Set<BeAFixTest> localTrustedTests = new HashSet<>(current.trustedTests());
             Set<BeAFixTest> localUntrustedTests = new HashSet<>(current.untrustedTests());
-            localUntrustedTests.add(branch);
+            if (!localUntrustedTests.add(branch))
+                throw new IllegalStateException("Repeated branch in branching");
             FixCandidate newCandidate = new FixCandidate(modelToRepair, newDepth, localUntrustedTests, localTrustedTests);
             newCandidate.repairedProperties(repairedPropertiesForCurrent);
             searchSpace.push(newCandidate);
         }
-        return true;
+        TestHashes.getInstance().undoLatestExceptFor(branches);
+        return branches.size();
     }
 
     private boolean checkIfInvalidAndReportBeAFixResults(BeAFixResult beAFixResult, FixCandidate current, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {
         if (!beAFixResult.error()) {
             String beafixMsg = "BeAFix finished\n";
+            if (!beAFixResult.isCheck()) {
+                beAFixResult.parseAllTests();
+            }
             beafixMsg += beAFixResult + "\n";
             logger.info(beafixMsg);
             return false;
         } else {
             logger.severe("BeAFix test generation ended in error, ending search");
-            Report report = Report.beafixGenFailed(current, tests, beafixTimeCounter, arepairTimeCounter);
+            Report report = Report.beafixGenFailed(current, tests, beafixTimeCounter, arepairTimeCounter, arepairCalls);
             writeReport(report);
             return true;
         }
@@ -294,7 +326,7 @@ public class IterativeCEBasedAlloyRepair {
     private ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
         if (!aRepair.cleanFixDirectory())
             logger.warning("There was a problem cleaning ARepair .hidden folder, will keep going (cross your fingers)");
-        Collection<BeAFixTest> tests = new LinkedList<>(trustedTests);
+        Collection<BeAFixTest> tests = new LinkedList<>(trustedCounterexampleTests);
         tests.addAll(candidate.untrustedTests());
         tests.addAll(candidate.trustedTests());
         if (tests.isEmpty() && (initialTests == null || initialTests.getInitialTests().isEmpty()))
@@ -321,9 +353,12 @@ public class IterativeCEBasedAlloyRepair {
             return error;
         }
         logger.info("Running ARepair with " + testCount + " tests");
+        writeTestsToLog(tests, logger);
         aRepair.testsPath(testsPath);
         logger.info("Executing ARepair:\n" + aRepair.aRepairCommandToString());
-        return aRepair.run();
+        ARepairResult aRepairResult = aRepair.run();
+        arepairCalls++;
+        return aRepairResult;
     }
 
     private enum BeAFixMode {TESTS, CHECK}

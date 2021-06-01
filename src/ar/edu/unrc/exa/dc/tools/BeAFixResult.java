@@ -23,9 +23,9 @@ public final class BeAFixResult {
 
     public static final class BeAFixTest {
 
-        public enum TestType {COUNTEREXAMPLE, TRUSTED, UNTRUSTED, INITIAL, BRANCH} //COUNTEREXAMPLE tests will be translated to TRUSTED and COUNTEREXAMPLE as source
+        public enum TestType {TRUSTED, UNTRUSTED, INITIAL, BRANCH} //COUNTEREXAMPLE tests will be translated to TRUSTED and COUNTEREXAMPLE as source
         public enum TestSource {COUNTEREXAMPLE, PREDICATE}
-        public enum Branch {POSITIVE, NEGATIVE, NONE, BOTH, MULTIPLE}
+        public enum Branch {POSITIVE, NEGATIVE, NONE, POSITIVE_AND_NEGATIVE, MULTIPLE, MULTIPLE_POSITIVE, MULTIPLE_NEGATIVE}
         private final TestType testType;
         private TestSource testSource;
         private Branch branch = Branch.NONE;
@@ -46,13 +46,11 @@ public final class BeAFixResult {
                 throw new IllegalArgumentException("null or empty test");
             if (testType == null)
                 throw new IllegalArgumentException("null test type");
-            this.testType = testType.equals(TestType.COUNTEREXAMPLE)?TestType.TRUSTED:testType;
+            this.testType = testType;
             parseTest(test);
-            if (this.testSource.equals(TestSource.PREDICATE))
-                throw new IllegalStateException("Test source should be COUNTEREXAMPLE but it's PREDICATE instead\n" + test);
         }
 
-        private BeAFixTest(String command, String predicate, int index, String relatedTest, BeAFixTest relatedBeAFixTest, int maxScope, TestType testType, TestSource testSource, Branch branch) {
+        private BeAFixTest(String command, String predicate, int index, String relatedTest, BeAFixTest relatedBeAFixTest, int maxScope, TestType testType, TestSource testSource, Branch branch, List<BeAFixTest> branches) {
             this.command = command;
             this.predicate = predicate;
             this.index = index;
@@ -62,30 +60,40 @@ public final class BeAFixResult {
             this.testType = testType;
             this.testSource = testSource;
             this.branch = branch;
+            this.branches = branches;
         }
 
         private BeAFixTest(BeAFixTest positive, BeAFixTest negative) {
             this.testType = TestType.BRANCH;
             this.testSource = positive.testSource;
-            this.branch = Branch.BOTH;
-            this.command = positive.command();
-            this.predicate = positive.predicate();
-            this.index = positive.getIndex();
-            this.subIndex = positive.getSubIndex();
-            this.relatedTest = positive.relatedTestID();
-            this.relatedBeAFixTest = positive.relatedBeAFixTest();
+            this.branch = Branch.POSITIVE_AND_NEGATIVE;
+            this.branches = positive.branches;
+            this.command = positive.command;
+            this.predicate = positive.predicate;
+            this.index = positive.index;
+            this.subIndex = positive.subIndex;
+            this.relatedTest = positive.relatedTest;
+            this.relatedBeAFixTest = positive.relatedBeAFixTest;
             this.negativeBranch = negative;
             this.maxScope = Math.max(positive.getMaxScope(), negative.getMaxScope());
         }
 
-        private BeAFixTest(TestSource source, List<BeAFixTest> cases) {
+        protected static final int MULTIBRANCH = 0;
+        protected static final int POSITIVE_MULTIBRANCH = 1;
+        protected static final int NEGATIVE_MULTIBRANCH = 2;
+        private BeAFixTest(TestSource source, List<BeAFixTest> cases, int multibranchType) {
             if (cases == null || cases.size() < 2)
                 throw new IllegalArgumentException("Either cases is null or there is none or one case (2 or more are required)");
             this.testType = TestType.BRANCH;
             this.testSource = source;
-            this.branch = Branch.MULTIPLE;
-            this.command = "MULTIPLE";
-            this.predicate = "MULTIPLE";
+            if (multibranchType == POSITIVE_MULTIBRANCH)
+                this.branch = Branch.MULTIPLE_POSITIVE;
+            else if (multibranchType == NEGATIVE_MULTIBRANCH)
+                this.branch = Branch.MULTIPLE_NEGATIVE;
+            else
+                this.branch = Branch.MULTIPLE;
+            this.command = this.branch.name();
+            this.predicate = this.branch.name();
             this.index = cases.get(0).getIndex();
             this.subIndex = -1;
             this.relatedTest = NOT_RELATED;
@@ -116,22 +124,30 @@ public final class BeAFixResult {
 
         public boolean isRelated() { return relatedTest != null && !relatedTest.isEmpty(); }
 
-        public boolean isCounterexampleTest() { return testType.equals(TestType.TRUSTED) && testSource.equals(TestSource.COUNTEREXAMPLE); }
+        public boolean isCounterexampleTest() { return testSource.equals(TestSource.COUNTEREXAMPLE); }
 
-        public boolean isPositiveAndNegativeBranch() { return testType.equals(TestType.BRANCH); }
+        public boolean isPredicateTest() { return testSource.equals(TestSource.PREDICATE); }
 
-        public boolean isMultipleBranch() { return testType.equals(TestType.BRANCH) && branch.equals(Branch.MULTIPLE); }
+        @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+        public boolean isPositiveAndNegativeBranch() { return testType.equals(TestType.BRANCH) && branch.equals(Branch.POSITIVE_AND_NEGATIVE); }
 
-        public boolean isPositiveBranch() { return branch.equals(Branch.POSITIVE); }
+        @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+        public boolean isMultipleBranch() { return testType.equals(TestType.BRANCH) && (branch.equals(Branch.MULTIPLE) || branch.equals(Branch.MULTIPLE_POSITIVE) || branch.equals(Branch.MULTIPLE_NEGATIVE)); }
 
-        public boolean isNegativeBranch() { return branch.equals(Branch.NEGATIVE); }
+        public boolean isPositiveBranch() { return branch.equals(Branch.POSITIVE) || branch.equals(Branch.MULTIPLE_POSITIVE); }
+
+        public boolean isNegativeBranch() { return branch.equals(Branch.NEGATIVE) || branch.equals(Branch.MULTIPLE_NEGATIVE); }
+
+        public boolean isBranchedTest() {
+            return !branch.equals(Branch.NONE) && !isPositiveBranch() && !isNegativeBranch();
+        }
 
         public OneTypePair<BeAFixTest> getPositiveAndNegativeBranches() {
             if (!isPositiveAndNegativeBranch())
                 throw new IllegalStateException("This is not a positive/negative branching test");
             if (negativeBranch == null)
                 throw new IllegalStateException("This test has no associated negative test");
-            BeAFixTest positive = new BeAFixTest(command, predicate, index, relatedTest, relatedBeAFixTest, maxScope, TestType.UNTRUSTED, testSource, Branch.POSITIVE);
+            BeAFixTest positive = new BeAFixTest(command, predicate, index, relatedTest, relatedBeAFixTest, maxScope, TestType.UNTRUSTED, testSource, this.branches==null?Branch.POSITIVE:Branch.MULTIPLE_POSITIVE, this.branches);
             BeAFixTest negative = negativeBranch;
             return new OneTypePair<>(positive, negative);
         }
@@ -167,6 +183,7 @@ public final class BeAFixResult {
         public static final String PREDICATE_END_DELIMITER = "--TEST FINISH\n";
         private static final String COMMAND_NAME_SEPARATOR = "_";
         private static final String RELATED_TO_KEYWORD = "relTo-";
+        private static final String RELATED_TO_KEYWORD_ALLOY_FRIENDLY = "relTo_";
         private static final String COMMAND_POS_KEYWORD = "POS";
         private static final String COMMAND_NEG_KEYWORD = "NEG";
         private static final String COMMAND_PREDICATE_KEYWORD = "PRED";
@@ -216,6 +233,8 @@ public final class BeAFixResult {
                 }
                 if (!relToRaw.isEmpty()) {
                     this.relatedTest = relToRaw.replace(RELATED_TO_KEYWORD, "");
+                    this.predicate = this.predicate.replace(RELATED_TO_KEYWORD, RELATED_TO_KEYWORD_ALLOY_FRIENDLY);
+                    this.command = this.command.replace(RELATED_TO_KEYWORD, RELATED_TO_KEYWORD_ALLOY_FRIENDLY);
                 } else {
                     this.relatedTest = NOT_RELATED;
                 }
@@ -234,6 +253,15 @@ public final class BeAFixResult {
 
         @Override
         public int hashCode() {
+            if (isBranchedTest())
+                throw new IllegalStateException("Do not call this on branching tests");
+            int hash = currentTestHashCode();
+            if (hash == 0)
+                throw new IllegalStateException("hash is zero at this point");
+            return hash;
+        }
+
+        public int currentTestHashCode() {
             MessageDigest messageDigest;
             try {
                 messageDigest = MessageDigest.getInstance("MD5");
@@ -268,11 +296,45 @@ public final class BeAFixResult {
 
         @Override
         public String toString() {
+            if (isBranchedTest()) {
+                if (isPositiveAndNegativeBranch())
+                    return positiveAndNegativeToString();
+                else if (isMultipleBranch())
+                    return multipleBranchesToString();
+            } else {
+                return singleTestToString();
+            }
+            throw new IllegalStateException("Invalid state in toString");
+        }
+
+        private String singleTestToString() {
             String rep = "{\n\t" + testType.name();
             rep += "\n\tPredicate:\n" + predicate;
             rep += "\n\tCommand: " + command;
             rep += "\n}";
             return rep;
+        }
+
+        private String positiveAndNegativeToString() {
+            String rep = "{\n\t Positive and Negative branch";
+            rep += "\n\t Positive branch :\n";
+            if (isMultipleBranch()) {
+                rep += multipleBranchesToString();
+            } else {
+                rep += singleTestToString();
+            }
+            rep += "\n\t Negative branch :\n" + negativeBranch.toString();
+            rep += "\n}";
+            return rep;
+        }
+
+        private String multipleBranchesToString() {
+            StringBuilder rep = new StringBuilder("{\n\t Multiple branches");
+            for (BeAFixTest branch : branches) {
+                rep.append("\n").append(branch.toString()).append("\n");
+            }
+            rep.append("\n}");
+            return rep.toString();
         }
 
     }
@@ -424,15 +486,15 @@ public final class BeAFixResult {
             generatedTests = ceTests.size() + ttTests.size() + utTests.size();
             mergeRelated(ceTests, ttTests);
             mergeRelated(utTests);
-            mergePositiveAndNegativeBranches(utTests);
             mergeMultipleBranches(utTests);
+            mergePositiveAndNegativeBranches(utTests);
             testsParsed = true;
         }
     }
 
     private List<BeAFixTest> parseCounterexampleTests() throws IOException {
         if (ceTests == null)
-            ceTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(cetFile, TestType.COUNTEREXAMPLE);
+            ceTests = (isCheck() || error()) ? new LinkedList<>() : parseTestsFrom(cetFile, TestType.TRUSTED);
         maxIndex = Math.max(maxIndex, getMaxIndexFrom(ceTests));
         return ceTests;
     }
@@ -455,7 +517,7 @@ public final class BeAFixResult {
     @SafeVarargs
     private final void mergeRelated(final List<BeAFixTest>... tests) {
         if (tests == null || tests.length == 0)
-            throw new IllegalArgumentException("null or empty tests");
+            return;
         boolean merged = true;
         while (merged) {
             merged = false;
@@ -471,6 +533,8 @@ public final class BeAFixResult {
                         currentTest.relatedBeAFixTest(relatedTest.get());
                         merged = true;
                         break;
+                    } else {
+                        throw new IllegalStateException("Related test is missing it's related BeAFixTest test");
                     }
                 }
             }
@@ -479,30 +543,46 @@ public final class BeAFixResult {
 
     private void mergeMultipleBranches(List<BeAFixTest> untrustedTests) {
         if (untrustedTests == null || untrustedTests.isEmpty())
-            throw new IllegalArgumentException("null or empty tests");
+            return;
         boolean merged = true;
         while (merged) {
             merged = false;
             for (int i = 0; i < untrustedTests.size(); i++) {
                 BeAFixTest currentTest = untrustedTests.get(i);
-                if (currentTest.isPositiveBranch() || currentTest.isNegativeBranch())
-                    continue;
-                int index = currentTest.getIndex();
-                List<BeAFixTest> alternateTests = untrustedTests.stream().filter(t -> t.getIndex() == index).collect(Collectors.toList());
+                List<BeAFixTest> alternateTests = getAlternateCases(currentTest, untrustedTests);
                 if (alternateTests.size() > 1) {
-                    BeAFixTest multipleBranchTest = new BeAFixTest(currentTest.testSource, alternateTests);
+                    int branchType = BeAFixTest.MULTIBRANCH;
+                    if (currentTest.isPositiveBranch())
+                        branchType = BeAFixTest.POSITIVE_MULTIBRANCH;
+                    else if (currentTest.isNegativeBranch())
+                        branchType = BeAFixTest.NEGATIVE_MULTIBRANCH;
+                    BeAFixTest multipleBranchTest = new BeAFixTest(currentTest.testSource, alternateTests, branchType);
                     merged = true;
-                    removeCases(untrustedTests, index);
+                    removeCases(untrustedTests, alternateTests);
                     untrustedTests.add(multipleBranchTest);
+                    break;
                 }
             }
         }
     }
 
-    private void removeCases(List<BeAFixTest> from, int index) {
+    private List<BeAFixTest> getAlternateCases(BeAFixTest from, List<BeAFixTest> untrustedTests) {
+        boolean isPositive = from.isPositiveBranch();
+        boolean isNegative = from.isNegativeBranch();
+        if (!isPositive && !isNegative) {
+            return untrustedTests.stream().filter(t -> t.getIndex() == from.getIndex()).collect(Collectors.toList());
+        } else if (isPositive) {
+            return untrustedTests.stream().filter(t -> t.getIndex() == from.getIndex() && t.isPositiveBranch()).collect(Collectors.toList());
+        } else {
+            return untrustedTests.stream().filter(t -> t.getIndex() == from.getIndex() && t.isNegativeBranch()).collect(Collectors.toList());
+        }
+    }
+
+    private void removeCases(List<BeAFixTest> from, List<BeAFixTest> toRemove) {
+        Set<Integer> hashesToRemove = toRemove.stream().map(System::identityHashCode).collect(Collectors.toSet());
         for (int i = 0; i < from.size(); i++) {
             BeAFixTest current = from.get(i);
-            if (current.getIndex() == index) {
+            if (hashesToRemove.contains(System.identityHashCode(current))) {
                 from.remove(i);
                 i--;
             }
@@ -511,7 +591,7 @@ public final class BeAFixResult {
 
     private void mergePositiveAndNegativeBranches(List<BeAFixTest> untrustedTests) {
         if (untrustedTests == null || untrustedTests.isEmpty())
-            throw new IllegalArgumentException("null or empty tests");
+            return;
         boolean merged = true;
         while (merged) {
             merged = false;
@@ -647,9 +727,9 @@ public final class BeAFixResult {
                 break;
             }
             case TESTS: {
-                String ceTests = testsToString(TestType.COUNTEREXAMPLE);
-                String ttTests = testsToString(TestType.TRUSTED);
-                String utTests = testsToString(TestType.UNTRUSTED);
+                String ceTests = testsToString(this.ceTests);
+                String ttTests = testsToString(this.ttTests);
+                String utTests = testsToString(this.utTests);
                 rep += "Message: " + message;
                 rep += "\n\tMax index for test batch: " + maxIndex;
                 rep += "\n\tCounterexample tests:\n";
@@ -669,26 +749,11 @@ public final class BeAFixResult {
         return rep;
     }
 
-    private String testsToString(TestType testType) {
+    private String testsToString(List<BeAFixTest> from) {
         StringBuilder rep = new StringBuilder();
-        Collection<BeAFixTest> tests = null;
-        switch (testType) {
-            case COUNTEREXAMPLE: {
-                tests = ceTests;
-                break;
-            }
-            case TRUSTED: {
-                tests = ttTests;
-                break;
-            }
-            case UNTRUSTED: {
-                tests = utTests;
-                break;
-            }
-        }
-        if (tests == null || tests.isEmpty())
+        if (from == null || from.isEmpty())
             return "NO TESTS\n";
-        for (BeAFixTest ceTest : tests) {
+        for (BeAFixTest ceTest : from) {
             rep.append(ceTest.toString()).append("\n");
         }
         return rep.toString();

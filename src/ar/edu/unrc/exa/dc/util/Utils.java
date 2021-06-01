@@ -13,6 +13,7 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 import static ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.NO_SCOPE;
 
@@ -72,13 +73,21 @@ public final class Utils {
     }
 
     public static int generateTestsFile(Collection<BeAFixTest> tests, Path output) throws IOException {
+        return writeTestsToFile(tests, output, true);
+    }
+
+    public static int writeTestsToFile(Collection<BeAFixTest> tests, Path output, boolean newFile) throws IOException {
         int testCount = 0;
         if (tests == null || tests.isEmpty())
             throw new IllegalArgumentException("null or empty tests");
-        if (output == null || output.toFile().exists())
-            throw new IllegalArgumentException("output path is either null or points to an existing file (" + (output==null?"NULL":output.toString()) + ")");
+        if (output == null)
+            throw new IllegalArgumentException("output path is null");//:"points to an existing file and newFile mode was used") + " (" + (output==null?"NULL":output.toString()) + ")");
+        if (newFile && output.toFile().exists())
+            throw new IllegalArgumentException("output path point to an existing file while newFile mode is used (" + output + ")");
+        if (!newFile && !output.toFile().exists())
+            throw new IllegalArgumentException("output path points to a non existing file while append mode (!newFile) is used (" + output + ")");
         File testsFile = output.toFile();
-        if (!testsFile.createNewFile()) {
+        if (newFile && !testsFile.createNewFile()) {
             throw new Error("Couldn't create tests file (" + (testsFile) + ")");
         }
         Files.write(output, "\n".getBytes(), StandardOpenOption.APPEND);
@@ -96,6 +105,17 @@ public final class Utils {
             }
         }
         return testCount;
+    }
+
+    public static void writeTestsToLog(Collection<BeAFixTest> tests, Logger logger) {
+        StringBuilder sb = new StringBuilder("\n");
+        for (BeAFixTest test : tests) {
+            sb.append("--").append(test.testType().toString()).append("\n").append(test.predicate()).append("\n").append(test.command()).append("\n");
+            if (test.isRelated()) {
+                sb.append("--").append(test.relatedBeAFixTest().testType().toString()).append("\n").append(test.relatedBeAFixTest().predicate()).append("\n").append(test.relatedBeAFixTest().command()).append("\n");
+            }
+        }
+        logger.info(sb.toString());
     }
 
     /**
@@ -171,9 +191,9 @@ public final class Utils {
                     "MODEL" + Report.SEPARATOR +
                     "DEPTH" + Report.SEPARATOR +
                     "CE_GLOBAL" + Report.SEPARATOR +
-                    "TRUSTED_GLOBAL" + Report.SEPARATOR +
-                    "TRUSTED_LOCAL" + Report.SEPARATOR +
-                    "UNTRUSTED_LOCAL" + Report.SEPARATOR +
+                    "CE_TRUSTED_LOCAL" + Report.SEPARATOR +
+                    "CE_UNTRUSTED_LOCAL" + Report.SEPARATOR +
+                    "PREDICATE_LOCAL" + Report.SEPARATOR +
                     "AREPAIR STATUS" + "\n"
             ;
     public static void startCandidateInfoFile() throws IOException {
@@ -188,7 +208,7 @@ public final class Utils {
         Files.write(candidateInfoFilePath, CANDIDATE_REPORT_HEADER.getBytes(), StandardOpenOption.APPEND);
     }
 
-    public static void writeCandidateInfo(FixCandidate candidate, Collection<BeAFixTest> trustedTests, ARepair.ARepairResult aRepairResult) throws IOException {
+    public static void writeCandidateInfo(FixCandidate candidate, Collection<BeAFixTest> globalCounterexampleTests, ARepair.ARepairResult aRepairResult) throws IOException {
         String candidateInfoFileRaw = "cegar_arepair.info";
         Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
         File candidateInfoFile = candidateInfoFilePath.toFile();
@@ -197,22 +217,30 @@ public final class Utils {
         String candidateInfo =
                         candidate.modelName() + Report.SEPARATOR +
                         candidate.depth() + Report.SEPARATOR +
-                        countTests(trustedTests, BeAFixTest.TestType.COUNTEREXAMPLE) + Report.SEPARATOR +
-                        countTests(trustedTests, BeAFixTest.TestType.TRUSTED) + Report.SEPARATOR +
-                        countTests(candidate.trustedTests(), BeAFixTest.TestType.TRUSTED) + Report.SEPARATOR +
-                        countTests(candidate.untrustedTests(), BeAFixTest.TestType.UNTRUSTED) + Report.SEPARATOR +
+                        countTests(globalCounterexampleTests, BeAFixTest.TestSource.COUNTEREXAMPLE) + Report.SEPARATOR +
+                        countTests(candidate.trustedTests(), BeAFixTest.TestSource.COUNTEREXAMPLE) + Report.SEPARATOR +
+                        countTests(candidate.untrustedTests(), BeAFixTest.TestSource.COUNTEREXAMPLE) + Report.SEPARATOR +
+                        countTests(candidate.untrustedTests(), BeAFixTest.TestSource.PREDICATE) + Report.SEPARATOR +
                         aRepairResult.name()  + "\n"
                 ;
         Files.write(candidateInfoFilePath, candidateInfo.getBytes(), StandardOpenOption.APPEND);
     }
 
-    private static int countTests(Collection<BeAFixTest> tests, BeAFixTest.TestType testType) {
+    private static int countTests(Collection<BeAFixTest> tests, BeAFixTest.TestSource testSource) {
         int count = 0;
+        boolean countTest;
         for (BeAFixTest test : tests) {
-            if (test.testType().equals(testType))
+            countTest = false;
+            if (testSource.equals(BeAFixTest.TestSource.COUNTEREXAMPLE) && test.isCounterexampleTest())
+                countTest = true;
+            else if (testSource.equals(BeAFixTest.TestSource.PREDICATE) && test.isPredicateTest())
+                countTest = true;
+            if (countTest) {
                 count++;
-            else if (test.isRelated() && test.relatedBeAFixTest().testType().equals(testType))
-                count++;
+                if (test.isRelated()) {
+                    count++;
+                }
+            }
         }
         return count;
     }

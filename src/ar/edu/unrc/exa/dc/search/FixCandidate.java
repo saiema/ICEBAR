@@ -25,7 +25,7 @@ public class FixCandidate {
             throw new IllegalArgumentException("negative depth (" + depth + ")");
         if (untrustedTests != null) {
             for (BeAFixTest uTest : untrustedTests) {
-                if (uTest.testType().equals(BeAFixTest.TestType.COUNTEREXAMPLE) || uTest.testType().equals(BeAFixTest.TestType.TRUSTED)) {
+                if (uTest.testType().equals(BeAFixTest.TestType.TRUSTED)) {
                     throw new IllegalArgumentException("trusted or counterexample found in untrusted tests (" + uTest.testType() + ")");
                 }
             }

@@ -19,7 +19,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "1.9.0";
+    private static final String VERSION = "2.0.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -73,10 +73,10 @@ public class ICEBAR {
         }
         if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_SEARCH)) {
             String search = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.ICEBAR_SEARCH);
-            if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.CegarSearch.DFS.toString()) == 0) {
-                iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.CegarSearch.DFS);
-            } else if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.CegarSearch.BFS.toString()) == 0) {
-                iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.CegarSearch.BFS);
+            if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.ICEBARSearch.DFS.toString()) == 0) {
+                iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.ICEBARSearch.DFS);
+            } else if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.ICEBARSearch.BFS.toString()) == 0) {
+                iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.ICEBARSearch.BFS);
             } else {
                 throw new IllegalArgumentException("Invalid configuration value for " + ICEBARProperties.ConfigKey.ICEBAR_SEARCH.getKey() + " (" + search + ")");
             }
