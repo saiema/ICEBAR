@@ -533,10 +533,10 @@ public final class BeAFixResult {
                         currentTest.relatedBeAFixTest(relatedTest.get());
                         merged = true;
                         break;
-                    } else {
-                        throw new IllegalStateException("Related test is missing it's related BeAFixTest test");
                     }
                 }
+                if (currentTest.isRelated() && !merged)
+                    throw new IllegalStateException("Related test is missing it's related BeAFixTest test");
             }
         }
     }

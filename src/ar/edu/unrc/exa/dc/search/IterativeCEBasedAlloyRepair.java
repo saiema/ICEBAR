@@ -75,6 +75,9 @@ public class IterativeCEBasedAlloyRepair {
     private boolean keepGoingAfterARepairNPE = false;
     public void keepGoingAfterARepairNPE(boolean keepGoingAfterARepairNPE) { this.keepGoingAfterARepairNPE =keepGoingAfterARepairNPE; }
 
+    private boolean keepGoingARepairNoFixAndOnlyTrustedTests = false;
+    public void keepGoingARepairNoFixAndOnlyTrustedTests(boolean keepGoingARepairNoFixAndOnlyTrustedTests) { this.keepGoingARepairNoFixAndOnlyTrustedTests = keepGoingARepairNoFixAndOnlyTrustedTests; }
+
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
             throw new IllegalArgumentException("Invalid model to repair path (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
@@ -150,8 +153,11 @@ public class IterativeCEBasedAlloyRepair {
                 writeReport(report);
                 return Optional.empty();
             }
-            if (aRepairResult.hasRepair() || aRepairResult.equals(ARepairResult.NO_TESTS)) {
-                boolean fromOriginal = aRepairResult.equals(ARepairResult.NO_TESTS);
+            boolean repairFound = aRepairResult.hasRepair();
+            boolean noTests = aRepairResult.equals(ARepairResult.NO_TESTS);
+            boolean keepGoing = !repairFound && !noTests && keepGoingARepairNoFixAndOnlyTrustedTests && searchSpace.isEmpty() && !trustedCounterexampleTests.isEmpty() && current.untrustedTests().isEmpty();
+            if (repairFound || noTests || keepGoing) {
+                boolean fromOriginal = aRepairResult.equals(ARepairResult.NO_TESTS) || keepGoing;
                 FixCandidate repairCandidate = fromOriginal?current:new FixCandidate(aRepairResult.repair(), current.depth(), null);
                 logger.info("Validating current candidate with BeAFix");
                 beafixTimeCounter.clockStart();
@@ -185,7 +191,6 @@ public class IterativeCEBasedAlloyRepair {
                     beafixTimeCounter.clockEnd();
                     if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                         return Optional.empty();
-                    //beAFixResult.parseAllTests();
                     List<BeAFixTest> counterexampleTests = beAFixResult.getCounterexampleTests();
                     List<BeAFixTest> counterexampleUntrustedTests = beAFixResult.getCounterExampleUntrustedTests();
                     List<BeAFixTest> predicateTests = beAFixResult.getPredicateTests();
@@ -198,7 +203,6 @@ public class IterativeCEBasedAlloyRepair {
                         beafixTimeCounter.clockEnd();
                         if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                             return Optional.empty();
-                        //beAFixResult.parseAllTests();
                         relaxedPredicateTests = beAFixResult.getPredicateTests();
                         if (forceAssertionGeneration) {
                             logger.info("Generating with assertion forced test generation...");
@@ -208,7 +212,6 @@ public class IterativeCEBasedAlloyRepair {
                             beafixTimeCounter.clockEnd();
                             if (checkIfInvalidAndReportBeAFixResults(beAFixResult_forcedAssertionTestGeneration, current, beafixTimeCounter, arepairTimeCounter))
                                 return Optional.empty();
-                            //beAFixResult_forcedAssertionTestGeneration.parseAllTests();
                             relaxedAssertionsTests = beAFixResult_forcedAssertionTestGeneration.getCounterExampleUntrustedTests();
                         }
                     }
