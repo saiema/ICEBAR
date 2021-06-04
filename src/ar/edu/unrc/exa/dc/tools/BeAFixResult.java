@@ -47,7 +47,15 @@ public final class BeAFixResult {
             if (testType == null)
                 throw new IllegalArgumentException("null test type");
             this.testType = testType;
-            parseTest(test);
+            try {
+                parseTest(test);
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                if (testType.equals(TestType.INITIAL)) {
+                    parseTestInitialTestFallback(test);
+                } else {
+                    throw e;
+                }
+            }
         }
 
         private BeAFixTest(String command, String predicate, int index, String relatedTest, BeAFixTest relatedBeAFixTest, int maxScope, TestType testType, TestSource testSource, Branch branch, List<BeAFixTest> branches) {
@@ -189,6 +197,7 @@ public final class BeAFixResult {
         private static final String COMMAND_PREDICATE_KEYWORD = "PRED";
         private static final String COMMAND_COUNTEREXAMPLE_KEYWORD = "CE";
         //Test name should be <name>_<(PRED|CE)>_<index>_<subindex>[_<(POS|NEG>][_relTo-<ID>]
+        //Initial tests can follow another naming convention
         private void parseTest(final String test) {
             String filteredRawTest = test.replaceAll(TEST_SEPARATOR, "");
             this.predicate = Utils.getBetweenStrings(filteredRawTest, PREDICATE_START_DELIMITER, PREDICATE_END_DELIMITER);
@@ -248,6 +257,27 @@ public final class BeAFixResult {
                     }
                 }
             }
+            this.maxScope = getMaxScopeFromCommandSegments(commandSegments);
+        }
+
+        private void parseTestInitialTestFallback(final String test) {
+            String filteredRawTest = test.replaceAll(TEST_SEPARATOR, "");
+            this.predicate = Utils.getBetweenStrings(filteredRawTest, PREDICATE_START_DELIMITER, PREDICATE_END_DELIMITER);
+            if (predicate.isEmpty())
+                throw new IllegalArgumentException("Predicate not found in:\n" + filteredRawTest);
+            int runIdx = filteredRawTest.indexOf("run");
+            if (runIdx < 0)
+                throw new IllegalArgumentException("Command not found in:\n" + filteredRawTest);
+            this.command = filteredRawTest.endsWith("\n")?filteredRawTest.substring(runIdx, filteredRawTest.indexOf("\n", runIdx)):filteredRawTest.substring(runIdx);
+            String[] commandSegments = this.command.split(" ");
+            if (commandSegments.length < 2)
+                throw new IllegalArgumentException("Command was expected to have at least 2 words, but got " + commandSegments.length + " instead ( " + Arrays.toString(commandSegments) + ")");
+            String commandFullName = commandSegments[1].trim();
+            String indexRaw = commandFullName.replaceAll("\\D+","");
+            this.index = Integer.parseInt(indexRaw);
+            this.subIndex = 0;
+            this.relatedTest = NOT_RELATED;
+            this.branch = Branch.NONE;
             this.maxScope = getMaxScopeFromCommandSegments(commandSegments);
         }
 

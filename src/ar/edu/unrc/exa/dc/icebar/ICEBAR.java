@@ -19,7 +19,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.0.1";
+    private static final String VERSION = "2.0.2";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -28,15 +28,20 @@ public class ICEBAR {
     private static final String APARSER_JAR = "aparser-1.0.jar";
     private static final String AREPAIR_JAR = "arepair-1.0-jar-with-dependencies.jar";
 
-    private static final String HELP = "--help";
+    private static final String HELP_FLAG = "--help";
+    private static final String VERSION_FLAG = "--version";
 
     /**
      * Runs CEGAR with a model, oracle, and a properties file
      * @param args the arguments to be used, must be three, two als files and one .properties file
      */
     public static void main(String[] args) throws IOException {
-        if (args[0].trim().compareTo(HELP) == 0) {
+        if (args[0].trim().compareToIgnoreCase(HELP_FLAG) == 0) {
             help();
+            return;
+        }
+        if (args[0].trim().compareToIgnoreCase(VERSION_FLAG) == 0) {
+            version();
             return;
         }
         parseCommandLine(args);
@@ -181,6 +186,7 @@ public class ICEBAR {
                 "Iterative Counter Example-Based Alloy Repair\n" +
                 "Usage:\n" +
                 "\t--help                                   :  Shows this message\n" +
+                "\t--version                                :  Shows the current version of ICEBAR\n" +
                 "\t--" + MODEL_KEY + "<path to .als file>               :  The path to the model to repair (anything in this file can be modified to repair) (*).\n" +
                 "\t--" + ORACLE_KEY + "<path to .als file>              :  The path to the oracle (containing predicates, assertions, and anything related to those which can't be modified to repair) (*).\n" +
                 "\t--" + PROPERTIES_KEY + "<path to .properties file>   :  ICEBAR properties, please look at 'icebar_stein.properties' as an example (**).\n" +
@@ -193,6 +199,10 @@ public class ICEBAR {
                 "Each test must be separated by a line containing " + BeAFixResult.TEST_SEPARATOR + "\n" +
                 "Each predicate must be between a line with " + BeAFixResult.BeAFixTest.PREDICATE_START_DELIMITER.replace("\n", "")  + " and a line with " + BeAFixResult.BeAFixTest.PREDICATE_END_DELIMITER;
         System.out.println(help);
+    }
+
+    private static void version() {
+        System.out.println(VERSION);
     }
 
     private static BeAFix beafix() {
