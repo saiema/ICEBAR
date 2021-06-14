@@ -19,7 +19,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.0.2";
+    private static final String VERSION = "2.0.3";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";

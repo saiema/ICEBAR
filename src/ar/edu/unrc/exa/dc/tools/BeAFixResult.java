@@ -222,7 +222,6 @@ public final class BeAFixResult {
             else
                 throw new IllegalStateException("Test source can't be determined, related value in test name is (" + commandNameSegments[1].trim() + ")") ;
             String indexRaw = commandNameSegments[2].trim();
-            //String indexRaw = commandFullName.replaceAll("\\D+","");
             this.index = Integer.parseInt(indexRaw);
             String subIndexRaw = commandNameSegments[3].trim();
             this.subIndex = Integer.parseInt(subIndexRaw);
@@ -234,9 +233,9 @@ public final class BeAFixResult {
                     relToRaw = fifthValue;
                 } else {
                     posOrNegRaw = fifthValue;
-                    if (commandSegments.length > 5 && !commandNameSegments[5].trim().startsWith(RELATED_TO_KEYWORD)) {
+                    if (commandNameSegments.length > 5 && !commandNameSegments[5].trim().startsWith(RELATED_TO_KEYWORD)) {
                         throw new IllegalStateException("Test segments should end with relTo but it ends with " + commandNameSegments[5].trim());
-                    } else if (commandSegments.length > 5) {
+                    } else if (commandNameSegments.length > 5) {
                         relToRaw = commandNameSegments[5].trim();
                     }
                 }
