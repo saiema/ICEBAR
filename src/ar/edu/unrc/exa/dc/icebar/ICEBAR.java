@@ -19,7 +19,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.0.3";
+    private static final String VERSION = "2.0.4";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -111,6 +111,10 @@ public class ICEBAR {
         if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_NO_FIX_ONLY_TRUSTED_KEEP_GOING)) {
             boolean keepGoingARepairNoFixAndOnlyTrustedTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_NO_FIX_ONLY_TRUSTED_KEEP_GOING);
             iterativeCEBasedAlloyRepair.keepGoingARepairNoFixAndOnlyTrustedTests(keepGoingARepairNoFixAndOnlyTrustedTests);
+        }
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY)) {
+            boolean restartForMoreUnseenTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY);
+            iterativeCEBasedAlloyRepair.restartForMoreUnseenTests(restartForMoreUnseenTests);
         }
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();

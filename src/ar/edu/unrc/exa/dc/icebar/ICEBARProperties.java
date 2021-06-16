@@ -88,6 +88,10 @@ public class ICEBARProperties {
         ICEBAR_NO_FIX_ONLY_TRUSTED_KEEP_GOING {
             @Override
             public String getKey() { return "icebar.nofixonlytrustedkeepgoing"; }
+        },
+        ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY {
+            @Override
+            public String getKey() { return "icebar.search.emptysearchspace.retryformoretests"; }
         }
         ;
         public abstract String getKey();
@@ -193,6 +197,7 @@ public class ICEBARProperties {
             case ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE:
             case ICEBAR_KEEP_GOING_ON_AREPAIR_NPE:
             case ICEBAR_NO_FIX_ONLY_TRUSTED_KEEP_GOING:
+            case ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case BEAFIX_INSTANCE_TESTS: return true;
             default: return false;

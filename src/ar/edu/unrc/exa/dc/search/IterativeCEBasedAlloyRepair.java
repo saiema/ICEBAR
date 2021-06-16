@@ -78,6 +78,11 @@ public class IterativeCEBasedAlloyRepair {
     private boolean keepGoingARepairNoFixAndOnlyTrustedTests = false;
     public void keepGoingARepairNoFixAndOnlyTrustedTests(boolean keepGoingARepairNoFixAndOnlyTrustedTests) { this.keepGoingARepairNoFixAndOnlyTrustedTests = keepGoingARepairNoFixAndOnlyTrustedTests; }
 
+
+    private boolean restartForMoreUnseenTests = false;
+    private boolean searchRestarted = false;
+    public void restartForMoreUnseenTests(boolean restartForMoreUnseenTests) {this.restartForMoreUnseenTests = restartForMoreUnseenTests;}
+
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
             throw new IllegalArgumentException("Invalid model to repair path (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
@@ -262,6 +267,13 @@ public class IterativeCEBasedAlloyRepair {
             } else if (aRepairResult.hasMessage()) {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
             }
+            if (restartForMoreUnseenTests && searchSpace.isEmpty()) {
+                if (!searchRestarted || current != originalCandidate) {
+                    searchRestarted = true;
+                    searchSpace.push(originalCandidate);
+                    logger.info("***Restarting search to allow for unseen tests to be used***");
+                }
+            }
         }
         logger.info("ICEBAR ended with no more candidates");
         Report report = Report.exhaustedSearchSpace(maxReachedLap, tests, beafixTimeCounter, arepairTimeCounter, arepairCalls);
@@ -273,14 +285,20 @@ public class IterativeCEBasedAlloyRepair {
     private static final int BRANCHING_ERROR = -1;
     private int createBranches(FixCandidate current, List<BeAFixTest> fromTests, boolean multipleBranches, int newDepth, CandidateSpace searchSpace, int repairedPropertiesForCurrent, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {
         BeAFixTest branchingTest = fromTests.get(0);
+        boolean oneBranch = false;
         if ((multipleBranches && !branchingTest.isMultipleBranch()) || (!multipleBranches && !branchingTest.isPositiveAndNegativeBranch())) {
-            logger.severe(multipleBranches?"An untrusted counterexample test must have at least two alternate cases":"A predicate test must have a positive and negative branch");
+            logger.severe((multipleBranches?"An untrusted counterexample test must have at least two alternate cases":"A predicate test must have a positive and negative branch") +
+                    "\nThis could be caused by a repeated branch, could occur for unexpected instance tests, we will generate only one branch, but you should check the hashes log");
+            oneBranch = true;
+            /*TODO: remove in future version
             Report report = Report.icebarInternError(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
             writeReport(report);
-            return BRANCHING_ERROR;
+            return BRANCHING_ERROR;*/
         }
         Collection<BeAFixTest> branches;
-        if (multipleBranches)
+        if (oneBranch) {
+            branches = Collections.singleton(branchingTest);
+        } else if (multipleBranches)
             branches = branchingTest.getAlternateBranches();
         else {
             branches = new HashSet<>();

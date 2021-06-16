@@ -70,7 +70,7 @@ public class Report {
     private final int laps;
     private final TimeCounter beafixTimer;
     private final TimeCounter arepairTimer;
-    private int arepairCalls;
+    private final int arepairCalls;
 
     private Report(Status status, FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer, int arepairCalls) {
         this.status = status;

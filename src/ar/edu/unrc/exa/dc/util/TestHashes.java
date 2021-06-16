@@ -1,13 +1,35 @@
 package ar.edu.unrc.exa.dc.util;
 
+import ar.edu.unrc.exa.dc.search.IterativeCEBasedAlloyRepair;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
 
 public final class TestHashes {
+
+    private static final Logger logger = Logger.getLogger(TestHashes.class.getName());
+    private static final Path logFile = Paths.get("HashesCheck.log");
+
+    static {
+        try {
+            // This block configure the logger with handler and formatter
+            FileHandler fh = new FileHandler(logFile.toString());
+            logger.addHandler(fh);
+            SimpleFormatter formatter = new SimpleFormatter();
+            fh.setFormatter(formatter);
+        } catch (SecurityException | IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private final Set<Integer> hashes = new HashSet<>();
     private final Set<Integer> lastHashes = new HashSet<>();
@@ -24,6 +46,9 @@ public final class TestHashes {
     public boolean add(BeAFixTest test) {
         int hash = test.currentTestHashCode();
         boolean added = hashes.add(hash);
+        logger.info(test.toString());
+        logger.info("hash is: " + hash);
+        logger.info("repeated: " + (added?"NO":"YES"));
         if (added)
             lastHashes.add(hash);
         return added;

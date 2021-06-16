@@ -155,7 +155,8 @@ public final class BeAFixResult {
                 throw new IllegalStateException("This is not a positive/negative branching test");
             if (negativeBranch == null)
                 throw new IllegalStateException("This test has no associated negative test");
-            BeAFixTest positive = new BeAFixTest(command, predicate, index, relatedTest, relatedBeAFixTest, maxScope, TestType.UNTRUSTED, testSource, this.branches==null?Branch.POSITIVE:Branch.MULTIPLE_POSITIVE, this.branches);
+            TestType testType = this.branches == null?TestType.UNTRUSTED:TestType.BRANCH;
+            BeAFixTest positive = new BeAFixTest(command, predicate, index, relatedTest, relatedBeAFixTest, maxScope, testType, testSource, this.branches==null?Branch.POSITIVE:Branch.MULTIPLE_POSITIVE, this.branches);
             BeAFixTest negative = negativeBranch;
             return new OneTypePair<>(positive, negative);
         }
