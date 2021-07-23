@@ -245,16 +245,16 @@ public class IterativeCEBasedAlloyRepair {
                         }
                         TestHashes.getInstance().undoLatestExceptFor(counterexampleTests);
                     } else if (!counterexampleUntrustedTests.isEmpty()) {
-                        if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter)) == BRANCHING_ERROR)
+                        if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, newDepth, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR)
                             return Optional.empty();
                     } else if (!predicateTests.isEmpty()) {
-                        if ((newBranches = createBranches(current, predicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter)) == BRANCHING_ERROR)
+                        if ((newBranches = createBranches(current, predicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR)
                             return Optional.empty();
                     } else if (relaxedPredicateTests != null && !relaxedPredicateTests.isEmpty()) {
-                        if ((newBranches = createBranches(current, relaxedPredicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter)) == BRANCHING_ERROR)
+                        if ((newBranches = createBranches(current, relaxedPredicateTests, false, newDepth, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR)
                             return Optional.empty();
                     } else if (relaxedAssertionsTests != null && !relaxedAssertionsTests.isEmpty()) {
-                        if ((newBranches = createBranches(current, relaxedAssertionsTests, false, newDepth, searchSpace, repairedPropertiesForCurrent, beafixTimeCounter, arepairTimeCounter)) == BRANCHING_ERROR)
+                        if ((newBranches = createBranches(current, relaxedAssertionsTests, false, newDepth, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR)
                             return Optional.empty();
                     }
                     tests += beAFixResult.generatedTests();
@@ -282,49 +282,82 @@ public class IterativeCEBasedAlloyRepair {
     }
 
 
-    private static final int BRANCHING_ERROR = -1;
-    private int createBranches(FixCandidate current, List<BeAFixTest> fromTests, boolean multipleBranches, int newDepth, CandidateSpace searchSpace, int repairedPropertiesForCurrent, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {
-        BeAFixTest branchingTest = fromTests.get(0);
-        boolean oneBranch = false;
-        if ((multipleBranches && !branchingTest.isMultipleBranch()) || (!multipleBranches && !branchingTest.isPositiveAndNegativeBranch())) {
-            logger.severe((multipleBranches?"An untrusted counterexample test must have at least two alternate cases":"A predicate test must have a positive and negative branch") +
-                    "\nThis could be caused by a repeated branch, could occur for unexpected instance tests, we will generate only one branch, but you should check the hashes log");
-            oneBranch = true;
-            /*TODO: remove in future version
-            Report report = Report.icebarInternError(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
-            writeReport(report);
-            return BRANCHING_ERROR;*/
-        }
-        Collection<BeAFixTest> branches;
-        if (oneBranch) {
-            branches = Collections.singleton(branchingTest);
-        } else if (multipleBranches)
-            branches = branchingTest.getAlternateBranches();
-        else {
-            branches = new HashSet<>();
-            OneTypePair<BeAFixTest> positiveAndNegativeBranch = branchingTest.getPositiveAndNegativeBranches();
-            BeAFixTest positive = positiveAndNegativeBranch.fst();
-            if (positive.isMultipleBranch())
-                branches.addAll(positive.getAlternateBranches());
-            else
-                branches.add(positive);
-            BeAFixTest negative = positiveAndNegativeBranch.snd();
-            if (negative.isMultipleBranch())
-                branches.addAll(negative.getAlternateBranches());
-            else
-                branches.add(negative);
-        }
-        for (BeAFixTest branch : branches) {
+    private static final int BRANCHING_ERROR = -1; //TODO: currently not in use
+    private int createBranches(FixCandidate current, List<BeAFixTest> fromTests, boolean multipleBranches, int newDepth, CandidateSpace searchSpace, int repairedPropertiesForCurrent) {
+        int branches = 0;
+        for (List<BeAFixTest> combination : createBranchesCombinations(fromTests, multipleBranches)) {
+            if (combination.isEmpty())
+                continue;
             Set<BeAFixTest> localTrustedTests = new HashSet<>(current.trustedTests());
             Set<BeAFixTest> localUntrustedTests = new HashSet<>(current.untrustedTests());
-            if (!localUntrustedTests.add(branch))
-                throw new IllegalStateException("Repeated branch in branching");
+            localUntrustedTests.addAll(combination);
             FixCandidate newCandidate = new FixCandidate(modelToRepair, newDepth, localUntrustedTests, localTrustedTests);
             newCandidate.repairedProperties(repairedPropertiesForCurrent);
             searchSpace.push(newCandidate);
+            branches++;
         }
-        TestHashes.getInstance().undoLatestExceptFor(branches);
-        return branches.size();
+        return branches;
+    }
+
+    private List<List<BeAFixTest>> createBranchesCombinations(List<BeAFixTest> fromTests, boolean multipleBranches) {
+        List<List<BeAFixTest>> allCombinations = new LinkedList<>();
+        allCombinations.add(new LinkedList<>());
+        for (BeAFixTest branchingTest : fromTests) {
+            boolean oneBranch = false;
+            if ((multipleBranches && !branchingTest.isMultipleBranch()) || (!multipleBranches && !branchingTest.isPositiveAndNegativeBranch())) {
+                logger.severe((multipleBranches?"An untrusted counterexample test must have at least two alternate cases":"A predicate test must have a positive and negative branch") +
+                        "\nThis could be caused by a repeated branch, could occur for unexpected instance tests, we will generate only one branch, but you should check the hashes log");
+                oneBranch = true;
+            }
+            if (oneBranch) {
+                for (List<BeAFixTest> combination : allCombinations) {
+                    combination.add(branchingTest);
+                }
+            } else if (multipleBranches) {
+                List<List<BeAFixTest>> newCombinations = new LinkedList<>();
+                for (List<BeAFixTest> combination : allCombinations) {
+                    for (BeAFixTest branch : branchingTest.getAlternateBranches()) {
+                        List<BeAFixTest> newCombination = new LinkedList<>(combination);
+                        newCombination.add(branch);
+                        newCombinations.add(newCombination);
+                    }
+                }
+                allCombinations.clear();
+                allCombinations.addAll(newCombinations);
+            } else {
+                List<List<BeAFixTest>> newCombinations = new LinkedList<>();
+                OneTypePair<BeAFixTest> positiveAndNegativeBranch = branchingTest.getPositiveAndNegativeBranches();
+                BeAFixTest positive = positiveAndNegativeBranch.fst();
+                BeAFixTest negative = positiveAndNegativeBranch.snd();
+                for (List<BeAFixTest> combination : allCombinations) {
+                    if (positive.isMultipleBranch()) {
+                        for (BeAFixTest positiveBranch : positive.getAlternateBranches()) {
+                            List<BeAFixTest> newCombination = new LinkedList<>(combination);
+                            newCombination.add(positiveBranch);
+                            newCombinations.add(newCombination);
+                        }
+                    } else {
+                        List<BeAFixTest> newCombination = new LinkedList<>(combination);
+                        newCombination.add(positive);
+                        newCombinations.add(newCombination);
+                    }
+                    if (negative.isMultipleBranch()) {
+                        for (BeAFixTest negativeBranch : negative.getAlternateBranches()) {
+                            List<BeAFixTest> newCombination = new LinkedList<>(combination);
+                            newCombination.add(negativeBranch);
+                            newCombinations.add(newCombination);
+                        }
+                    } else {
+                        List<BeAFixTest> newCombination = new LinkedList<>(combination);
+                        newCombination.add(negative);
+                        newCombinations.add(newCombination);
+                    }
+                }
+                allCombinations.clear();
+                allCombinations.addAll(newCombinations);
+            }
+        }
+        return allCombinations;
     }
 
     private boolean checkIfInvalidAndReportBeAFixResults(BeAFixResult beAFixResult, FixCandidate current, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {

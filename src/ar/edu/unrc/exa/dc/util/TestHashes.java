@@ -18,6 +18,9 @@ public final class TestHashes {
 
     private static final Logger logger = Logger.getLogger(TestHashes.class.getName());
     private static final Path logFile = Paths.get("HashesCheck.log");
+    private static boolean enableHashesCheck = true;
+    public static void enableHashesCheck() {enableHashesCheck = true;}
+    public static void disableHashesCheck() {enableHashesCheck = false;}
 
     static {
         try {
@@ -44,6 +47,8 @@ public final class TestHashes {
     }
 
     public boolean add(BeAFixTest test) {
+        if (!enableHashesCheck)
+            return true;
         int hash = test.currentTestHashCode();
         boolean added = hashes.add(hash);
         logger.info(test.toString());
@@ -55,6 +60,8 @@ public final class TestHashes {
     }
 
     public void undoLatestExceptFor(Collection<BeAFixTest> exceptions) {
+        if (!enableHashesCheck)
+            return;
         if (exceptions.stream().anyMatch(BeAFixTest::isBranchedTest))
             throw new IllegalArgumentException("Tests in exceptions list can't be branching tests");
         Set<Integer> exceptionsHashes = exceptions.stream().map(BeAFixTest::currentTestHashCode).collect(Collectors.toSet());
@@ -74,7 +81,8 @@ public final class TestHashes {
     }
 
     public void clearUndoCache() {
-        lastHashes.clear();
+        if (enableHashesCheck)
+            lastHashes.clear();
     }
 
 }
