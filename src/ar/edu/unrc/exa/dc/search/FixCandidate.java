@@ -42,7 +42,7 @@ public final class FixCandidate {
     private final String id;
     private final TestHashes testHashes = new TestHashes();
     private final FixCandidate from;
-    private final boolean validCandidate;
+    private final boolean hasLocalTests;
 
     public static FixCandidate initialCandidate(Path modelToRepair) {
         return new FixCandidate(modelToRepair, 0, null, null, null);
@@ -80,7 +80,7 @@ public final class FixCandidate {
         this.depth = depth;
         this.untrustedTests = untrustedTests==null?new LinkedList<>():filterAlreadySeen(untrustedTests, from);
         this.trustedTests = trustedTests==null?new LinkedList<>():filterAlreadySeen(trustedTests, from);
-        validCandidate = from == null || (!this.untrustedTests.isEmpty() || !this.trustedTests.isEmpty());
+        hasLocalTests = (!this.untrustedTests.isEmpty() || !this.trustedTests.isEmpty());
     }
 
     private Collection<BeAFixTest> filterAlreadySeen(Collection<BeAFixTest> tests, FixCandidate from) {
@@ -136,8 +136,8 @@ public final class FixCandidate {
         return modelToRepair.getFileName().toString().replace(".als","");
     }
 
-    public boolean isValidCandidate() {
-        return validCandidate;
+    public boolean hasLocalTests() {
+        return hasLocalTests;
     }
 
     public String id() {

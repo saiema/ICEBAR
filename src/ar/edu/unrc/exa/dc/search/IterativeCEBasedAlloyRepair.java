@@ -278,8 +278,10 @@ public class IterativeCEBasedAlloyRepair {
                     }
                     boolean trustedTestsAdded;
                     boolean addLocalTrustedTests;
+                    boolean globalTestsAdded = false;
                     if (globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty())) {
                         trustedTestsAdded = this.trustedCounterexampleTests.addAll(counterexampleTests);
+                        globalTestsAdded = trustedTestsAdded;
                         addLocalTrustedTests = false;
                     } else { //local trusted tests except from original
                         trustedTestsAdded = !counterexampleTests.isEmpty();
@@ -295,7 +297,7 @@ public class IterativeCEBasedAlloyRepair {
                         if (trustedTestsAdded) {
                             FixCandidate newCandidate = FixCandidate.descendant(modelToRepair, localUntrustedTests, localTrustedTests, current);
                             newCandidate.repairedProperties(repairedPropertiesForCurrent);
-                            if (newCandidate.isValidCandidate()) {
+                            if (newCandidate.hasLocalTests() || globalTestsAdded) {
                                 searchSpace.push(newCandidate);
                                 newBranches = 1;
                             } else {
@@ -368,7 +370,7 @@ public class IterativeCEBasedAlloyRepair {
             localUntrustedTests.addAll(combination);
             FixCandidate newCandidate = FixCandidate.descendant(modelToRepair, localUntrustedTests, localTrustedTests, current);
             newCandidate.repairedProperties(repairedPropertiesForCurrent);
-            if (newCandidate.isValidCandidate()) {
+            if (newCandidate.hasLocalTests()) {
                 searchSpace.push(newCandidate);
                 branches++;
             } else {

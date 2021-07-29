@@ -223,8 +223,6 @@ public final class RepairGraph {
     private RepairGraph(FixCandidate candidate) {
         if (candidate == null)
             throw new IllegalArgumentException("candidate can't be null");
-        if (!candidate.isValidCandidate())
-            throw new IllegalArgumentException("candidate can't be an invalid one");
         this.root = Node.leaf(NODE_TYPE.ORIGINAL, convertCandidateIdToNodeId(candidate.id(), NODE_TYPE.ORIGINAL));
     }
 
