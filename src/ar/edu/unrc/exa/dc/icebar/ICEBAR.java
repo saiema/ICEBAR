@@ -20,7 +20,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.1.0";
+    private static final String VERSION = "2.2.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -45,7 +45,6 @@ public class ICEBAR {
             version();
             return;
         }
-        TestHashes.disableHashesCheck(); //Temporary solution
         parseCommandLine(args);
         ICEBARProperties.getInstance().loadConfig(
                 ICEBARExperiment.getInstance().hasProperties()?
@@ -118,6 +117,16 @@ public class ICEBAR {
             boolean restartForMoreUnseenTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY);
             iterativeCEBasedAlloyRepair.restartForMoreUnseenTests(restartForMoreUnseenTests);
         }
+        boolean printProcessGraph = false;
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH)) {
+            printProcessGraph = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH);
+        }
+        iterativeCEBasedAlloyRepair.printProcessGraph(printProcessGraph);
+        boolean checkRepeated = false;
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_CHECK_REPEATED_TESTS)) {
+            checkRepeated = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_CHECK_REPEATED_TESTS);
+        }
+        FixCandidate.checkRepeated(checkRepeated);
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {
@@ -125,6 +134,8 @@ public class ICEBAR {
         } else {
             System.out.println("No Fix Found for model: " + ICEBARExperiment.getInstance().modelPath().toString() + "\n");
         }
+        if (printProcessGraph)
+            iterativeCEBasedAlloyRepair.printProcessGraph();
     }
 
     private static void parseCommandLine(String[] args) {

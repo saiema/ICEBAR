@@ -92,6 +92,14 @@ public class ICEBARProperties {
         ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY {
             @Override
             public String getKey() { return "icebar.search.emptysearchspace.retryformoretests"; }
+        },
+        ICEBAR_PRINT_PROCESS_GRAPH {
+            @Override
+            public String getKey() { return "icebar.search.printprocessgraph"; }
+        },
+        ICEBAR_CHECK_REPEATED_TESTS {
+            @Override
+            public String getKey() { return "icebar.search.filterrepeatedtests"; }
         }
         ;
         public abstract String getKey();
@@ -199,6 +207,8 @@ public class ICEBARProperties {
             case ICEBAR_NO_FIX_ONLY_TRUSTED_KEEP_GOING:
             case ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
+            case ICEBAR_PRINT_PROCESS_GRAPH:
+            case ICEBAR_CHECK_REPEATED_TESTS:
             case BEAFIX_INSTANCE_TESTS: return true;
             default: return false;
         }

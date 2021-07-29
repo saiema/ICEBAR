@@ -13,6 +13,7 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.Random;
 import java.util.logging.Logger;
 
 import static ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.NO_SCOPE;
@@ -299,6 +300,33 @@ public final class Utils {
             }
         }
         return Optional.empty();
+    }
+
+    private static final String SYMBOLS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final int NAME_LENGTH = 8;
+    public static String generateRandomName() {
+        StringBuilder sb = new StringBuilder();
+        Random symbolRng = new Random();
+        Random letterOrNumberCoin = new Random(); //TRUE is letter, FALSE is number
+        Random upperOrLowerCaseCoin = new Random(); //TRUE is uppercase, FALSE is lowercase
+        Random numberRng = new Random();
+        for (int i = 0; i < NAME_LENGTH; i++) {
+            if (letterOrNumberCoin.nextBoolean()) {
+                //letter
+                char symbol = SYMBOLS.charAt(symbolRng.nextInt(SYMBOLS.length()));
+                if (upperOrLowerCaseCoin.nextBoolean()) {
+                    //uppercase
+                    sb.append(symbol);
+                } else {
+                    //lowercase
+                    sb.append(Character.toLowerCase(symbol));
+                }
+            } else {
+                //number
+                sb.append(numberRng.nextInt(10));
+            }
+        }
+        return sb.toString();
     }
 
 }

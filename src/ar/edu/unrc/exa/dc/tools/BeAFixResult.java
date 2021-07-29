@@ -693,9 +693,7 @@ public final class BeAFixResult {
             if (rawTest.trim().isEmpty())
                 continue;
             BeAFixTest test = new BeAFixTest(rawTest, testType);
-            if (TestHashes.getInstance().add(test)) {
-                tests.add(test);
-            }
+            tests.add(test);
         }
         return tests;
     }
