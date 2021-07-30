@@ -25,8 +25,9 @@ public final class BeAFix {
     public static final Path MODEL_OVERRIDES_FOLDER_DEFAULT = null;
     public static final boolean INSTANCE_TESTS_DEFAULT = true;
     public static final Path BUGGY_FUNCTIONS_DEFAULT = null;
-    public static final boolean FACTSRELAXATION_DEFAULT = false;
+    public static final boolean FACTS_RELAXATION_DEFAULT = false;
     public static final boolean FORCE_ASSERTION_TESTS_GENERATION_DEFAULT = false;
+    public static final boolean BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS_DEFAULT = false;
 
 
     private Path beAFixJar;
@@ -42,8 +43,9 @@ public final class BeAFix {
     private Path modelOverridesFolder = MODEL_OVERRIDES_FOLDER_DEFAULT;
     private boolean instanceTests = INSTANCE_TESTS_DEFAULT;
     private Path buggyFunctions = BUGGY_FUNCTIONS_DEFAULT;
-    private boolean factsRelaxationGeneration = FACTSRELAXATION_DEFAULT;
+    private boolean factsRelaxationGeneration = FACTS_RELAXATION_DEFAULT;
     private boolean forceAssertionTestsGeneration = FORCE_ASSERTION_TESTS_GENERATION_DEFAULT;
+    private boolean noInstanceTestForNegativeTestWhenNoFacts = BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS_DEFAULT;
 
     public BeAFixResult runTestGeneration() {
         if (invalidPaths())
@@ -125,6 +127,10 @@ public final class BeAFix {
 
     public void forceAssertionTestsGeneration(boolean forceAssertionTestsGeneration) {
         this.forceAssertionTestsGeneration = forceAssertionTestsGeneration;
+    }
+
+    public void noInstanceTestForNegativeTestWhenNoFacts(boolean noInstanceTestForNegativeTestWhenNoFacts) {
+        this.noInstanceTestForNegativeTestWhenNoFacts = noInstanceTestForNegativeTestWhenNoFacts;
     }
 
     public boolean cleanOutputDir() throws IOException {
@@ -239,7 +245,7 @@ public final class BeAFix {
     }
 
     private String[] getBeAFixCommand() {
-        String[] args = new String[29];
+        String[] args = new String[31];
         args[0] = "java";
         args[1] = "-jar"; args[2] = beAFixJar.toString();
         args[3] = pathToModel.toString();
@@ -256,6 +262,7 @@ public final class BeAFix {
         args[23] = "--buggyfuncs"; args[24] = (buggyFunctions == null?"\" \"":buggyFunctions.toString());
         args[25] = "--relaxedfacts"; args[26] = Boolean.toString(factsRelaxationGeneration);
         args[27] = "--fassertiontests"; args[28] = Boolean.toString(forceAssertionTestsGeneration);
+        args[29] = "--noexpectinstancewhennofacts"; args[30] = Boolean.toString(noInstanceTestForNegativeTestWhenNoFacts);
         return args;
     }
 

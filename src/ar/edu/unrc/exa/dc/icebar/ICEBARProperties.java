@@ -43,6 +43,10 @@ public class ICEBARProperties {
                 return BEAFIX_PREFIX + ".buggyfuncsfile";
             }
         },
+        BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS {
+            @Override
+            public String getKey() { return BEAFIX_PREFIX + ".noinstancetestsfornegativetestwhennofacts"; }
+        },
         AREPAIR_ROOT {
             @Override
             public String getKey() {
@@ -223,6 +227,7 @@ public class ICEBARProperties {
             case ICEBAR_CHECK_REPEATED_TESTS:
             case ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS:
             case AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES:
+            case BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS:
             case BEAFIX_INSTANCE_TESTS: return true;
             default: return false;
         }

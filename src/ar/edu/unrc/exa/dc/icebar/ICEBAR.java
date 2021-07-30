@@ -19,7 +19,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.3.1rc";
+    private static final String VERSION = "2.4.0rc";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -248,6 +248,9 @@ public class ICEBAR {
         }
         if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE)) {
             beAFix.aRepairCompatibilityRelaxedMode(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE));
+        }
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS)) {
+            beAFix.noInstanceTestForNegativeTestWhenNoFacts(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS));
         }
         return beAFix;
     }
