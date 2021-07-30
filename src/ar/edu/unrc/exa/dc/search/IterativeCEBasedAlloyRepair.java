@@ -173,6 +173,9 @@ public class IterativeCEBasedAlloyRepair {
             ARepairResult aRepairResult = runARepairWithCurrentConfig(current);
             arepairTimeCounter.clockEnd();
             writeCandidateInfo(current, trustedCounterexampleTests, aRepairResult);
+            if (printProcessGraph) {
+                repairGraph.addARepairCall(current, this.trustedCounterexampleTests);
+            }
             logger.info("ARepair finished\n" + aRepairResult.toString());
             if (aRepairResult.equals(ARepairResult.ERROR)) {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
@@ -225,6 +228,8 @@ public class IterativeCEBasedAlloyRepair {
                     logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
                     if (printProcessGraph && repairFound) {
                         repairGraph.addSpuriousFixFrom(current, current.parent() == null?originalCandidate:current.parent());
+                    } else if (printProcessGraph) {
+                        repairGraph.addFauxSpuriousFixFrom(current, current.parent() == null?originalCandidate:current.parent());
                     }
                     beafixTimeCounter.clockStart();
                     BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);

@@ -19,7 +19,8 @@ public final class ARepair {
         REPAIRED,
         NOT_REPAIRED,
         ERROR,
-        NO_TESTS;
+        NO_TESTS,
+        PARTIAL_REPAIR;
 
         private String message = null;
         private Path repair = null;
@@ -150,6 +151,7 @@ public final class ARepair {
     private int maxTryPerHole = MAX_TRY_PER_HOLE_DEFAULT;
     private int partitionNum = PARTITION_NUM_DEFAULT;
     private int maxTryPerDepth = MAX_TRY_PER_DEPTH_DEFAULT;
+    private boolean treatPartialRepairsAsFixes = false;
 
 
     public ARepairResult run() {
@@ -232,6 +234,14 @@ public final class ARepair {
         this.maxTryPerDepth = maxTryPerDepth;
     }
 
+    public void treatPartialRepairsAsFixes(boolean treatPartialRepairsAsFixes) {
+        this.treatPartialRepairsAsFixes = treatPartialRepairsAsFixes;
+    }
+
+    public boolean treatPartialRepairsAsFixes() {
+        return this.treatPartialRepairsAsFixes;
+    }
+
     public boolean cleanFixDirectory() {
         Path hiddenDir = Paths.get(workingDirectory.toAbsolutePath().toString(), AREPAIR_HIDDEN_DIR);
         try {
@@ -303,14 +313,18 @@ public final class ARepair {
             result.message("Error while reading output log:\n" + exceptionToString(e));
             return result;
         }
-        if (fixNotFound.isPresent()) {
+        if (fixNotFound.isPresent() && !treatPartialRepairsAsFixes) {
             result = ARepairResult.NOT_REPAIRED;
             result.message("No fix found");
         } else if (fixFound.isPresent() || allTestsPass.isPresent()) {
-            result = ARepairResult.REPAIRED;
-            if (!fixFound.isPresent())
+            if (fixNotFound.isPresent()){
+                result = ARepairResult.PARTIAL_REPAIR;
+                result.message("Fix is only a partial fix");
+            } else if (!fixFound.isPresent()) {
+                result = ARepairResult.REPAIRED;
                 result.message("All tests passed with no modifications required");
-            else {
+            } else {
+                result = ARepairResult.REPAIRED;
                 String repairFoundBy = fixFound.get().replace(FIX_FOUND, "");
                 result.message("Fix found (" + repairFoundBy + ") in " + repair);
             }

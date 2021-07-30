@@ -18,19 +18,25 @@ public final class RepairGraph {
         ORIGINAL,
         NO_TESTS,
         FIX_SPURIOUS,
+        FIX_FAUX_SPURIOUS,
         FIX_REAL,
         NO_FIX,
         MAX_LAP,
         TEST_GENERATION,
-        TIMEOUT
+        TIMEOUT,
+        AREPAIR_CALL
     }
 
     private static final String NO_TESTS_PREFIX = "NT";
     private static final String NO_FIX_PREFIX = "NF";
-    private static final String FROM_CANDIDATE_PREFIX = "FC";
+    private static final String REAL_FIX_PREFIX = "RF";
+    private static final String FROM_ORIGINAL_PREFIX = "FO";
+    private static final String FROM_SPURIOUS_FIX_PREFIX = "FS";
+    private static final String FROM_FAUX_SPURIOUS_PREFIX = "FF";
     private static final String MAX_LAP_PREFIX = "ML";
     private static final String TESTS_PREFIX = "TG";
     private static final String TIMEOUT_PREFIX = "TO";
+    private static final String AREPAIR_PREFIX = "AR";
 
     private final Node root;
 
@@ -38,37 +44,61 @@ public final class RepairGraph {
         return new RepairGraph(from);
     }
 
-    public void addRealFixFrom(FixCandidate realFix, FixCandidate from) {
-        String fromId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.ORIGINAL);
-        String fromTestGenerationId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.TEST_GENERATION);
-        String realFixId = convertCandidateIdToNodeId(realFix.id(), NODE_TYPE.FIX_REAL);
-        String extraInformation = "local tests: " + from.trustedTests().size() + "T" + "|" + from.untrustedTests().size() + "U";
-        if (root.searchNode(fromTestGenerationId).isPresent())
-            searchAndAddDescendant(fromTestGenerationId, realFixId, NODE_TYPE.FIX_REAL, extraInformation);
-        else
-            searchAndAddDescendant(fromId, realFixId, NODE_TYPE.FIX_REAL, extraInformation);
-    }
-
-    public void addGeneratedTestsFrom(FixCandidate from, Collection<BeAFixResult.BeAFixTest> testsGlobal, Collection<BeAFixResult.BeAFixTest> testsLocal) {
-        String fromId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.FIX_SPURIOUS);
-        String testGenerationId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.TEST_GENERATION);
-        int global = testsGlobal==null?0:testsGlobal.size();
+    public void addARepairCall(FixCandidate candidate, Collection<BeAFixResult.BeAFixTest> globalTests) {
+        String fromIdRaw = candidate.parent() == null?candidate.id():candidate.parent().id();
+        String fromIdOriginal = convertCandidateIdToNodeId(fromIdRaw, NODE_TYPE.ORIGINAL);
+        String fromIdTestGeneration = convertCandidateIdToNodeId(fromIdRaw, NODE_TYPE.TEST_GENERATION);
+        String arepairCallId = convertCandidateIdToNodeId(candidate.id(), NODE_TYPE.AREPAIR_CALL);
+        Collection<BeAFixResult.BeAFixTest> testsLocal = new LinkedList<>();
+        testsLocal.addAll(candidate.untrustedTests());
+        testsLocal.addAll(candidate.trustedTests());
+        int global = globalTests==null?0:countNonBranching(globalTests);
         int positive = countPositive(testsLocal);
         int negative = countNegative(testsLocal);
         int local = testsLocal.size();
         String extraInformation = "GT(" + global + ") LT(" + local + ")[+" + positive + ",-" + negative + "]";
-        searchAndAddDescendant(fromId, testGenerationId, NODE_TYPE.TEST_GENERATION, extraInformation);
+        if (root.searchNode(fromIdTestGeneration).isPresent())
+            searchAndAddDescendant(fromIdTestGeneration, arepairCallId, NODE_TYPE.AREPAIR_CALL, extraInformation);
+        else
+            searchAndAddDescendant(fromIdOriginal, arepairCallId, NODE_TYPE.AREPAIR_CALL, extraInformation);
+    }
+
+    public void addRealFixFrom(FixCandidate realFix, FixCandidate from) {
+        addFix(realFix, from, NODE_TYPE.FIX_REAL);
     }
 
     public void addSpuriousFixFrom(FixCandidate spuriousFix, FixCandidate from) {
+        addFix(spuriousFix, from, NODE_TYPE.FIX_SPURIOUS);
+    }
+
+    public void addFauxSpuriousFixFrom(FixCandidate fauxSpuriousFix, FixCandidate from) {
+        addFix(fauxSpuriousFix, from, NODE_TYPE.FIX_FAUX_SPURIOUS);
+    }
+
+    public void addNoFixFoundFrom(FixCandidate from) {
+        addFix(from, from, NODE_TYPE.NO_FIX);
+    }
+
+    private void addFix(FixCandidate fix, FixCandidate from, NODE_TYPE fixType) {
+        String fromId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.AREPAIR_CALL);
+        String fixId = convertCandidateIdToNodeId(fix.id(), fixType);
+        String extraInformation = "local tests: " + from.trustedTests().size() + "T" + "|" + from.untrustedTests().size() + "U";
+        searchAndAddDescendant(fromId, fixId, fixType, extraInformation);
+    }
+
+    public void addGeneratedTestsFrom(FixCandidate from, Collection<BeAFixResult.BeAFixTest> testsGlobal, Collection<BeAFixResult.BeAFixTest> testsLocal) {
         String fromId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.FIX_SPURIOUS);
-        String fromTestGenerationId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.TEST_GENERATION);
-        String spuriousFixId = convertCandidateIdToNodeId(spuriousFix.id(), NODE_TYPE.FIX_SPURIOUS);
-        String extraInformation = "LT: " + spuriousFix.trustedTests().size() + "T" + "|" + spuriousFix.untrustedTests().size() + "U";
-        if (root.searchNode(fromTestGenerationId).isPresent())
-            searchAndAddDescendant(fromTestGenerationId, spuriousFixId, NODE_TYPE.FIX_SPURIOUS, extraInformation);
+        String fromIdFauxSpurious = convertCandidateIdToNodeId(from.id(), NODE_TYPE.FIX_FAUX_SPURIOUS);
+        String testGenerationId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.TEST_GENERATION);
+        int global = testsGlobal==null?0:countNonBranching(testsGlobal);
+        int positive = countPositive(testsLocal);
+        int negative = countNegative(testsLocal);
+        int local = testsLocal.size();
+        String extraInformation = "GT(" + global + ") LT(" + local + ")[+" + positive + ",-" + negative + "]";
+        if (root.searchNode(fromIdFauxSpurious).isPresent())
+            searchAndAddDescendant(fromIdFauxSpurious, testGenerationId, NODE_TYPE.TEST_GENERATION, extraInformation);
         else
-            searchAndAddDescendant(fromId, spuriousFixId, NODE_TYPE.FIX_SPURIOUS, extraInformation);
+            searchAndAddDescendant(fromId, testGenerationId, NODE_TYPE.TEST_GENERATION, extraInformation);
     }
 
     public void addNoTestsFrom(FixCandidate from) {
@@ -77,23 +107,24 @@ public final class RepairGraph {
         searchAndAddDescendant(fromId, noTestsId, NODE_TYPE.NO_TESTS);
     }
 
-    public void addNoFixFoundFrom(FixCandidate from) {
-        String fromId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.FIX_SPURIOUS);
-        String noFixId = convertCandidateIdToNodeId(generateRandomName(), NODE_TYPE.NO_FIX);
-        String extraInformation = "LT: " + from.trustedTests().size() + "T" + "|" + from.untrustedTests().size() + "U";
-        searchAndAddDescendant(fromId, noFixId, NODE_TYPE.NO_FIX, extraInformation);
-    }
-
     public void addMaxLapFrom(FixCandidate from) {
         String fromId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.FIX_SPURIOUS);
+        String fromFauxSpuriousId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.FIX_FAUX_SPURIOUS);
         String maxLapId = convertCandidateIdToNodeId(generateRandomName(), NODE_TYPE.MAX_LAP);
-        searchAndAddDescendant(fromId, maxLapId, NODE_TYPE.MAX_LAP);
+        if (root.searchNode(fromFauxSpuriousId).isPresent())
+            searchAndAddDescendant(fromFauxSpuriousId, maxLapId, NODE_TYPE.MAX_LAP);
+        else
+            searchAndAddDescendant(fromId, maxLapId, NODE_TYPE.MAX_LAP);
     }
 
     public void addTimeoutFrom(FixCandidate from) {
         String fromId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.FIX_SPURIOUS);
+        String fromFauxSpuriousId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.FIX_FAUX_SPURIOUS);
         String timeoutId = convertCandidateIdToNodeId(generateRandomName(), NODE_TYPE.TIMEOUT);
-        searchAndAddDescendant(fromId, timeoutId, NODE_TYPE.TIMEOUT);
+        if (root.searchNode(fromFauxSpuriousId).isPresent())
+            searchAndAddDescendant(fromFauxSpuriousId, timeoutId, NODE_TYPE.TIMEOUT);
+        else
+            searchAndAddDescendant(fromId, timeoutId, NODE_TYPE.TIMEOUT);
     }
 
     private static final String GENERAL_NODE = "node [fontsize = 10 style=filled];";
@@ -102,10 +133,12 @@ public final class RepairGraph {
     private static final String ORIGINAL_NODE = "[shape = egg fillcolor = cornflowerblue LABEL];";
     private static final String REAL_FIX_NODE = "[shape = house fillcolor = chartreuse4 LABEL];";
     private static final String SPURIOUS_FIX_NODE = "[shape = polygon fillcolor = darkgoldenrod2 LABEL];";
+    private static final String FAUX_SPURIOUS_FIX_NODE = "[shape = polygon fillcolor = darkgoldenrod LABEL];";
     private static final String NO_FIX_NODE = "[shape = triangle fillcolor = indianred LABEL];";
     private static final String NO_TESTS_NODE = "[shape = triangle fillcolor = ivory4 LABEL];";
     private static final String MAX_LAP_NODE = "[shape = triangle fillcolor = black LABEL];";
     private static final String TEST_GENERATION_NODE = "[shape = diamond fillcolor = cyan LABEL];";
+    private static final String AREPAIR_CALL_NODE = "[shape = diaming fillcolor = yellow LABEL]";
     private static final String TIMEOUT_NODE = "[shape = triangle fillcolor = indigo LABEL]";
 
     public boolean generateDotFile(String file) {
@@ -143,6 +176,10 @@ public final class RepairGraph {
         if (!spuriousFixes.isEmpty()) {
             sb.append(generateNodeStatements(spuriousFixes, SPURIOUS_FIX_NODE, LABEL_SUB_LABEL_COMPONENT, indent));
         }
+        Collection<Node> fauxSpuriousFixes = getFauxSpuriousFixNodes();
+        if (!fauxSpuriousFixes.isEmpty()) {
+            sb.append(generateNodeStatements(fauxSpuriousFixes, FAUX_SPURIOUS_FIX_NODE, LABEL_SUB_LABEL_COMPONENT, indent));
+        }
         Collection<Node> noFixes = getNoFixNodes();
         if (!noFixes.isEmpty()) {
             sb.append(generateNodeStatements(noFixes, NO_FIX_NODE, LABEL_SUB_LABEL_COMPONENT, indent));
@@ -158,6 +195,10 @@ public final class RepairGraph {
         Collection<Node> testGenerationNodes = getTestGenerationNodes();
         if (!testGenerationNodes.isEmpty()) {
             sb.append(generateNodeStatements(testGenerationNodes, TEST_GENERATION_NODE, LABEL_SUB_LABEL_COMPONENT, indent));
+        }
+        Collection<Node> arepairCallNodes = getARepairCallNodes();
+        if (!arepairCallNodes.isEmpty()) {
+            sb.append(generateNodeStatements(arepairCallNodes, AREPAIR_CALL_NODE, LABEL_SUB_LABEL_COMPONENT, indent));
         }
         Collection<Node> timeoutNodes = getTimeoutNodes();
         if (!timeoutNodes.isEmpty()) {
@@ -228,26 +269,16 @@ public final class RepairGraph {
 
     private String convertCandidateIdToNodeId(String originalId, NODE_TYPE nodeType) {
         switch (nodeType) {
-            case ORIGINAL:
-            case FIX_REAL:
-            case FIX_SPURIOUS: {
-                return FROM_CANDIDATE_PREFIX + originalId;
-            }
-            case NO_FIX: {
-                return NO_FIX_PREFIX + originalId;
-            }
-            case NO_TESTS: {
-                return NO_TESTS_PREFIX + originalId;
-            }
-            case MAX_LAP: {
-                return MAX_LAP_PREFIX + originalId;
-            }
-            case TEST_GENERATION: {
-                return TESTS_PREFIX + originalId;
-            }
-            case TIMEOUT: {
-                return TIMEOUT_PREFIX + originalId;
-            }
+            case ORIGINAL: return FROM_ORIGINAL_PREFIX + originalId;
+            case FIX_REAL: return REAL_FIX_PREFIX + originalId;
+            case FIX_FAUX_SPURIOUS: return FROM_FAUX_SPURIOUS_PREFIX + originalId;
+            case FIX_SPURIOUS: return FROM_SPURIOUS_FIX_PREFIX + originalId;
+            case NO_FIX: return NO_FIX_PREFIX + originalId;
+            case NO_TESTS: return NO_TESTS_PREFIX + originalId;
+            case MAX_LAP: return MAX_LAP_PREFIX + originalId;
+            case TEST_GENERATION: return TESTS_PREFIX + originalId;
+            case AREPAIR_CALL: return AREPAIR_PREFIX + originalId;
+            case TIMEOUT: return TIMEOUT_PREFIX + originalId;
         }
         return "N/A";
     }
@@ -282,6 +313,8 @@ public final class RepairGraph {
 
     private Collection<Node> getSpuriousFixNodes() { return getAllNodesOfType(NODE_TYPE.FIX_SPURIOUS); }
 
+    private Collection<Node> getFauxSpuriousFixNodes() { return getAllNodesOfType(NODE_TYPE.FIX_FAUX_SPURIOUS); }
+
     private Collection<Node> getNoFixNodes() { return getAllNodesOfType(NODE_TYPE.NO_FIX); }
 
     private Collection<Node> getNoTestsNodes() { return getAllNodesOfType(NODE_TYPE.NO_TESTS); }
@@ -289,6 +322,8 @@ public final class RepairGraph {
     private Collection<Node> getMaxLapNodes()  { return getAllNodesOfType(NODE_TYPE.MAX_LAP); }
 
     private Collection<Node> getTestGenerationNodes() { return getAllNodesOfType(NODE_TYPE.TEST_GENERATION); }
+
+    private Collection<Node> getARepairCallNodes() { return getAllNodesOfType(NODE_TYPE.AREPAIR_CALL); }
 
     private Collection<Node> getTimeoutNodes() { return getAllNodesOfType(NODE_TYPE.TIMEOUT); }
 
@@ -309,6 +344,26 @@ public final class RepairGraph {
         return count(tests, false);
     }
 
+    private int countNonBranching(Collection<BeAFixResult.BeAFixTest> tests) {
+        int count = 0;
+        for (BeAFixResult.BeAFixTest test : tests) {
+            count += countNonBranching(test);
+        }
+        return count;
+    }
+
+    private int countNonBranching(BeAFixResult.BeAFixTest test) {
+        int count = 0;
+        if (!test.isPositiveAndNegativeBranch() && test.isBranchedTest()) {
+            count += test.getAlternateBranches().stream().map(this::countNonBranching).reduce(0, Integer::sum);
+        } else if (!test.isBranchedTest() && !test.isPositiveBranch() && !test.isNegativeBranch()) {
+            count++;
+            if (test.isRelated())
+                count++;
+        }
+        return count;
+    }
+
     private int count(Collection<BeAFixResult.BeAFixTest> tests, boolean positive) {
         int count = 0;
         for (BeAFixResult.BeAFixTest test : tests) {
@@ -326,13 +381,17 @@ public final class RepairGraph {
                 count += countTest(test.getPositiveAndNegativeBranches().snd(), false);
             }
         } else if (positive && test.isMultipleBranch() && test.isPositiveBranch()) {
-            count += test.getAlternateBranches().size();
+            count += test.getAlternateBranches().stream().map(t -> countTest(t, true)).reduce(0, Integer::sum);
         } else if (!positive && test.isMultipleBranch() && test.isNegativeBranch()) {
-            count += test.getAlternateBranches().size();
+            count += test.getAlternateBranches().stream().map(t -> countTest(t, false)).reduce(0, Integer::sum);
         } else if (positive && test.isPositiveBranch()) {
             count++;
+            if (test.isRelated())
+                count++;
         } else if (!positive && test.isNegativeBranch()) {
             count++;
+            if (test.isRelated())
+                count++;
         }
         return count;
     }
@@ -424,20 +483,26 @@ public final class RepairGraph {
 
         private boolean checkDescendantRules(NODE_TYPE nodeType) {
             switch (this.nodeType) {
-                case ORIGINAL: return !nodeType.equals(NODE_TYPE.ORIGINAL) && !nodeType.equals(NODE_TYPE.NO_TESTS);
+                case ORIGINAL: return nodeType.equals(NODE_TYPE.AREPAIR_CALL);
+                case FIX_FAUX_SPURIOUS:
                 case FIX_SPURIOUS: return nodeType.equals(NODE_TYPE.MAX_LAP) || nodeType.equals(NODE_TYPE.TEST_GENERATION) || nodeType.equals(NODE_TYPE.TIMEOUT);
-                case TEST_GENERATION: {
+                case TEST_GENERATION: return nodeType.equals(NODE_TYPE.AREPAIR_CALL) || nodeType.equals(NODE_TYPE.NO_TESTS);
+                case AREPAIR_CALL: {
                     switch (nodeType) {
                         case ORIGINAL:
-                        case MAX_LAP:
+                        case AREPAIR_CALL:
+                        case TIMEOUT:
                         case TEST_GENERATION:
-                            return false;
+                        case MAX_LAP:
                         case NO_TESTS:
+                            return false;
                         case FIX_SPURIOUS:
-                        case FIX_REAL:
                         case NO_FIX:
+                        case FIX_REAL:
+                        case FIX_FAUX_SPURIOUS:
                             return true;
                     }
+                    break;
                 }
                 case NO_TESTS:
                 case NO_FIX:

@@ -49,6 +49,10 @@ public class ICEBARProperties {
                 return AREPAIR_PREFIX + ".root";
             }
         },
+        AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES {
+            @Override
+            public String getKey() { return AREPAIR_PREFIX + ".partialrepairasfixes";}
+        },
         ICEBAR_LAPS {
             @Override
             public String getKey() { return "icebar.laps"; }
@@ -96,6 +100,14 @@ public class ICEBARProperties {
         ICEBAR_PRINT_PROCESS_GRAPH {
             @Override
             public String getKey() { return "icebar.search.printprocessgraph"; }
+        },
+        ICEBAR_PRINT_PROCESS_GRAPH_FOLDER {
+            @Override
+            public String getKey() { return "icebar.search.printprocessgraph.folder"; }
+        },
+        ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS {
+            @Override
+            public String getKey() { return "icebar.search.printprocessgraph.storetests"; }
         },
         ICEBAR_CHECK_REPEATED_TESTS {
             @Override
@@ -209,6 +221,8 @@ public class ICEBARProperties {
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case ICEBAR_PRINT_PROCESS_GRAPH:
             case ICEBAR_CHECK_REPEATED_TESTS:
+            case ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS:
+            case AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES:
             case BEAFIX_INSTANCE_TESTS: return true;
             default: return false;
         }
@@ -229,6 +243,7 @@ public class ICEBARProperties {
             case BEAFIX_JAR :
             case BEAFIX_MODEL_OVERRIDES_FOLDER :
             case BEAFIX_BUGGY_FUNCS_FILE :
+            case ICEBAR_PRINT_PROCESS_GRAPH_FOLDER:
             case AREPAIR_ROOT : return true;
             default : return false;
         }

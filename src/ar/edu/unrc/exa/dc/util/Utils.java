@@ -54,6 +54,26 @@ public final class Utils {
         return false;
     }
 
+    /**
+     * Checks if a folder exists but is empty, or it does not exist, if it doesn't exist it will create an empty folder.
+     *
+     * @param folderPath : the folder to check/create.
+     * @return {@code true} iff either the folder exists and is empty or it does not exist and could be created.
+     */
+    public static boolean checkAndCreateDirectory(Path folderPath)  {
+        if (isValidPath(folderPath, PathCheck.DIR)) {
+            File folder = folderPath.toFile();
+            if (folder.exists()) {
+                String[] names = folder.list();
+                return names == null || names.length == 0;
+            } else {
+                return folder.mkdirs();
+            }
+        } else {
+            throw new IllegalArgumentException("folderPath is not a folder (" + folderPath + ")");
+        }
+    }
+
     public static void mergeFiles(Path a, Path b, Path result) throws IOException {
         if (!isValidPath(a, PathCheck.FILE))
             throw new IllegalArgumentException("first path is not valid (" + (a==null?"NULL":a.toString()) + ")");
@@ -201,8 +221,7 @@ public final class Utils {
     private static final String CANDIDATE_FILE = "icebar_arepair.info";
     
     public static void startCandidateInfoFile() throws IOException {
-        String candidateInfoFileRaw = CANDIDATE_FILE;
-        Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
+        Path candidateInfoFilePath = Paths.get(CANDIDATE_FILE);
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (candidateInfoFile.exists() && !candidateInfoFile.delete())
             throw new Error("Candidate info file (" + candidateInfoFilePath + ") exists but couldn't be deleted");
@@ -213,8 +232,7 @@ public final class Utils {
     }
 
     public static void writeCandidateInfo(FixCandidate candidate, Collection<BeAFixTest> globalCounterexampleTests, ARepair.ARepairResult aRepairResult) throws IOException {
-        String candidateInfoFileRaw = CANDIDATE_FILE;
-        Path candidateInfoFilePath = Paths.get(candidateInfoFileRaw);
+        Path candidateInfoFilePath = Paths.get(CANDIDATE_FILE);
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (!candidateInfoFile.exists())
             throw new Error("Candidate info file (" + candidateInfoFilePath + ") doesn't exists");
