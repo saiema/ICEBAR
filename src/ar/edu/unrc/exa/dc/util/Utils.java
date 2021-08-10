@@ -43,7 +43,7 @@ public final class Utils {
         if (!pathToCheck.toFile().exists())
             return false;
         switch (check) {
-            case DIR: return pathToCheck.toFile().isDirectory();
+            case DIR: return pathToCheck.toFile().isDirectory() || !pathToCheck.toFile().isFile();
             case ALS: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".als");
             case JAR: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".jar");
             case PROPERTIES: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".properties");
@@ -61,7 +61,7 @@ public final class Utils {
      * @return {@code true} iff either the folder exists and is empty or it does not exist and could be created.
      */
     public static boolean checkAndCreateDirectory(Path folderPath)  {
-        if (isValidPath(folderPath, PathCheck.DIR)) {
+        if (folderPath.toFile().isDirectory() || !folderPath.toFile().isFile()) {
             File folder = folderPath.toFile();
             if (folder.exists()) {
                 String[] names = folder.list();
@@ -102,7 +102,7 @@ public final class Utils {
         if (tests == null || tests.isEmpty())
             throw new IllegalArgumentException("null or empty tests");
         if (output == null)
-            throw new IllegalArgumentException("output path is null");//:"points to an existing file and newFile mode was used") + " (" + (output==null?"NULL":output.toString()) + ")");
+            throw new IllegalArgumentException("output path is null");
         if (newFile && output.toFile().exists())
             throw new IllegalArgumentException("output path point to an existing file while newFile mode is used (" + output + ")");
         if (!newFile && !output.toFile().exists())
@@ -126,6 +126,20 @@ public final class Utils {
             }
         }
         return testCount;
+    }
+
+    public static void writeToFile(Path file, boolean newFile, String content) throws IOException {
+        if (file == null)
+            throw new IllegalArgumentException("file path is null");
+        if (newFile && file.toFile().exists())
+            throw new IllegalArgumentException("file path point to an existing file while newFile mode is used (" + file + ")");
+        if (!newFile && !file.toFile().exists())
+            throw new IllegalArgumentException("file path points to a non existing file while append mode (!newFile) is used (" + file + ")");
+        File testsFile = file.toFile();
+        if (newFile && !testsFile.createNewFile()) {
+            throw new Error("Couldn't create tests file (" + (testsFile) + ")");
+        }
+        Files.write(file, content.getBytes(), StandardOpenOption.APPEND);
     }
 
     public static void writeTestsToLog(Collection<BeAFixTest> tests, Logger logger) {

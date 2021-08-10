@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
-import static ar.edu.unrc.exa.dc.util.Utils.generateRandomName;
+import static ar.edu.unrc.exa.dc.util.Utils.*;
 
 public final class RepairGraph {
 
@@ -38,6 +38,21 @@ public final class RepairGraph {
     private static final String TIMEOUT_PREFIX = "TO";
     private static final String AREPAIR_PREFIX = "AR";
 
+    private static boolean storeTests = false;
+    public static void storeTests(boolean storeTests) { RepairGraph.storeTests = storeTests; }
+    public static boolean storeTests() { return storeTests; }
+
+    private static final Path GRAPHS_FOLDER_DEFAULT = Paths.get("");
+    private static Path graphsFolder = GRAPHS_FOLDER_DEFAULT;
+    public static void graphsFolder(Path graphsFolder) { RepairGraph.graphsFolder = graphsFolder; }
+    public static Path graphsFolder() { return RepairGraph.graphsFolder; }
+
+    private static boolean cleanGraphsFolder = false;
+    public static void cleanGraphsFolder(boolean cleanGraphsFolder) { RepairGraph.cleanGraphsFolder = cleanGraphsFolder; }
+    public static boolean cleanGraphsFolder() { return RepairGraph.cleanGraphsFolder; }
+
+    private static final String TESTS_FOLDER = "tests";
+
     private final Node root;
 
     public static RepairGraph createNewGraph(FixCandidate from) {
@@ -61,28 +76,43 @@ public final class RepairGraph {
             searchAndAddDescendant(fromIdTestGeneration, arepairCallId, NODE_TYPE.AREPAIR_CALL, extraInformation);
         else
             searchAndAddDescendant(fromIdOriginal, arepairCallId, NODE_TYPE.AREPAIR_CALL, extraInformation);
+        if (storeTests()) {
+            Collection<BeAFixResult.BeAFixTest> allTests = new LinkedList<>();
+            if (globalTests != null)
+                allTests.addAll(globalTests);
+            allTests.addAll(testsLocal);
+            Path fullPath = getFullTestFilePathFromCandidate(candidate);
+            try {
+                if (allTests.isEmpty())
+                    writeToFile(fullPath, true, "--NO TESTS");
+                else
+                    generateTestsFile(allTests, fullPath);
+            } catch (IOException e) {
+                throw new IllegalStateException("Something went wrong while writing test file (" + fullPath + ")", e);
+            }
+        }
     }
 
-    public void addRealFixFrom(FixCandidate realFix, FixCandidate from) {
-        addFix(realFix, from, NODE_TYPE.FIX_REAL);
+    public void addRealFixFrom(FixCandidate realFix) {
+        addFix(realFix, NODE_TYPE.FIX_REAL);
     }
 
-    public void addSpuriousFixFrom(FixCandidate spuriousFix, FixCandidate from) {
-        addFix(spuriousFix, from, NODE_TYPE.FIX_SPURIOUS);
+    public void addSpuriousFixFrom(FixCandidate spuriousFix) {
+        addFix(spuriousFix, NODE_TYPE.FIX_SPURIOUS);
     }
 
-    public void addFauxSpuriousFixFrom(FixCandidate fauxSpuriousFix, FixCandidate from) {
-        addFix(fauxSpuriousFix, from, NODE_TYPE.FIX_FAUX_SPURIOUS);
+    public void addFauxSpuriousFixFrom(FixCandidate fauxSpuriousFix) {
+        addFix(fauxSpuriousFix, NODE_TYPE.FIX_FAUX_SPURIOUS);
     }
 
-    public void addNoFixFoundFrom(FixCandidate from) {
-        addFix(from, from, NODE_TYPE.NO_FIX);
+    public void addNoFixFoundFrom(FixCandidate current) {
+        addFix(current, NODE_TYPE.NO_FIX);
     }
 
-    private void addFix(FixCandidate fix, FixCandidate from, NODE_TYPE fixType) {
-        String fromId = convertCandidateIdToNodeId(from.id(), NODE_TYPE.AREPAIR_CALL);
+    private void addFix(FixCandidate fix, NODE_TYPE fixType) {
+        String fromId = convertCandidateIdToNodeId(fix.id(), NODE_TYPE.AREPAIR_CALL);
         String fixId = convertCandidateIdToNodeId(fix.id(), fixType);
-        String extraInformation = "local tests: " + from.trustedTests().size() + "T" + "|" + from.untrustedTests().size() + "U";
+        String extraInformation = "local tests: " + fix.trustedTests().size() + "T" + "|" + fix.untrustedTests().size() + "U";
         searchAndAddDescendant(fromId, fixId, fixType, extraInformation);
     }
 
@@ -130,6 +160,7 @@ public final class RepairGraph {
     private static final String GENERAL_NODE = "node [fontsize = 10 style=filled];";
     private static final String LABEL_SUB_LABEL_COMPONENT = "label=<LABEL<BR />\n" + "<FONT POINT-SIZE=\"10\">EXTRAINFO</FONT>>";
     private static final String LABEL_ONLY_COMPONENT = "label=LABEL";
+    private static final String URL_COMPONENT = "URL=\"file:PATH\"";
     private static final String ORIGINAL_NODE = "[shape = egg fillcolor = cornflowerblue LABEL];";
     private static final String REAL_FIX_NODE = "[shape = house fillcolor = chartreuse4 LABEL];";
     private static final String SPURIOUS_FIX_NODE = "[shape = polygon fillcolor = darkgoldenrod2 LABEL];";
@@ -139,10 +170,11 @@ public final class RepairGraph {
     private static final String MAX_LAP_NODE = "[shape = triangle fillcolor = black LABEL];";
     private static final String TEST_GENERATION_NODE = "[shape = diamond fillcolor = cyan LABEL];";
     private static final String AREPAIR_CALL_NODE = "[shape = diaming fillcolor = yellow LABEL]";
+    private static final String AREPAIR_CALL_NODE_WITH_URL = "[shape = diaming fillcolor = yellow LABEL URL]";
     private static final String TIMEOUT_NODE = "[shape = triangle fillcolor = indigo LABEL]";
 
     public boolean generateDotFile(String file) {
-        Path pfile = Paths.get(file);
+        Path pfile = fileNameToFullPath(file);
         if (Files.exists(pfile)) { //file already exists
             return false;
         }
@@ -198,7 +230,7 @@ public final class RepairGraph {
         }
         Collection<Node> arepairCallNodes = getARepairCallNodes();
         if (!arepairCallNodes.isEmpty()) {
-            sb.append(generateNodeStatements(arepairCallNodes, AREPAIR_CALL_NODE, LABEL_SUB_LABEL_COMPONENT, indent));
+            sb.append(generateNodeStatements(arepairCallNodes, storeTests()?AREPAIR_CALL_NODE_WITH_URL:AREPAIR_CALL_NODE, LABEL_SUB_LABEL_COMPONENT, indent));
         }
         Collection<Node> timeoutNodes = getTimeoutNodes();
         if (!timeoutNodes.isEmpty()) {
@@ -237,16 +269,21 @@ public final class RepairGraph {
         if (node.extraInformation() != null && !node.extraInformation().isEmpty()) {
             labelSection = labelSection.replace("EXTRAINFO", node.extraInformation());
         }
+        if (nodeTemplate.compareTo(AREPAIR_CALL_NODE_WITH_URL) == 0) {
+            String urlComponent = URL_COMPONENT.replace("PATH", getFullTestFilePathFromNodeId(node.id).toAbsolutePath().toString());
+            nodeTemplate = nodeTemplate.replace("URL", urlComponent);
+        }
         String nodeProperties = nodeTemplate.replace("LABEL", labelSection);
         return node + " " + nodeProperties;
     }
 
     public boolean generateSVG(String file) {
-        Path pfile = Paths.get(file.replace(".dot", ".svg"));
-        if (Files.exists(pfile)) {
+        Path dotFile = fileNameToFullPath(file);
+        Path svgFile = fileNameToFullPath(file.replace(".dot", ".svg"));
+        if (Files.exists(svgFile)) {
             return false;
         }
-        String[] args = getGraphGenerationCommand(file);
+        String[] args = getGraphGenerationCommand(dotFile.toString());
         ProcessBuilder pb = new ProcessBuilder(args);
         File errorLog = new File("error.log");
         pb.redirectError(ProcessBuilder.Redirect.appendTo(errorLog));
@@ -264,6 +301,24 @@ public final class RepairGraph {
     private RepairGraph(FixCandidate candidate) {
         if (candidate == null)
             throw new IllegalArgumentException("candidate can't be null");
+        if (!graphsFolder().equals(GRAPHS_FOLDER_DEFAULT) && cleanGraphsFolder && Utils.isValidPath(graphsFolder, PathCheck.DIR)) {
+            try {
+                deleteFolderAndItsContent(graphsFolder);
+            } catch (IOException e) {
+                throw new IllegalStateException("An error occurred while trying to clean graphs folder");
+            }
+        }
+        if (!graphsFolder().equals(GRAPHS_FOLDER_DEFAULT)) {
+            if (!Utils.checkAndCreateDirectory(graphsFolder())) {
+                throw new IllegalStateException("Graphs folder (" + graphsFolder() + ") either exists and it's not empty or it couldn't be created");
+            }
+        }
+        if (storeTests()) {
+            Path testsFolder = Paths.get(graphsFolder().toString(), TESTS_FOLDER);
+            if (!Utils.checkAndCreateDirectory(testsFolder)) {
+                throw new IllegalStateException("Tests folder (" + testsFolder + ") either exists and it's not empty or it couldn't be created");
+            }
+        }
         this.root = Node.leaf(NODE_TYPE.ORIGINAL, convertCandidateIdToNodeId(candidate.id(), NODE_TYPE.ORIGINAL));
     }
 
@@ -394,6 +449,23 @@ public final class RepairGraph {
                 count++;
         }
         return count;
+    }
+
+    private Path getFullTestFilePathFromCandidate(FixCandidate candidate) {
+        return getFullTestFilePathFromId(candidate.id());
+    }
+
+    private Path getFullTestFilePathFromNodeId(String nodeId) {
+        return getFullTestFilePathFromId(nodeId.substring(2));
+    }
+
+    private Path getFullTestFilePathFromId(String id) {
+        String testFileName = id + ".tests";
+        return Paths.get(graphsFolder.toString(), TESTS_FOLDER, testFileName);
+    }
+
+    private Path fileNameToFullPath(String fileName) {
+        return Paths.get(graphsFolder.toString(), fileName);
     }
 
     private static final class Node {

@@ -6,6 +6,7 @@ import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.tools.InitialTests;
+import ar.edu.unrc.exa.dc.util.RepairGraph;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -19,7 +20,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.4.0rc";
+    private static final String VERSION = "2.5.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -121,16 +122,33 @@ public class ICEBAR {
             printProcessGraph = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH);
         }
         iterativeCEBasedAlloyRepair.printProcessGraph(printProcessGraph);
+        if (printProcessGraph) {
+            boolean storeTestsForProcessGraph = false;
+            if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS)) {
+                storeTestsForProcessGraph = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS);
+            }
+            RepairGraph.storeTests(storeTestsForProcessGraph);
+            Path processGraphFolder = Paths.get("");
+            if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_FOLDER)) {
+                processGraphFolder = Paths.get(ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_FOLDER));
+            }
+            RepairGraph.graphsFolder(processGraphFolder);
+            boolean cleanProcessGraphFolder = false;
+            if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_FOLDER_CLEAN)) {
+                cleanProcessGraphFolder = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_FOLDER_CLEAN);
+            }
+            RepairGraph.cleanGraphsFolder(cleanProcessGraphFolder);
+        }
         boolean checkRepeated = false;
         if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_CHECK_REPEATED_TESTS)) {
             checkRepeated = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_CHECK_REPEATED_TESTS);
         }
+        FixCandidate.checkRepeated(checkRepeated);
         boolean treatARepairPartialFixesAsFixes = false;
         if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES)) {
             treatARepairPartialFixesAsFixes = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES);
         }
         arepair.treatPartialRepairsAsFixes(treatARepairPartialFixesAsFixes);
-        FixCandidate.checkRepeated(checkRepeated);
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {

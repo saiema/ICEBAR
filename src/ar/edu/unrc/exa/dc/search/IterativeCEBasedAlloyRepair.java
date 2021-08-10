@@ -209,7 +209,7 @@ public class IterativeCEBasedAlloyRepair {
                     Report report = Report.repairFound(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
                     writeReport(report);
                     if (printProcessGraph) {
-                        repairGraph.addRealFixFrom(current, current.parent() == null?originalCandidate:current.parent());
+                        repairGraph.addRealFixFrom(current);
                     }
                     return Optional.of(repairCandidate);
                 } else if (current.depth() < laps) {
@@ -227,9 +227,9 @@ public class IterativeCEBasedAlloyRepair {
                     }
                     logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
                     if (printProcessGraph && repairFound) {
-                        repairGraph.addSpuriousFixFrom(current, current.parent() == null?originalCandidate:current.parent());
+                        repairGraph.addSpuriousFixFrom(current);
                     } else if (printProcessGraph) {
-                        repairGraph.addFauxSpuriousFixFrom(current, current.parent() == null?originalCandidate:current.parent());
+                        repairGraph.addFauxSpuriousFixFrom(current);
                     }
                     beafixTimeCounter.clockStart();
                     BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);
@@ -273,7 +273,7 @@ public class IterativeCEBasedAlloyRepair {
                     }
                     if (printProcessGraph && !testsGenerationLogged) {
                         boolean trustedAsGlobal = globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty());
-                        Collection<BeAFixTest> globalTests = trustedAsGlobal?Collections.emptyList():counterexampleTests;
+                        Collection<BeAFixTest> globalTests = trustedAsGlobal?counterexampleTests:Collections.emptyList();
                         Collection<BeAFixTest> localTests = new LinkedList<>();
                         if (!trustedAsGlobal)
                             localTests.addAll(counterexampleTests);

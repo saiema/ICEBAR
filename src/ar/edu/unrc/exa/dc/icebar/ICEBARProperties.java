@@ -109,6 +109,10 @@ public class ICEBARProperties {
             @Override
             public String getKey() { return "icebar.search.printprocessgraph.folder"; }
         },
+        ICEBAR_PRINT_PROCESS_GRAPH_FOLDER_CLEAN {
+            @Override
+            public String getKey() { return "icebar.search.printprocessgraph.folder.clean"; }
+        },
         ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS {
             @Override
             public String getKey() { return "icebar.search.printprocessgraph.storetests"; }
@@ -224,6 +228,7 @@ public class ICEBARProperties {
             case ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case ICEBAR_PRINT_PROCESS_GRAPH:
+            case ICEBAR_PRINT_PROCESS_GRAPH_FOLDER_CLEAN:
             case ICEBAR_CHECK_REPEATED_TESTS:
             case ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS:
             case AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES:
