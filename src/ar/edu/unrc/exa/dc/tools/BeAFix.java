@@ -245,7 +245,7 @@ public final class BeAFix {
     }
 
     private String[] getBeAFixCommand() {
-        String[] args = new String[31];
+        String[] args = new String[33];
         args[0] = "java";
         args[1] = "-jar"; args[2] = beAFixJar.toString();
         args[3] = pathToModel.toString();
@@ -263,6 +263,7 @@ public final class BeAFix {
         args[25] = "--relaxedfacts"; args[26] = Boolean.toString(factsRelaxationGeneration);
         args[27] = "--fassertiontests"; args[28] = Boolean.toString(forceAssertionTestsGeneration);
         args[29] = "--noexpectinstancewhennofacts"; args[30] = Boolean.toString(noInstanceTestForNegativeTestWhenNoFacts);
+        args[31] = "--instancesbranches"; args[32] = "BOTH";
         return args;
     }
 
