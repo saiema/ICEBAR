@@ -121,6 +121,10 @@ public class IterativeCEBasedAlloyRepair {
     private boolean printProcessGraph = false;
     public void printProcessGraph(boolean printProcessGraph) {this.printProcessGraph = printProcessGraph; }
 
+    public boolean justRunningARepairOnce() {
+        return laps == 0;
+    }
+
     private RepairGraph repairGraph;
     public void printProcessGraph() {
         if (!printProcessGraph)
@@ -348,6 +352,18 @@ public class IterativeCEBasedAlloyRepair {
             }
             if (printProcessGraph && !noTests && !repairFound) {
                 repairGraph.addNoFixFoundFrom(current);
+            }
+            if (justRunningARepairOnce() && !noTests && !repairFound) {
+                logger.info("ICEBAR running ARepair once could not find a fix");
+                Report report = Report.arepairOnceNoFixFound(tests, beafixTimeCounter, arepairTimeCounter, arepairCalls);
+                writeReport(report);
+                return Optional.empty();
+            }
+            if (justRunningARepairOnce() && !noTests && repairFound) {
+                logger.info("ICEBAR running ARepair once found a spurious fix");
+                Report report = Report.arepairOnceSpurious(tests, beafixTimeCounter, arepairTimeCounter, arepairCalls);
+                writeReport(report);
+                return Optional.empty();
             }
             if (restartForMoreUnseenTests && searchSpace.isEmpty()) {
                 if (!searchRestarted || current != originalCandidate) {

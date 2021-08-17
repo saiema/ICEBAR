@@ -14,6 +14,22 @@ public class Report {
             }
 
         },
+        AREPAIR_ONCE_SPURIOUS {
+
+            @Override
+            public String toString() {
+                return "ARepair once Spurious";
+            }
+
+        },
+        AREPAIR_ONCE_NO_FIX_FOUND {
+
+            @Override
+            public String toString() {
+                return "ARepair once No Fix Found";
+            }
+
+        },
         AREPAIR_FAILED {
 
             @Override
@@ -106,12 +122,20 @@ public class Report {
         return new Report(Status.BEAFIX_GEN_FAILED, candidate, tests, beafixTimer, arepairTimer, arepairCalls);
     }
 
-    public static Report icebarInternError(FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer, int arepairCalls) {
+    public static Report icebarInternalError(FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer, int arepairCalls) {
         return new Report(Status.ICEBAR_INTERNAL_ERROR, candidate, tests, beafixTimer, arepairTimer, arepairCalls);
     }
 
     public static Report exhaustedSearchSpace(int laps, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer, int arepairCalls) {
         return new Report(Status.EXHAUSTED_CANDIDATES, laps, tests, beafixTimer, arepairTimer, arepairCalls);
+    }
+
+    public static Report arepairOnceSpurious(int tests, TimeCounter beafixTimer, TimeCounter arepairTimer, int arepairCalls) {
+        return new Report(Status.AREPAIR_ONCE_SPURIOUS, 0, tests, beafixTimer, arepairTimer, arepairCalls);
+    }
+
+    public static Report arepairOnceNoFixFound(int tests, TimeCounter beafixTimer, TimeCounter arepairTimer, int arepairCalls) {
+        return new Report(Status.AREPAIR_ONCE_NO_FIX_FOUND, 0, tests, beafixTimer, arepairTimer, arepairCalls);
     }
 
     public static Report timeout(FixCandidate candidate, int tests, TimeCounter beafixTimer, TimeCounter arepairTimer, int arepairCalls) {
