@@ -329,6 +329,9 @@ public final class ARepair {
                 result.message("Fix found (" + repairFoundBy + ") in " + repair);
             }
             result.repair(repair.toPath());
+        } else if (fixNotFound.isPresent()) {
+            result = ARepairResult.NOT_REPAIRED;
+            result.message("No fix found");
         } else {
             result = ARepairResult.ERROR;
             result.message("No 'fix found'/'fix not found' line found in ARepair's output log");
