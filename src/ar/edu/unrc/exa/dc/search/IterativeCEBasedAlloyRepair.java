@@ -216,142 +216,146 @@ public class IterativeCEBasedAlloyRepair {
                         repairGraph.addRealFixFrom(current);
                     }
                     return Optional.of(repairCandidate);
-                } else if (current.depth() < laps) {
-                    if (timeout > 0) {
-                        totalTime.updateTotalTime();
-                        if (totalTime.toMinutes() >= timeout) {
-                            logger.info("ICEBAR timeout (" + timeout + " minutes) reached");
-                            Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
-                            writeReport(report);
-                            if (printProcessGraph) {
-                                repairGraph.addTimeoutFrom(current);
-                            }
-                            return Optional.empty();
+                } else {
+                    logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
+                    if (printProcessGraph) {
+                        if (repairFound) {
+                            repairGraph.addSpuriousFixFrom(current);
+                        } else if (!justRunningARepairOnce()) { //!repairFound
+                            repairGraph.addFauxSpuriousFixFrom(current);
+                        } else if (!noTests || justRunningARepairOnce()) {
+                            repairGraph.addNoFixFoundFrom(current);
                         }
                     }
-                    logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
-                    if (printProcessGraph && repairFound) {
-                        repairGraph.addSpuriousFixFrom(current);
-                    } else if (printProcessGraph) {
-                        repairGraph.addFauxSpuriousFixFrom(current);
-                    }
-                    beafixTimeCounter.clockStart();
-                    BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);
-                    beafixTimeCounter.clockEnd();
-                    if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
-                        return Optional.empty();
-                    List<BeAFixTest> counterexampleTests = beAFixResult.getCounterexampleTests();
-                    List<BeAFixTest> counterexampleUntrustedTests = beAFixResult.getCounterExampleUntrustedTests();
-                    List<BeAFixTest> predicateTests = beAFixResult.getPredicateTests();
-                    List<BeAFixTest> relaxedPredicateTests = null;
-                    List<BeAFixTest> relaxedAssertionsTests = null;
-                    boolean testsGenerated = !(counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty() && predicateTests.isEmpty());
-                    boolean testsGenerationLogged = false;
-                    if (allowFactsRelaxation && counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty() && predicateTests.isEmpty()) {
-                        logger.info("No tests available, generating with relaxed facts...");
+                    if (current.depth() < laps) {
+                        if (timeout > 0) {
+                            totalTime.updateTotalTime();
+                            if (totalTime.toMinutes() >= timeout) {
+                                logger.info("ICEBAR timeout (" + timeout + " minutes) reached");
+                                Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
+                                writeReport(report);
+                                if (printProcessGraph) {
+                                    repairGraph.addTimeoutFrom(current);
+                                }
+                                return Optional.empty();
+                            }
+                        }
+
                         beafixTimeCounter.clockStart();
-                        beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, true, false);
+                        BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);
                         beafixTimeCounter.clockEnd();
                         if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                             return Optional.empty();
-                        relaxedPredicateTests = beAFixResult.getPredicateTests();
-                        testsGenerated = !relaxedPredicateTests.isEmpty();
-                        if (forceAssertionGeneration) {
-                            logger.info("Generating with assertion forced test generation...");
-                            beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
+                        List<BeAFixTest> counterexampleTests = beAFixResult.getCounterexampleTests();
+                        List<BeAFixTest> counterexampleUntrustedTests = beAFixResult.getCounterExampleUntrustedTests();
+                        List<BeAFixTest> predicateTests = beAFixResult.getPredicateTests();
+                        List<BeAFixTest> relaxedPredicateTests = null;
+                        List<BeAFixTest> relaxedAssertionsTests = null;
+                        boolean testsGenerated = !(counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty() && predicateTests.isEmpty());
+                        boolean testsGenerationLogged = false;
+                        if (allowFactsRelaxation && counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty() && predicateTests.isEmpty()) {
+                            logger.info("No tests available, generating with relaxed facts...");
                             beafixTimeCounter.clockStart();
-                            BeAFixResult beAFixResult_forcedAssertionTestGeneration = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, true);
+                            beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, true, false);
                             beafixTimeCounter.clockEnd();
-                            if (checkIfInvalidAndReportBeAFixResults(beAFixResult_forcedAssertionTestGeneration, current, beafixTimeCounter, arepairTimeCounter))
+                            if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                                 return Optional.empty();
-                            relaxedAssertionsTests = beAFixResult_forcedAssertionTestGeneration.getCounterExampleUntrustedTests();
-                            testsGenerated = testsGenerated || !relaxedAssertionsTests.isEmpty();
-                        }
-                        if (printProcessGraph) {
-                            Collection<BeAFixTest> localTests = new LinkedList<>();
-                            if (relaxedAssertionsTests != null) localTests.addAll(relaxedAssertionsTests);
-                            localTests.addAll(relaxedPredicateTests);
-                            repairGraph.addGeneratedTestsFrom(current, Collections.emptyList(), localTests);
-                            testsGenerationLogged = true;
-                        }
-                    }
-                    if (printProcessGraph && !testsGenerationLogged) {
-                        boolean trustedAsGlobal = globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty());
-                        Collection<BeAFixTest> globalTests = trustedAsGlobal?counterexampleTests:Collections.emptyList();
-                        Collection<BeAFixTest> localTests = new LinkedList<>();
-                        if (!trustedAsGlobal)
-                            localTests.addAll(counterexampleTests);
-                        localTests.addAll(counterexampleUntrustedTests);
-                        localTests.addAll(predicateTests);
-                        repairGraph.addGeneratedTestsFrom(current, globalTests, localTests);
-                    }
-                    boolean trustedTestsAdded;
-                    boolean addLocalTrustedTests;
-                    boolean globalTestsAdded = false;
-                    if (globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty())) {
-                        trustedTestsAdded = this.trustedCounterexampleTests.addAll(counterexampleTests);
-                        globalTestsAdded = trustedTestsAdded;
-                        addLocalTrustedTests = false;
-                    } else { //local trusted tests except from original
-                        trustedTestsAdded = !counterexampleTests.isEmpty();
-                        addLocalTrustedTests = true;
-                    }
-                    int newBranches = 0;
-                    if (!counterexampleTests.isEmpty()) {
-                        Set<BeAFixTest> localTrustedTests = new HashSet<>(current.trustedTests());
-                        Set<BeAFixTest> localUntrustedTests = new HashSet<>(current.untrustedTests());
-                        if (addLocalTrustedTests) {
-                            localTrustedTests.addAll(counterexampleTests);
-                        }
-                        if (trustedTestsAdded) {
-                            FixCandidate newCandidate = FixCandidate.descendant(modelToRepair, localUntrustedTests, localTrustedTests, current);
-                            newCandidate.repairedProperties(repairedPropertiesForCurrent);
-                            if (newCandidate.hasLocalTests() || globalTestsAdded) {
-                                searchSpace.push(newCandidate);
-                                newBranches = 1;
-                            } else {
-                                logger.warning("Candidate " + newCandidate.id() + " is invalid (no new tests could be added)");
+                            relaxedPredicateTests = beAFixResult.getPredicateTests();
+                            testsGenerated = !relaxedPredicateTests.isEmpty();
+                            if (forceAssertionGeneration) {
+                                logger.info("Generating with assertion forced test generation...");
+                                beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
+                                beafixTimeCounter.clockStart();
+                                BeAFixResult beAFixResult_forcedAssertionTestGeneration = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, true);
+                                beafixTimeCounter.clockEnd();
+                                if (checkIfInvalidAndReportBeAFixResults(beAFixResult_forcedAssertionTestGeneration, current, beafixTimeCounter, arepairTimeCounter))
+                                    return Optional.empty();
+                                relaxedAssertionsTests = beAFixResult_forcedAssertionTestGeneration.getCounterExampleUntrustedTests();
+                                testsGenerated = testsGenerated || !relaxedAssertionsTests.isEmpty();
+                            }
+                            if (printProcessGraph) {
+                                Collection<BeAFixTest> localTests = new LinkedList<>();
+                                if (relaxedAssertionsTests != null) localTests.addAll(relaxedAssertionsTests);
+                                localTests.addAll(relaxedPredicateTests);
+                                repairGraph.addGeneratedTestsFrom(current, Collections.emptyList(), localTests);
+                                testsGenerationLogged = true;
                             }
                         }
-                    } else if (!counterexampleUntrustedTests.isEmpty()) {
-                        if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                            logger.severe("Branching error!");
-                            return Optional.empty();
+                        if (printProcessGraph && !testsGenerationLogged) {
+                            boolean trustedAsGlobal = globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty());
+                            Collection<BeAFixTest> globalTests = trustedAsGlobal?counterexampleTests:Collections.emptyList();
+                            Collection<BeAFixTest> localTests = new LinkedList<>();
+                            if (!trustedAsGlobal)
+                                localTests.addAll(counterexampleTests);
+                            localTests.addAll(counterexampleUntrustedTests);
+                            localTests.addAll(predicateTests);
+                            repairGraph.addGeneratedTestsFrom(current, globalTests, localTests);
                         }
-                    } else if (!predicateTests.isEmpty()) {
-                        if ((newBranches = createBranches(current, predicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                            logger.severe("Branching error!");
-                            return Optional.empty();
+                        boolean trustedTestsAdded;
+                        boolean addLocalTrustedTests;
+                        boolean globalTestsAdded = false;
+                        if (globalTrustedTests || (current.untrustedTests().isEmpty() && current.trustedTests().isEmpty())) {
+                            trustedTestsAdded = this.trustedCounterexampleTests.addAll(counterexampleTests);
+                            globalTestsAdded = trustedTestsAdded;
+                            addLocalTrustedTests = false;
+                        } else { //local trusted tests except from original
+                            trustedTestsAdded = !counterexampleTests.isEmpty();
+                            addLocalTrustedTests = true;
                         }
-                    } else if (relaxedPredicateTests != null && !relaxedPredicateTests.isEmpty()) {
-                        if ((newBranches = createBranches(current, relaxedPredicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                            logger.severe("Branching error!");
-                            return Optional.empty();
+                        int newBranches = 0;
+                        if (!counterexampleTests.isEmpty()) {
+                            Set<BeAFixTest> localTrustedTests = new HashSet<>(current.trustedTests());
+                            Set<BeAFixTest> localUntrustedTests = new HashSet<>(current.untrustedTests());
+                            if (addLocalTrustedTests) {
+                                localTrustedTests.addAll(counterexampleTests);
+                            }
+                            if (trustedTestsAdded) {
+                                FixCandidate newCandidate = FixCandidate.descendant(modelToRepair, localUntrustedTests, localTrustedTests, current);
+                                newCandidate.repairedProperties(repairedPropertiesForCurrent);
+                                if (newCandidate.hasLocalTests() || globalTestsAdded) {
+                                    searchSpace.push(newCandidate);
+                                    newBranches = 1;
+                                } else {
+                                    logger.warning("Candidate " + newCandidate.id() + " is invalid (no new tests could be added)");
+                                }
+                            }
+                        } else if (!counterexampleUntrustedTests.isEmpty()) {
+                            if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                logger.severe("Branching error!");
+                                return Optional.empty();
+                            }
+                        } else if (!predicateTests.isEmpty()) {
+                            if ((newBranches = createBranches(current, predicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                logger.severe("Branching error!");
+                                return Optional.empty();
+                            }
+                        } else if (relaxedPredicateTests != null && !relaxedPredicateTests.isEmpty()) {
+                            if ((newBranches = createBranches(current, relaxedPredicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                logger.severe("Branching error!");
+                                return Optional.empty();
+                            }
+                        } else if (relaxedAssertionsTests != null && !relaxedAssertionsTests.isEmpty()) {
+                            if ((newBranches = createBranches(current, relaxedAssertionsTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                logger.severe("Branching error!");
+                                return Optional.empty();
+                            }
                         }
-                    } else if (relaxedAssertionsTests != null && !relaxedAssertionsTests.isEmpty()) {
-                        if ((newBranches = createBranches(current, relaxedAssertionsTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                            logger.severe("Branching error!");
-                            return Optional.empty();
+                        if (printProcessGraph && !testsGenerated) {
+                            repairGraph.addNoTestsFrom(current);
                         }
-                    }
-                    if (printProcessGraph && !testsGenerated) {
-                        repairGraph.addNoTestsFrom(current);
-                    }
-                    tests += beAFixResult.generatedTests() + (relaxedPredicateTests==null?0:relaxedPredicateTests.size()) + (relaxedAssertionsTests==null?0:relaxedAssertionsTests.size());
-                    logger.info("Total tests generated: " + tests);
-                    logger.info("Generated branches: " + newBranches);
-                    beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
-                } else {
-                    logger.info("max laps reached (" + laps + "), ending branch");
-                    if (printProcessGraph) {
-                        repairGraph.addMaxLapFrom(current);
+                        tests += beAFixResult.generatedTests() + (relaxedPredicateTests==null?0:relaxedPredicateTests.size()) + (relaxedAssertionsTests==null?0:relaxedAssertionsTests.size());
+                        logger.info("Total tests generated: " + tests);
+                        logger.info("Generated branches: " + newBranches);
+                        beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
+                    } else if (!justRunningARepairOnce()) {
+                        logger.info("max laps reached (" + laps + "), ending branch");
+                        if (printProcessGraph) {
+                            repairGraph.addMaxLapFrom(current);
+                        }
                     }
                 }
             } else if (aRepairResult.hasMessage()) {
                 logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
-            }
-            if (printProcessGraph && !noTests && !repairFound) {
-                repairGraph.addNoFixFoundFrom(current);
             }
             if (justRunningARepairOnce() && !noTests && !repairFound) {
                 logger.info("ICEBAR running ARepair once could not find a fix");
