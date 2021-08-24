@@ -169,8 +169,8 @@ public final class RepairGraph {
     private static final String NO_TESTS_NODE = "[shape = triangle fillcolor = ivory4 LABEL];";
     private static final String MAX_LAP_NODE = "[shape = triangle fillcolor = black LABEL];";
     private static final String TEST_GENERATION_NODE = "[shape = diamond fillcolor = cyan LABEL];";
-    private static final String AREPAIR_CALL_NODE = "[shape = diaming fillcolor = yellow LABEL]";
-    private static final String AREPAIR_CALL_NODE_WITH_URL = "[shape = diaming fillcolor = yellow LABEL URL]";
+    private static final String AREPAIR_CALL_NODE = "[shape = diamond fillcolor = yellow LABEL]";
+    private static final String AREPAIR_CALL_NODE_WITH_URL = "[shape = diamond fillcolor = yellow LABEL URL]";
     private static final String TIMEOUT_NODE = "[shape = triangle fillcolor = indigo LABEL]";
 
     public boolean generateDotFile(String file) {
