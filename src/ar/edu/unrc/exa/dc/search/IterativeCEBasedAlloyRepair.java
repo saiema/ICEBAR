@@ -61,6 +61,13 @@ public class IterativeCEBasedAlloyRepair {
         this.search = search;
     }
 
+    public enum ICEBARInitialTestsLocation {
+        PREPEND, APPEND
+    }
+
+    private ICEBARInitialTestsLocation initialTestsLocation = ICEBARInitialTestsLocation.APPEND;
+    public void setInitialTestsLocation(ICEBARInitialTestsLocation initialTestsLocation) { this.initialTestsLocation = initialTestsLocation; }
+
     private boolean allowFactsRelaxation = false;
     public void allowFactsRelaxation(boolean allowFactsRelaxation) { this.allowFactsRelaxation = allowFactsRelaxation; }
 
@@ -194,14 +201,18 @@ public class IterativeCEBasedAlloyRepair {
             boolean repairFound = aRepairResult.hasRepair();
             boolean noTests = aRepairResult.equals(ARepairResult.NO_TESTS);
             boolean keepGoing = !repairFound && !noTests && keepGoingARepairNoFixAndOnlyTrustedTests && searchSpace.isEmpty() && !trustedCounterexampleTests.isEmpty() && current.untrustedTests().isEmpty();
-            if (repairFound || noTests || keepGoing) {
+            boolean checkAndGenerate = repairFound || noTests || keepGoing;
+            if (printProcessGraph && !checkAndGenerate) {
+                repairGraph.addNoFixFoundFrom(current);
+            }
+            if (checkAndGenerate) {
                 boolean fromOriginal = aRepairResult.equals(ARepairResult.NO_TESTS) || keepGoing;
                 FixCandidate repairCandidate = fromOriginal?current:FixCandidate.aRepairCheckCandidate(aRepairResult.repair(), current.depth());
                 logger.info("Validating current candidate with BeAFix");
                 beafixTimeCounter.clockStart();
                 BeAFixResult beAFixCheckResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.CHECK, false, false);
                 beafixTimeCounter.clockEnd();
-                logger.info("BeAFix check finished\n" + beAFixCheckResult.toString());
+                logger.info( "BeAFix check finished\n" + beAFixCheckResult.toString());
                 int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
                 if (beAFixCheckResult.error()) {
                     logger.severe("BeAFix check ended in error, ending search");
@@ -221,10 +232,8 @@ public class IterativeCEBasedAlloyRepair {
                     if (printProcessGraph) {
                         if (repairFound) {
                             repairGraph.addSpuriousFixFrom(current);
-                        } else if (!justRunningARepairOnce()) { //!repairFound
+                        } else { //!repairFound
                             repairGraph.addFauxSpuriousFixFrom(current);
-                        } else if (!noTests || justRunningARepairOnce()) {
-                            repairGraph.addNoFixFoundFrom(current);
                         }
                     }
                     if (current.depth() < laps) {
@@ -486,7 +495,7 @@ public class IterativeCEBasedAlloyRepair {
     private ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
         if (!aRepair.cleanFixDirectory())
             logger.warning("There was a problem cleaning ARepair .hidden folder, will keep going (cross your fingers)");
-        Collection<BeAFixTest> tests = new LinkedList<>(trustedCounterexampleTests);
+        List<BeAFixTest> tests = new LinkedList<>(trustedCounterexampleTests);
         tests.addAll(candidate.untrustedTests());
         tests.addAll(candidate.trustedTests());
         if (tests.isEmpty() && (initialTests == null || initialTests.getInitialTests().isEmpty()))
@@ -503,8 +512,12 @@ public class IterativeCEBasedAlloyRepair {
         }
         int testCount;
         try {
-            if (initialTests != null)
-                tests.addAll(initialTests.getInitialTests());
+            if (initialTests != null) {
+                if (initialTestsLocation.equals(ICEBARInitialTestsLocation.PREPEND))
+                    tests.addAll(0, initialTests.getInitialTests());
+                else
+                    tests.addAll(initialTests.getInitialTests());
+            }
             testCount = generateTestsFile(tests, testsPath);
         } catch (IOException e) {
             logger.severe("An exception occurred while trying to generate tests file\n" + Utils.exceptionToString(e) + "\n");

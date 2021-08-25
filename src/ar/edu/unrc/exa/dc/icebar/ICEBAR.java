@@ -20,7 +20,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.6.1";
+    private static final String VERSION = "2.7.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -85,6 +85,16 @@ public class ICEBAR {
                 iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.ICEBARSearch.BFS);
             } else {
                 throw new IllegalArgumentException("Invalid configuration value for " + ICEBARProperties.ConfigKey.ICEBAR_SEARCH.getKey() + " (" + search + ")");
+            }
+        }
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_INITIAL_TESTS_POSITION)) {
+            String initialTestsPosition = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.ICEBAR_INITIAL_TESTS_POSITION);
+            if (initialTestsPosition.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.ICEBARInitialTestsLocation.APPEND.toString()) == 0) {
+                iterativeCEBasedAlloyRepair.setInitialTestsLocation(IterativeCEBasedAlloyRepair.ICEBARInitialTestsLocation.APPEND);
+            } else if (initialTestsPosition.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.ICEBARInitialTestsLocation.PREPEND.toString()) == 0) {
+                iterativeCEBasedAlloyRepair.setInitialTestsLocation(IterativeCEBasedAlloyRepair.ICEBARInitialTestsLocation.PREPEND);
+            } else {
+                throw new IllegalArgumentException("Invalid configuration value for " + ICEBARProperties.ConfigKey.ICEBAR_INITIAL_TESTS_POSITION.getKey() + "(" + initialTestsPosition + ")");
             }
         }
         if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_ENABLE_RELAXEDFACTS_GENERATION)) {

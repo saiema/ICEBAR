@@ -120,6 +120,10 @@ public class ICEBARProperties {
         ICEBAR_CHECK_REPEATED_TESTS {
             @Override
             public String getKey() { return "icebar.search.filterrepeatedtests"; }
+        },
+        ICEBAR_INITIAL_TESTS_POSITION {
+            @Override
+            public String getKey() { return "icebar.search.initialtests.position"; }
         }
         ;
         public abstract String getKey();
@@ -254,6 +258,7 @@ public class ICEBARProperties {
             case BEAFIX_MODEL_OVERRIDES_FOLDER :
             case BEAFIX_BUGGY_FUNCS_FILE :
             case ICEBAR_PRINT_PROCESS_GRAPH_FOLDER:
+            case ICEBAR_INITIAL_TESTS_POSITION:
             case AREPAIR_ROOT : return true;
             default : return false;
         }
