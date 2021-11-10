@@ -12,6 +12,7 @@ import java.io.StringWriter;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Random;
 import java.util.logging.Logger;
@@ -229,7 +230,9 @@ public final class Utils {
                     "CE_TRUSTED_LOCAL" + Report.SEPARATOR +
                     "CE_UNTRUSTED_LOCAL" + Report.SEPARATOR +
                     "PREDICATE_LOCAL" + Report.SEPARATOR +
-                    "AREPAIR STATUS" + "\n"
+                    "AREPAIR STATUS" + Report.SEPARATOR +
+                    "TOTAL TRUSTED TESTS" + Report.SEPARATOR +
+                    "TOTAL UNTRUSTED TESTS" + "\n"
             ;
     
     private static final String CANDIDATE_FILE = "icebar_arepair.info";
@@ -250,14 +253,22 @@ public final class Utils {
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (!candidateInfoFile.exists())
             throw new Error("Candidate info file (" + candidateInfoFilePath + ") doesn't exists");
+        int globalCounterexampleTestsCount = countTests(globalCounterexampleTests, BeAFixTest.TestSource.COUNTEREXAMPLE);
+        int localTrustedCounterexampleTestsCount = countTests(candidate.trustedTests(), BeAFixTest.TestSource.COUNTEREXAMPLE);
+        int localUntrustedCounterexampleTestsCount = countTests(candidate.untrustedTests(), BeAFixTest.TestSource.COUNTEREXAMPLE);
+        int localUntrustedPredicateTestsCount = countTests(candidate.untrustedTests(), BeAFixTest.TestSource.PREDICATE);
+        int totalTrustedTests = globalCounterexampleTestsCount + localTrustedCounterexampleTestsCount;
+        int totalUntrustedTests = localUntrustedPredicateTestsCount + localUntrustedCounterexampleTestsCount;
         String candidateInfo =
                         candidate.modelName() + Report.SEPARATOR +
                         candidate.depth() + Report.SEPARATOR +
-                        countTests(globalCounterexampleTests, BeAFixTest.TestSource.COUNTEREXAMPLE) + Report.SEPARATOR +
-                        countTests(candidate.trustedTests(), BeAFixTest.TestSource.COUNTEREXAMPLE) + Report.SEPARATOR +
-                        countTests(candidate.untrustedTests(), BeAFixTest.TestSource.COUNTEREXAMPLE) + Report.SEPARATOR +
-                        countTests(candidate.untrustedTests(), BeAFixTest.TestSource.PREDICATE) + Report.SEPARATOR +
-                        aRepairResult.name()  + "\n"
+                        globalCounterexampleTestsCount + Report.SEPARATOR +
+                        localTrustedCounterexampleTestsCount + Report.SEPARATOR +
+                        localUntrustedCounterexampleTestsCount + Report.SEPARATOR +
+                        localUntrustedPredicateTestsCount + Report.SEPARATOR +
+                        aRepairResult.name()  +
+                        totalTrustedTests + Report.SEPARATOR +
+                        totalUntrustedTests + "\n"
                 ;
         Files.write(candidateInfoFilePath, candidateInfo.getBytes(), StandardOpenOption.APPEND);
     }

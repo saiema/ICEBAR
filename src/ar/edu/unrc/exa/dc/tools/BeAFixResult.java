@@ -86,9 +86,9 @@ public final class BeAFixResult {
             this.maxScope = Math.max(positive.getMaxScope(), negative.getMaxScope());
         }
 
-        protected static final int MULTIBRANCH = 0;
-        protected static final int POSITIVE_MULTIBRANCH = 1;
-        protected static final int NEGATIVE_MULTIBRANCH = 2;
+        private static final int MULTIBRANCH = 0;
+        private static final int POSITIVE_MULTIBRANCH = 1;
+        private static final int NEGATIVE_MULTIBRANCH = 2;
         private BeAFixTest(TestSource source, List<BeAFixTest> cases, int multibranchType) {
             if (cases == null || cases.size() < 2)
                 throw new IllegalArgumentException("Either cases is null or there is none or one case (2 or more are required)");

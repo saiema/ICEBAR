@@ -117,6 +117,10 @@ public class ICEBARProperties {
             @Override
             public String getKey() { return "icebar.search.printprocessgraph.storetests"; }
         },
+        ICEBAR_PRINT_ALL_USED_TESTS {
+            @Override
+            public String getKey() { return "icebar.search.printallusedtests"; }
+        },
         ICEBAR_CHECK_REPEATED_TESTS {
             @Override
             public String getKey() { return "icebar.search.filterrepeatedtests"; }
@@ -233,6 +237,7 @@ public class ICEBARProperties {
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
             case ICEBAR_PRINT_PROCESS_GRAPH:
             case ICEBAR_PRINT_PROCESS_GRAPH_FOLDER_CLEAN:
+            case ICEBAR_PRINT_ALL_USED_TESTS:
             case ICEBAR_CHECK_REPEATED_TESTS:
             case ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS:
             case AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES:

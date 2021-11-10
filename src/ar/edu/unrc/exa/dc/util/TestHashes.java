@@ -19,4 +19,8 @@ public final class TestHashes {
         return hashes.contains(hash);
     }
 
+    public int count() {
+        return hashes.size();
+    }
+
 }

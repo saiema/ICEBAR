@@ -20,7 +20,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.7.0";
+    private static final String VERSION = "2.8.0";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -159,6 +159,11 @@ public class ICEBAR {
             treatARepairPartialFixesAsFixes = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES);
         }
         arepair.treatPartialRepairsAsFixes(treatARepairPartialFixesAsFixes);
+        boolean printUsedTests = false;
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_ALL_USED_TESTS)) {
+            printUsedTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_ALL_USED_TESTS);
+        }
+        iterativeCEBasedAlloyRepair.printAllUsedTests(printUsedTests);
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {

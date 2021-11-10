@@ -7,10 +7,7 @@ import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 import ar.edu.unrc.exa.dc.tools.InitialTests;
-import ar.edu.unrc.exa.dc.util.OneTypePair;
-import ar.edu.unrc.exa.dc.util.RepairGraph;
-import ar.edu.unrc.exa.dc.util.TimeCounter;
-import ar.edu.unrc.exa.dc.util.Utils;
+import ar.edu.unrc.exa.dc.util.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,8 +46,13 @@ public class IterativeCEBasedAlloyRepair {
     private final Path modelToRepair;
     private final Path oracle;
     private final int laps;
-    private int tests;
+    private int totalTestsGenerated;
     private int arepairCalls;
+    private int evaluatedCandidates;
+    private int evaluatedCandidatesLeadingToNoFix;
+    private int evaluatedCandidatesLeadingToSpurious;
+    private TestHashes trustedTests;
+    private TestHashes untrustedTests;
 
     public enum ICEBARSearch {
         DFS, BFS
@@ -109,8 +111,11 @@ public class IterativeCEBasedAlloyRepair {
         this.modelToRepair = modelToRepair;
         this.oracle = oracle;
         this.laps = laps;
-        this.tests = 0;
+        this.totalTestsGenerated = 0;
         this.arepairCalls = 0;
+        this.evaluatedCandidates = 0;
+        this.evaluatedCandidatesLeadingToNoFix = 0;
+        this.evaluatedCandidatesLeadingToSpurious = 0;
     }
 
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix) {
@@ -126,7 +131,10 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     private boolean printProcessGraph = false;
-    public void printProcessGraph(boolean printProcessGraph) {this.printProcessGraph = printProcessGraph; }
+    public void printProcessGraph(boolean printProcessGraph) { this.printProcessGraph = printProcessGraph; }
+
+    private boolean printAllUsedTests = false;
+    public void printAllUsedTests(boolean printAllUsedTests) { this.printAllUsedTests = printAllUsedTests; }
 
     public boolean justRunningARepairOnce() {
         return laps == 0;
@@ -175,9 +183,14 @@ public class IterativeCEBasedAlloyRepair {
         int maxReachedLap = 0;
         if (printProcessGraph)
             repairGraph = RepairGraph.createNewGraph(originalCandidate);
+        if (printAllUsedTests) {
+            trustedTests = new TestHashes();
+            untrustedTests = new TestHashes();
+        }
         totalTime.clockStart();
         while (!searchSpace.isEmpty()) {
             FixCandidate current = searchSpace.pop();
+            evaluatedCandidates++;
             maxReachedLap = Math.max(maxReachedLap, current.depth());
             logger.info("Repairing current candidate\n" + current);
             arepairTimeCounter.clockStart();
@@ -194,7 +207,7 @@ public class IterativeCEBasedAlloyRepair {
                     logger.warning("ARepair ended with a NullPointerException but we are going to ignore that and hope for the best");
                     continue;
                 }
-                Report report = Report.arepairFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), arepairTimeCounter, beafixTimeCounter, arepairCalls);
+                Report report = Report.arepairFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), arepairTimeCounter, beafixTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
                 writeReport(report);
                 return Optional.empty();
             }
@@ -204,6 +217,7 @@ public class IterativeCEBasedAlloyRepair {
             boolean checkAndGenerate = repairFound || noTests || keepGoing;
             if (printProcessGraph && !checkAndGenerate) {
                 repairGraph.addNoFixFoundFrom(current);
+                evaluatedCandidatesLeadingToNoFix++;
             }
             if (checkAndGenerate) {
                 boolean fromOriginal = aRepairResult.equals(ARepairResult.NO_TESTS) || keepGoing;
@@ -216,12 +230,12 @@ public class IterativeCEBasedAlloyRepair {
                 int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
                 if (beAFixCheckResult.error()) {
                     logger.severe("BeAFix check ended in error, ending search");
-                    Report report = Report.beafixCheckFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
+                    Report report = Report.beafixCheckFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
                     writeReport(report);
                     return Optional.empty();
                 } else if (beAFixCheckResult.checkResult()) {
                     logger.info("BeAFix validated the repair, fix found");
-                    Report report = Report.repairFound(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
+                    Report report = Report.repairFound(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
                     writeReport(report);
                     if (printProcessGraph) {
                         repairGraph.addRealFixFrom(current);
@@ -229,6 +243,7 @@ public class IterativeCEBasedAlloyRepair {
                     return Optional.of(repairCandidate);
                 } else {
                     logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
+                    evaluatedCandidatesLeadingToSpurious++;
                     if (printProcessGraph) {
                         if (repairFound) {
                             repairGraph.addSpuriousFixFrom(current);
@@ -241,7 +256,7 @@ public class IterativeCEBasedAlloyRepair {
                             totalTime.updateTotalTime();
                             if (totalTime.toMinutes() >= timeout) {
                                 logger.info("ICEBAR timeout (" + timeout + " minutes) reached");
-                                Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls);
+                                Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
                                 writeReport(report);
                                 if (printProcessGraph) {
                                     repairGraph.addTimeoutFrom(current);
@@ -324,6 +339,9 @@ public class IterativeCEBasedAlloyRepair {
                                 if (newCandidate.hasLocalTests() || globalTestsAdded) {
                                     searchSpace.push(newCandidate);
                                     newBranches = 1;
+                                    if (printAllUsedTests) {
+                                        counterexampleTests.forEach(trustedTests::add);
+                                    }
                                 } else {
                                     logger.warning("Candidate " + newCandidate.id() + " is invalid (no new tests could be added)");
                                 }
@@ -352,8 +370,8 @@ public class IterativeCEBasedAlloyRepair {
                         if (printProcessGraph && !testsGenerated) {
                             repairGraph.addNoTestsFrom(current);
                         }
-                        tests += beAFixResult.generatedTests() + (relaxedPredicateTests==null?0:relaxedPredicateTests.size()) + (relaxedAssertionsTests==null?0:relaxedAssertionsTests.size());
-                        logger.info("Total tests generated: " + tests);
+                        totalTestsGenerated += beAFixResult.generatedTests() + (relaxedPredicateTests==null?0:relaxedPredicateTests.size()) + (relaxedAssertionsTests==null?0:relaxedAssertionsTests.size());
+                        logger.info("Total tests generated: " + totalTestsGenerated);
                         logger.info("Generated branches: " + newBranches);
                         beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
                     } else if (!justRunningARepairOnce()) {
@@ -368,13 +386,13 @@ public class IterativeCEBasedAlloyRepair {
             }
             if (justRunningARepairOnce() && !noTests && !repairFound) {
                 logger.info("ICEBAR running ARepair once could not find a fix");
-                Report report = Report.arepairOnceNoFixFound(tests, beafixTimeCounter, arepairTimeCounter, arepairCalls);
+                Report report = Report.arepairOnceNoFixFound(totalTestsGenerated, beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
                 writeReport(report);
                 return Optional.empty();
             }
             if (justRunningARepairOnce() && !noTests && repairFound) {
                 logger.info("ICEBAR running ARepair once found a spurious fix");
-                Report report = Report.arepairOnceSpurious(tests, beafixTimeCounter, arepairTimeCounter, arepairCalls);
+                Report report = Report.arepairOnceSpurious(totalTestsGenerated, beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
                 writeReport(report);
                 return Optional.empty();
             }
@@ -387,7 +405,7 @@ public class IterativeCEBasedAlloyRepair {
             }
         }
         logger.info("ICEBAR ended with no more candidates");
-        Report report = Report.exhaustedSearchSpace(maxReachedLap, tests, beafixTimeCounter, arepairTimeCounter, arepairCalls);
+        Report report = Report.exhaustedSearchSpace(maxReachedLap, totalTestsGenerated, beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
         writeReport(report);
         return Optional.empty();
     }
@@ -407,6 +425,9 @@ public class IterativeCEBasedAlloyRepair {
             if (newCandidate.hasLocalTests()) {
                 searchSpace.push(newCandidate);
                 branches++;
+                if (printAllUsedTests) {
+                    combination.forEach(untrustedTests::add);
+                }
             } else {
                 logger.warning("Candidate " + newCandidate.id() + " is invalid (no new tests could be added)");
             }
@@ -486,7 +507,7 @@ public class IterativeCEBasedAlloyRepair {
             return false;
         } else {
             logger.severe("BeAFix test generation ended in error, ending search");
-            Report report = Report.beafixGenFailed(current, tests, beafixTimeCounter, arepairTimeCounter, arepairCalls);
+            Report report = Report.beafixGenFailed(current, totalTestsGenerated, beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
             writeReport(report);
             return true;
         }
@@ -574,6 +595,13 @@ public class IterativeCEBasedAlloyRepair {
             }
         }
         return beAFixResult;
+    }
+
+    private Report.TestsAndCandidatesCounters generateTestsAndCandidateCounters() {
+        int totalTests = printAllUsedTests?(trustedTests.count() + untrustedTests.count()):totalTestsGenerated;
+        int trustedTestsUsed = printAllUsedTests?trustedTests.count():-1;
+        int untrustedTestsUsed = printAllUsedTests? untrustedTests.count():-1;
+        return new Report.TestsAndCandidatesCounters(totalTests, trustedTestsUsed, untrustedTestsUsed, evaluatedCandidates, evaluatedCandidatesLeadingToNoFix, evaluatedCandidatesLeadingToSpurious);
     }
 
 }
