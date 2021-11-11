@@ -217,7 +217,6 @@ public class IterativeCEBasedAlloyRepair {
             boolean checkAndGenerate = repairFound || noTests || keepGoing;
             if (printProcessGraph && !checkAndGenerate) {
                 repairGraph.addNoFixFoundFrom(current);
-                evaluatedCandidatesLeadingToNoFix++;
             }
             if (checkAndGenerate) {
                 boolean fromOriginal = aRepairResult.equals(ARepairResult.NO_TESTS) || keepGoing;
@@ -247,6 +246,7 @@ public class IterativeCEBasedAlloyRepair {
                     if (printProcessGraph) {
                         if (repairFound) {
                             repairGraph.addSpuriousFixFrom(current);
+                            evaluatedCandidatesLeadingToNoFix++;
                         } else { //!repairFound
                             repairGraph.addFauxSpuriousFixFrom(current);
                         }
