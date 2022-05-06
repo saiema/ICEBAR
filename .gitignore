@@ -30,3 +30,5 @@ beafix.properties
 *.info
 *.dot
 *.svg
+*.xml
+*.tests
