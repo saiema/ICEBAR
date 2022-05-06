@@ -26,5 +26,7 @@ hs_err_pid*
 beafix.properties
 *.lck
 *.1
-.idea
+.idea/
 *.info
+*.dot
+*.svg
