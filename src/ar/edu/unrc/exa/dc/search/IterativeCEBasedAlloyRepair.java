@@ -63,6 +63,9 @@ public class IterativeCEBasedAlloyRepair {
         this.search = search;
     }
 
+    private boolean allowSecondarySearchSpace = false;
+    public void allowSecondarySearchSpace(boolean allowSecondarySearchSpace) { this.allowSecondarySearchSpace = allowSecondarySearchSpace; }
+
     public enum ICEBARInitialTestsLocation {
         PREPEND, APPEND
     }
@@ -168,13 +171,18 @@ public class IterativeCEBasedAlloyRepair {
         TimeCounter totalTime = new TimeCounter();
         //CEGAR process
         CandidateSpace searchSpace = null;
+        CandidateSpace secondarySearchSpace = null;
         switch (search) {
             case DFS: {
                 searchSpace = usePriorization?CandidateSpace.priorityStack():CandidateSpace.normalStack();
+                if (allowSecondarySearchSpace)
+                    secondarySearchSpace = usePriorization?CandidateSpace.priorityStack():CandidateSpace.normalStack();
                 break;
             }
             case BFS: {
                 searchSpace = usePriorization?CandidateSpace.priorityQueue():CandidateSpace.normalQueue();
+                if (allowSecondarySearchSpace)
+                    secondarySearchSpace = usePriorization?CandidateSpace.priorityQueue():CandidateSpace.normalQueue();
                 break;
             }
         }
@@ -188,7 +196,15 @@ public class IterativeCEBasedAlloyRepair {
             untrustedTests = new TestHashes();
         }
         totalTime.clockStart();
-        while (!searchSpace.isEmpty()) {
+        while (!searchSpace.isEmpty() || allowSecondarySearchSpace) {
+            if (searchSpace.isEmpty() && allowSecondarySearchSpace) {
+                assert secondarySearchSpace != null;
+                if (!secondarySearchSpace.isEmpty()) {
+                    logger.info("Search space is empty, but secondary search space is enabled and not empty, redirecting one candidate from secondary to primary...");
+                    searchSpace.push(secondarySearchSpace.pop());
+                }
+                else break;
+            }
             FixCandidate current = searchSpace.pop();
             evaluatedCandidates++;
             maxReachedLap = Math.max(maxReachedLap, current.depth());
@@ -277,8 +293,11 @@ public class IterativeCEBasedAlloyRepair {
                         List<BeAFixTest> relaxedAssertionsTests = null;
                         boolean testsGenerated = !(counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty() && predicateTests.isEmpty());
                         boolean testsGenerationLogged = false;
-                        if (allowFactsRelaxation && counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty() && predicateTests.isEmpty()) {
-                            logger.info("No tests available, generating with relaxed facts...");
+                        if (allowFactsRelaxation && ((counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty()) || allowSecondarySearchSpace) && predicateTests.isEmpty()) {
+                            if (counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty())
+                                logger.info("No tests available, generating with relaxed facts...");
+                            else
+                                logger.info("Counterexamples are available but secondary search space is enabled, generating with relaxed facts...");
                             beafixTimeCounter.clockStart();
                             beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, true, false);
                             beafixTimeCounter.clockEnd();
@@ -346,25 +365,66 @@ public class IterativeCEBasedAlloyRepair {
                                     logger.warning("Candidate " + newCandidate.id() + " is invalid (no new tests could be added)");
                                 }
                             }
-                        } else if (!counterexampleUntrustedTests.isEmpty()) {
-                            if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
+                        }
+                        boolean counterexamples = !counterexampleTests.isEmpty();
+                        boolean untrustedCounterexamples = !counterexampleUntrustedTests.isEmpty();
+                        boolean predicates = !predicateTests.isEmpty();
+                        boolean relaxedPredicates = relaxedPredicateTests != null && !relaxedPredicateTests.isEmpty();
+                        boolean relaxedAssertions = relaxedAssertionsTests != null && !relaxedAssertionsTests.isEmpty();
+                        if ((!counterexamples || allowSecondarySearchSpace) && untrustedCounterexamples) {
+                            if (!counterexamples) {
+                                if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                    logger.severe("Branching error!");
+                                    return Optional.empty();
+                                }
+                            } else {
+                                logger.info("Adding untrusted counterexamples candidates into secondary search space...");
+                                if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, secondarySearchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                    logger.severe("Branching error!");
+                                    return Optional.empty();
+                                }
                             }
-                        } else if (!predicateTests.isEmpty()) {
-                            if ((newBranches = createBranches(current, predicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
+                        }
+                        if (((!counterexamples && !untrustedCounterexamples) || allowSecondarySearchSpace) && predicates) {
+                            if (!counterexamples && !untrustedCounterexamples) {
+                                if ((newBranches = createBranches(current, predicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                    logger.severe("Branching error!");
+                                    return Optional.empty();
+                                }
+                            } else {
+                                logger.info("Adding untrusted predicate candidates into secondary search space...");
+                                if ((newBranches = createBranches(current, predicateTests, false, secondarySearchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                    logger.severe("Branching error!");
+                                    return Optional.empty();
+                                }
                             }
-                        } else if (relaxedPredicateTests != null && !relaxedPredicateTests.isEmpty()) {
-                            if ((newBranches = createBranches(current, relaxedPredicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
+                        }
+                        if (((!counterexamples && !untrustedCounterexamples && !predicates) || allowSecondarySearchSpace) && relaxedPredicates) {
+                            if (!counterexamples && !untrustedCounterexamples && !predicates) {
+                                if ((newBranches = createBranches(current, relaxedPredicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                    logger.severe("Branching error!");
+                                    return Optional.empty();
+                                }
+                            } else {
+                                logger.info("Adding untrusted relaxed candidates into secondary search space...");
+                                if ((newBranches = createBranches(current, relaxedPredicateTests, false, secondarySearchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                    logger.severe("Branching error!");
+                                    return Optional.empty();
+                                }
                             }
-                        } else if (relaxedAssertionsTests != null && !relaxedAssertionsTests.isEmpty()) {
-                            if ((newBranches = createBranches(current, relaxedAssertionsTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
+                        }
+                        if (((!counterexamples && !untrustedCounterexamples && !predicates && !relaxedPredicates) || allowSecondarySearchSpace) && relaxedAssertions) {
+                            if (!counterexamples && !untrustedCounterexamples && !predicates && !relaxedPredicates) {
+                                if ((newBranches = createBranches(current, relaxedAssertionsTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                    logger.severe("Branching error!");
+                                    return Optional.empty();
+                                }
+                            } else {
+                                logger.info("Adding untrusted relaxed assertions candidates into secondary search space...");
+                                if ((newBranches = createBranches(current, relaxedAssertionsTests, false, secondarySearchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                                    logger.severe("Branching error!");
+                                    return Optional.empty();
+                                }
                             }
                         }
                         if (printProcessGraph && !testsGenerated) {

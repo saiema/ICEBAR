@@ -1,6 +1,7 @@
 package ar.edu.unrc.exa.dc.icebar;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.Properties;
 
 public class ICEBARProperties {
@@ -128,6 +129,10 @@ public class ICEBARProperties {
         ICEBAR_INITIAL_TESTS_POSITION {
             @Override
             public String getKey() { return "icebar.search.initialtests.position"; }
+        },
+        ICEBAR_SECONDARY_SEARCH_SPACE {
+            @Override
+            public String getKey() { return "icebar.search.searchspace.secondary"; }
         }
         ;
         public abstract String getKey();
@@ -167,7 +172,7 @@ public class ICEBARProperties {
         String cwd = System.getProperty("user.dir");
         String configFile = fromFile!=null?fromFile:(cwd + File.separator + DEFAULT_PROPERTIES);
         File propFile = createConfigFileIfMissing(configFile);
-        InputStream inputStream = new FileInputStream(propFile);
+        InputStream inputStream = Files.newInputStream(propFile.toPath());
         prop.load(inputStream);
     }
 
@@ -240,6 +245,7 @@ public class ICEBARProperties {
             case ICEBAR_PRINT_ALL_USED_TESTS:
             case ICEBAR_CHECK_REPEATED_TESTS:
             case ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS:
+            case ICEBAR_SECONDARY_SEARCH_SPACE:
             case AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES:
             case BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS:
             case BEAFIX_INSTANCE_TESTS: return true;

@@ -20,7 +20,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.8.1";
+    private static final String VERSION = "2.9.0rc";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
@@ -164,6 +164,11 @@ public class ICEBAR {
             printUsedTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_ALL_USED_TESTS);
         }
         iterativeCEBasedAlloyRepair.printAllUsedTests(printUsedTests);
+        boolean allowSecondarySearchSpace = false;
+        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_SECONDARY_SEARCH_SPACE)) {
+            allowSecondarySearchSpace = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_SECONDARY_SEARCH_SPACE);
+        }
+        iterativeCEBasedAlloyRepair.allowSecondarySearchSpace(allowSecondarySearchSpace);
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {
@@ -202,32 +207,33 @@ public class ICEBAR {
     private static final String PROPERTIES_KEY = "properties";
     private static final String INITIAL_TESTS_KEY = "initialtests";
     private static void setConfig(String key, String value) {
+        Path path = Paths.get(value);
         switch (key.toLowerCase()) {
             case MODEL_KEY: {
                 if (ICEBARExperiment.getInstance().hasModel())
                     throw new IllegalArgumentException("Already a model path has been defined (current: " + ICEBARExperiment.getInstance().modelPath().toString() + " | new: " + value + ")");
-                Path modelPath = Paths.get(value).toAbsolutePath();
+                Path modelPath = path.toAbsolutePath();
                 ICEBARExperiment.getInstance().modelPath(modelPath);
                 break;
             }
             case ORACLE_KEY: {
                 if (ICEBARExperiment.getInstance().hasOracle())
                     throw new IllegalArgumentException("Already an oracle path has been defined (current: " + ICEBARExperiment.getInstance().oraclePath().toString() + " | new: " + value + ")");
-                Path oraclePath = Paths.get(value).toAbsolutePath();
+                Path oraclePath = path.toAbsolutePath();
                 ICEBARExperiment.getInstance().oraclePath(oraclePath);
                 break;
             }
             case PROPERTIES_KEY: {
                 if (ICEBARExperiment.getInstance().hasProperties())
                     throw new IllegalArgumentException("Already a properties path has been defined (current: " + ICEBARExperiment.getInstance().propertiesPath().toString() + " | new: " + value + ")");
-                Path propertiesPath = Paths.get(value).toAbsolutePath();
+                Path propertiesPath = path.toAbsolutePath();
                 ICEBARExperiment.getInstance().propertiesPath(propertiesPath);
                 break;
             }
             case INITIAL_TESTS_KEY: {
                 if (ICEBARExperiment.getInstance().hasInitialTests())
                     throw new IllegalArgumentException("Already an initial tests path has been defined (current: " + ICEBARExperiment.getInstance().initialTestsPath().toString() + " | new: " + value + ")");
-                Path initialTestsPath = Paths.get(value).toAbsolutePath();
+                Path initialTestsPath = path.toAbsolutePath();
                 ICEBARExperiment.getInstance().initialTestsPath(initialTestsPath);
                 break;
             }
