@@ -9,9 +9,9 @@ public final class TestHashes {
 
     private final Set<Integer> hashes = new HashSet<>();
 
-    public boolean add(BeAFixTest test) {
+    public void addHash(BeAFixTest test) {
         int hash = test.currentTestHashCode();
-        return hashes.add(hash);
+        hashes.add(hash);
     }
 
     public boolean contains(BeAFixTest test) {

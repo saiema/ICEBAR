@@ -6,7 +6,6 @@ import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.tools.InitialTests;
-import ar.edu.unrc.exa.dc.util.RepairGraph;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -119,36 +118,6 @@ public class ICEBAR {
             boolean keepGoingAfterARepairNPE = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_KEEP_GOING_ON_AREPAIR_NPE);
             iterativeCEBasedAlloyRepair.keepGoingAfterARepairNPE(keepGoingAfterARepairNPE);
         }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_NO_FIX_ONLY_TRUSTED_KEEP_GOING)) {
-            boolean keepGoingARepairNoFixAndOnlyTrustedTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_NO_FIX_ONLY_TRUSTED_KEEP_GOING);
-            iterativeCEBasedAlloyRepair.keepGoingARepairNoFixAndOnlyTrustedTests(keepGoingARepairNoFixAndOnlyTrustedTests);
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY)) {
-            boolean restartForMoreUnseenTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY);
-            iterativeCEBasedAlloyRepair.restartForMoreUnseenTests(restartForMoreUnseenTests);
-        }
-        boolean printProcessGraph = false;
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH)) {
-            printProcessGraph = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH);
-        }
-        iterativeCEBasedAlloyRepair.printProcessGraph(printProcessGraph);
-        if (printProcessGraph) {
-            boolean storeTestsForProcessGraph = false;
-            if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS)) {
-                storeTestsForProcessGraph = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS);
-            }
-            RepairGraph.storeTests(storeTestsForProcessGraph);
-            Path processGraphFolder = Paths.get("");
-            if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_FOLDER)) {
-                processGraphFolder = Paths.get(ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_FOLDER));
-            }
-            RepairGraph.graphsFolder(processGraphFolder);
-            boolean cleanProcessGraphFolder = false;
-            if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_FOLDER_CLEAN)) {
-                cleanProcessGraphFolder = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_PROCESS_GRAPH_FOLDER_CLEAN);
-            }
-            RepairGraph.cleanGraphsFolder(cleanProcessGraphFolder);
-        }
         boolean checkRepeated = false;
         if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_CHECK_REPEATED_TESTS)) {
             checkRepeated = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_CHECK_REPEATED_TESTS);
@@ -159,11 +128,6 @@ public class ICEBAR {
             treatARepairPartialFixesAsFixes = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES);
         }
         arepair.treatPartialRepairsAsFixes(treatARepairPartialFixesAsFixes);
-        boolean printUsedTests = false;
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRINT_ALL_USED_TESTS)) {
-            printUsedTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRINT_ALL_USED_TESTS);
-        }
-        iterativeCEBasedAlloyRepair.printAllUsedTests(printUsedTests);
         boolean allowSecondarySearchSpace = false;
         if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_SECONDARY_SEARCH_SPACE)) {
             allowSecondarySearchSpace = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_SECONDARY_SEARCH_SPACE);
@@ -176,8 +140,6 @@ public class ICEBAR {
         } else {
             System.out.println("No Fix Found for model: " + ICEBARExperiment.getInstance().modelPath().toString() + "\n");
         }
-        if (printProcessGraph)
-            iterativeCEBasedAlloyRepair.printProcessGraph();
     }
 
     private static void parseCommandLine(String[] args) {

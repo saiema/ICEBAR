@@ -30,10 +30,6 @@ public class TimeCounter {
         this.running = false;
     }
 
-    public long toSeconds() {
-        return TimeUnit.NANOSECONDS.toSeconds(totalTime);
-    }
-
     public long toMilliSeconds() {
         return TimeUnit.NANOSECONDS.toMillis(totalTime);
     }

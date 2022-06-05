@@ -2,7 +2,7 @@ package ar.edu.unrc.exa.dc.util;
 
 import ar.edu.unrc.exa.dc.icebar.Report;
 import ar.edu.unrc.exa.dc.search.FixCandidate;
-import ar.edu.unrc.exa.dc.tools.ARepair;
+import ar.edu.unrc.exa.dc.tools.ARepairResult;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 
 import java.io.File;
@@ -12,7 +12,6 @@ import java.io.StringWriter;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Random;
 import java.util.logging.Logger;
@@ -53,26 +52,6 @@ public final class Utils {
             case EXISTS: return true;
         }
         return false;
-    }
-
-    /**
-     * Checks if a folder exists but is empty, or it does not exist, if it doesn't exist it will create an empty folder.
-     *
-     * @param folderPath : the folder to check/create.
-     * @return {@code true} iff either the folder exists and is empty or it does not exist and could be created.
-     */
-    public static boolean checkAndCreateDirectory(Path folderPath)  {
-        if (folderPath.toFile().isDirectory() || !folderPath.toFile().isFile()) {
-            File folder = folderPath.toFile();
-            if (folder.exists()) {
-                String[] names = folder.list();
-                return names == null || names.length == 0;
-            } else {
-                return folder.mkdirs();
-            }
-        } else {
-            throw new IllegalArgumentException("folderPath is not a folder (" + folderPath + ")");
-        }
     }
 
     public static void mergeFiles(Path a, Path b, Path result) throws IOException {
@@ -127,20 +106,6 @@ public final class Utils {
             }
         }
         return testCount;
-    }
-
-    public static void writeToFile(Path file, boolean newFile, String content) throws IOException {
-        if (file == null)
-            throw new IllegalArgumentException("file path is null");
-        if (newFile && file.toFile().exists())
-            throw new IllegalArgumentException("file path point to an existing file while newFile mode is used (" + file + ")");
-        if (!newFile && !file.toFile().exists())
-            throw new IllegalArgumentException("file path points to a non existing file while append mode (!newFile) is used (" + file + ")");
-        File testsFile = file.toFile();
-        if (newFile && !testsFile.createNewFile()) {
-            throw new Error("Couldn't create tests file (" + (testsFile) + ")");
-        }
-        Files.write(file, content.getBytes(), StandardOpenOption.APPEND);
     }
 
     public static void writeTestsToLog(Collection<BeAFixTest> tests, Logger logger) {
@@ -248,7 +213,7 @@ public final class Utils {
         Files.write(candidateInfoFilePath, CANDIDATE_REPORT_HEADER.getBytes(), StandardOpenOption.APPEND);
     }
 
-    public static void writeCandidateInfo(FixCandidate candidate, Collection<BeAFixTest> globalCounterexampleTests, ARepair.ARepairResult aRepairResult) throws IOException {
+    public static void writeCandidateInfo(FixCandidate candidate, Collection<BeAFixTest> globalCounterexampleTests, ARepairResult aRepairResult) throws IOException {
         Path candidateInfoFilePath = Paths.get(CANDIDATE_FILE);
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (!candidateInfoFile.exists())

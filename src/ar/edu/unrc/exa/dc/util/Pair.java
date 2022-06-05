@@ -2,8 +2,8 @@ package ar.edu.unrc.exa.dc.util;
 
 public class Pair<A, B> {
 
-    private A fst;
-    private B snd;
+    private final A fst;
+    private final B snd;
 
     public Pair(A fst, B snd) {
         this.fst = fst;
@@ -14,16 +14,8 @@ public class Pair<A, B> {
         return fst;
     }
 
-    public void fst(A fst) {
-        this.fst = fst;
-    }
-
     public B snd() {
         return snd;
-    }
-
-    public void snd(B snd) {
-        this.snd = snd;
     }
 
 }

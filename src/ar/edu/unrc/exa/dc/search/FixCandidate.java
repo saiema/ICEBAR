@@ -90,7 +90,7 @@ public final class FixCandidate {
         for (BeAFixTest test : tests) {
             if (!checkRepeated || !alreadySeen(test, this)) {
                 filtered.add(test);
-                testHashes.add(test);
+                testHashes.addHash(test);
             } else {
                 logger.warning("Filtered test [" + test.currentTestHashCode() + "]");
             }

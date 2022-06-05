@@ -94,34 +94,6 @@ public class ICEBARProperties {
             @Override
             public String getKey() { return "icebar.keepgoingarepairnpe"; }
         },
-        ICEBAR_NO_FIX_ONLY_TRUSTED_KEEP_GOING {
-            @Override
-            public String getKey() { return "icebar.nofixonlytrustedkeepgoing"; }
-        },
-        ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY {
-            @Override
-            public String getKey() { return "icebar.search.emptysearchspace.retryformoretests"; }
-        },
-        ICEBAR_PRINT_PROCESS_GRAPH {
-            @Override
-            public String getKey() { return "icebar.search.printprocessgraph"; }
-        },
-        ICEBAR_PRINT_PROCESS_GRAPH_FOLDER {
-            @Override
-            public String getKey() { return "icebar.search.printprocessgraph.folder"; }
-        },
-        ICEBAR_PRINT_PROCESS_GRAPH_FOLDER_CLEAN {
-            @Override
-            public String getKey() { return "icebar.search.printprocessgraph.folder.clean"; }
-        },
-        ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS {
-            @Override
-            public String getKey() { return "icebar.search.printprocessgraph.storetests"; }
-        },
-        ICEBAR_PRINT_ALL_USED_TESTS {
-            @Override
-            public String getKey() { return "icebar.search.printallusedtests"; }
-        },
         ICEBAR_CHECK_REPEATED_TESTS {
             @Override
             public String getKey() { return "icebar.search.filterrepeatedtests"; }
@@ -237,14 +209,8 @@ public class ICEBARProperties {
             case ICEBAR_ENABLE_FORCE_ASSERTION_TESTS:
             case ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE:
             case ICEBAR_KEEP_GOING_ON_AREPAIR_NPE:
-            case ICEBAR_NO_FIX_ONLY_TRUSTED_KEEP_GOING:
-            case ICEBAR_EMPTY_SEARCH_SPACE_BUT_MAYBE_MORE_TESTS_RETRY:
             case BEAFIX_AREPAIR_COMPAT_RELAXED_MODE:
-            case ICEBAR_PRINT_PROCESS_GRAPH:
-            case ICEBAR_PRINT_PROCESS_GRAPH_FOLDER_CLEAN:
-            case ICEBAR_PRINT_ALL_USED_TESTS:
             case ICEBAR_CHECK_REPEATED_TESTS:
-            case ICEBAR_PRINT_PROCESS_GRAPH_STORE_TESTS:
             case ICEBAR_SECONDARY_SEARCH_SPACE:
             case AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES:
             case BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS:
@@ -268,7 +234,6 @@ public class ICEBARProperties {
             case BEAFIX_JAR :
             case BEAFIX_MODEL_OVERRIDES_FOLDER :
             case BEAFIX_BUGGY_FUNCS_FILE :
-            case ICEBAR_PRINT_PROCESS_GRAPH_FOLDER:
             case ICEBAR_INITIAL_TESTS_POSITION:
             case AREPAIR_ROOT : return true;
             default : return false;
