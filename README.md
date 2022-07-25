@@ -34,3 +34,7 @@ In both cases, the oracle problem arises: given an instance **I** that satisfies
 # Instalation
 
 For instalation instructions please refer to the **INSTALL.md** file.
+
+# Publications and experiments replication
+
+A research paper for **ICEBAR** tittled *"ICEBAR: Feedback-Driven Iterative Repair of Alloy Specifications"* was accepted at **ASE 2022**. The version used in this research paper was **2.8.1** which can be found in the releases section. Release [2.8.1](https://github.com/saiema/ICEBAR/releases/tag/2.8.1) also contains the whole replication package, including benchmarks and scripts. 
