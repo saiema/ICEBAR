@@ -28,7 +28,7 @@ In both cases, the oracle problem arises: given an instance **I** that satisfies
 **ICEBAR** has the following requirements:
 
 1. Java 8+
-2. [ARepair](https://github.com/kaiyuanw/ARepair), we provide ARepair as a jar in each [release](https://github.com/saiema/ICEBAR/releases).
+2. [ARepair](https://github.com/kaiyuanw/ARepair), we provide ARepair as a jar in each [release](https://github.com/saiema/ICEBAR/releases) starting from **2.8.1**.
 3. [BeAFix](https://github.com/saiema/BeAFix), this is used for test generation.
 
 # Instalation
