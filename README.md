@@ -30,6 +30,47 @@ In both cases, the oracle problem arises: given an instance **I** that satisfies
 1. Java 8+
 2. [ARepair](https://github.com/kaiyuanw/ARepair), we provide ARepair as a jar in each [release](https://github.com/saiema/ICEBAR/releases) starting from **2.8.1**.
 3. [BeAFix](https://github.com/saiema/BeAFix), this is used for test generation.
+4. Bash is used, on macOS zsh should be used.
+
+# Usage
+
+We provided scripts to replicate our experiments (in release [2.8.1](https://github.com/saiema/ICEBAR/releases/tag/2.8.1)).
+
+## Running ICEBAR experiments (given a model and an oracle, search for a test suite that can make ARepair find a non-spurious repair)
+
+The script for running these experiments is `icebar-run.sh` which can take two possible inputs: `--run-ARepair` to use the ARepair's bechmark; and `--run-A4F` to use the Alloy4Fun's benchmark. The cases for each benchmark can be disabled by commenting (prepending `#`) unwanted cases inside `AREPAIR_CASES` in `modelsARepair.sh`, or `A4F_CASES` in `modelsA4F.sh` for ARepair and Alloy4Fun benchmarks respectively.
+
+### Running ICEBAR on ARepair's benchmark
+```
+./icebar-run.sh --run-ARepair
+```
+
+### Running ICEBAR on Alloy4Fun's benchmark
+```
+./icebar-run.sh --run-A4F
+```
+
+## Running ARepair experiments (given a model and 4 test suites, run ARepair once per test suite). The used test suites are an automatic generated one (using AUnit), and three randomly generated test suites.
+
+### Running ARepair on ARepair's benchmark
+```
+./icebar-run-arepair.sh --run-ARepair
+```
+
+### Running ARepair on Alloy4Fun's benchmark
+```
+./icebar-run-arepair.sh --run-A4F
+```
+
+## Running ICEBAR independently
+
+ICEBAR uses a mixture of `.properties` files to configure ICEBAR's behaviour, and a set of command line arguments. There are two `.properties` files available with the 2.8.1 release as well as part of the repository, these properties have each property documented. And for help with the command line the following command is available:
+
+```
+java -jar ICEBAR-2.8.1.jar --help
+```
+
+The same command, changing `--help` with the appropiate arguments, can be used to run ICEBAR on a specific model.
 
 # Instalation
 
