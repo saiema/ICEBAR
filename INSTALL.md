@@ -23,6 +23,8 @@ from inside the `src` folder.
 
 ICEBAR uses `.properties` files to configure its behavior. Some examples of properties files are provided in the repository and [release 2.8.1](https://github.com/saiema/ICEBAR/releases/tag/2.8.1). All properties are defined and documented in the provided sample files.
 
+Inside both `.properties` files, and in any new one, the property `icebar.tools.arepair.root=Tools/ARepair` must be edited to have the full path to that directory, e.g.: for a user `bob` who downloaded the replication package inside his `Download` folder, the property should be changed to `icebar.tools.arepair.root=/home/bob/Downloads/ICEBAR-2.8.1/Tools/ARepair/`.
+
 ## Running ICEBAR
 
 ICEBAR is run from the command line, using the provided jar, or compiling and running the sources.
