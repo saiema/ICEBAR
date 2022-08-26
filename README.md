@@ -4,6 +4,7 @@
 ICEBAR is a technique based on [ARepair](https://github.com/kaiyuanw/ARepair) that takes a buggy model and a property based oracle (both written in Alloy). It uses the oracle to check the model and strengthen a test suite from counterexamples when found. The buggy model alongside a test suite is passed to ARepair, if a fix is found, this is checked against the property based oracle to check if it's a correct fix, if not, then the process repeats until a given bound.
 
 ICEBAR's repository can be found at https://github.com/saiema/ICEBAR.
+
 ICEBAR's replication package site can be found at https://sites.google.com/view/icebar-evaluation/home/replication-package.
 
 # Overview of the technique
