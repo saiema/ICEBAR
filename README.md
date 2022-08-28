@@ -34,7 +34,21 @@ In both cases, the oracle problem arises: given an instance **I** that satisfies
 1. Java 8 (as tested, newer versions of Java may work).
 2. [ARepair](https://github.com/kaiyuanw/ARepair), we provide ARepair as a jar in each [release](https://github.com/saiema/ICEBAR/releases) starting from **2.8.1**.
 3. [BeAFix 2.12.1](https://github.com/saiema/BeAFix/releases/tag/2.12.1), this is used for test generation.
-4. Bash is used, on macOS zsh should be used.
+4. Bash if using Linux/GNU, or zsh on macOS.
+5. Our experiments were run with 16Gb of memory as maximum memory available for both the test generation tool and ARepair.
+
+# Using Docker
+
+## Requirements
+
+ * Docker, by either installing Docker Desktop for [Windows](https://docs.docker.com/desktop/install/windows-install/) or [macOS](https://docs.docker.com/desktop/install/mac-install/); or by installing [Docker Engine](https://docs.docker.com/engine/install/) (not available for Windows).
+ * Pulling image `drstein/icebar:2.8.1` by executing `docker push drstein/icebar:2.8.1` or by using Docker Desktop.
+
+## Running paper's experiments
+
+To run the docker, the command is `docker run -it drstein/icebar:2.8.1`.
+
+For information on the content of our replication package and how to run our experiments follow the instructions below. 
 
 # Folder structure and files
 
