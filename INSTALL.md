@@ -7,7 +7,7 @@ As of version 2.8.1, ICEBAR requirements are the following:
 1. Java 8 (newer versions may work).
 2. [ARepair*](https://github.com/kaiyuanw/ARepair), used for test generation. For convenience, ARepair is included in our [2.8.1 release](https://github.com/saiema/ICEBAR/releases/tag/2.8.1).
 3. [BeAFix 2.12.1](https://github.com/saiema/BeAFix/releases/tag/2.12.1), also used for test generation. For convenience, BeAFix 2.12.1 is also included in  our [2.8.1 release](https://github.com/saiema/ICEBAR/releases/tag/2.8.1).
-4. Bash, or zsh on macOS.
+4. Bash if using Linux/GNU, or zsh on macOS.
 
 _* ARepair has a bug that causes null pointer exceptions on some inputs (model + test suite). ICEBAR provides an option that can be set in the .properties file to deal with these exceptions. A fix to ARepair, dealing with this issue, is provided in our included version of this tool. This fix will be submitted as a pull request to ARepair's repository._
 
