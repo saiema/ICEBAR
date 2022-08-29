@@ -33,7 +33,7 @@ For instalation instructions please refer to the **INSTALL.md** file.
 
 # Folder structure and files
 
-After downloading and extracting ICEBAR's zip file (release 2.8.1 and above), there will be the following folders and files:
+After downloading and extracting ICEBAR's zip file (release [2.8.1](https://github.com/saiema/ICEBAR/releases/tag/2.8.1) and above), there will be the following folders and files:
 
  * `experiments` folder contains ARepair's and Alloy4Fun's benchmarks.
  * `Tools` folder contains both ARepair and BeAFix, the second one is used by ICEBAR to generate tests.
