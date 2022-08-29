@@ -27,22 +27,9 @@ When a counterexample is not available and the model is buggy, i.e.: no instance
 
 In both cases, the oracle problem arises: given an instance **I** that satisfies predicate **P**, is this the expected behaviour or not? To solve this issue *ICEBAR* uses branches, in one branch the assumption that `I and P` is the expected behaviour; in the other the opossite asumption is made `I and not P`. 
 
-# Instalation
+# Requirements and Installation
 
 For instalation instructions please refer to the **INSTALL.md** file.
-
-# Using Docker
-
-## Requirements
-
- * Docker, by either installing Docker Desktop for [Windows](https://docs.docker.com/desktop/install/windows-install/) or [macOS](https://docs.docker.com/desktop/install/mac-install/); or by installing [Docker Engine](https://docs.docker.com/engine/install/) (not available for Windows).
- * Pulling image `drstein/icebar:2.8.1` by executing `docker push drstein/icebar:2.8.1` or by using Docker Desktop.
-
-## Running paper's experiments
-
-To run the docker, the command is `docker run -it drstein/icebar:2.8.1`.
-
-For information on the content of our replication package and how to run our experiments follow the instructions below. 
 
 # Folder structure and files
 
@@ -59,8 +46,7 @@ After downloading and extracting ICEBAR's zip file (release 2.8.1 and above), th
  * `modelsARepair.sh`, this script defines all ARepair's models to use. Variable `AREPAIR_CASES` can be modified to remove specific cases by prefixing      them with the `#` symbol.
 
 # Usage
-
-## Running ICEBAR
+### Running ICEBAR
 
 ICEBAR uses a mixture of `.properties` files to configure ICEBAR's behaviour, and a set of command line arguments. There are two `.properties` files available with the 2.8.1 release as well as part of the repository, these properties have each property documented. And for help with the command line the following command is available:
 
@@ -110,16 +96,28 @@ We provided scripts to replicate our experiments (in release [2.8.1](https://git
 
 Inside both `.properties` files, and in any new one, the property `icebar.tools.arepair.root=Tools/ARepair` must be edited to have the full path to that directory, e.g.: for a user `bob` who downloaded the replication package inside his `Download` folder, the property should be changed to `icebar.tools.arepair.root=/home/bob/Downloads/ICEBAR-2.8.1/Tools/ARepair/`.
 
-## Running ICEBAR experiments (given a model and an oracle, search for a test suite that can make ARepair find a non-spurious repair)
+# Replicating ICEBAR's experiments
+
+## Using Docker
+
+We provide a docker image as an alternative for the replication of our experiments. For using our docker image please follow these instructions:
+
+ 1. Install Docker, by either installing Docker Desktop for [Windows](https://docs.docker.com/desktop/install/windows-install/) or [macOS](https://docs.docker.com/desktop/install/mac-install/); or by installing [Docker Engine](https://docs.docker.com/engine/install/) (not available for Windows).
+ 2. Pull our docker image `drstein/icebar:2.8.1` by executing `docker push drstein/icebar:2.8.1` or by using Docker Desktop.
+ 3. Create and run a docker container from our image by executing the command `docker run -it drstein/icebar:2.8.1`.
+  
+The folder structure is the same as the one mentioned above, and the instructions are the same as for replicating our experiments natively.
+
+## Experiments replication
 
 The script for running these experiments is `icebar-run.sh` which can take two possible inputs: `--run-ARepair` to use the ARepair's bechmark; and `--run-A4F` to use the Alloy4Fun's benchmark. The cases for each benchmark can be disabled by commenting (prepending `#`) unwanted cases inside `AREPAIR_CASES` in `modelsARepair.sh`, or `A4F_CASES` in `modelsA4F.sh` for ARepair and Alloy4Fun benchmarks respectively.
 
-### Running ICEBAR on ARepair's benchmark
+## Running ICEBAR on ARepair's benchmark
 ```
 ./icebar-run.sh --run-ARepair
 ```
 
-### Running ICEBAR on Alloy4Fun's benchmark
+## Running ICEBAR on Alloy4Fun's benchmark
 ```
 ./icebar-run.sh --run-A4F
 ```
