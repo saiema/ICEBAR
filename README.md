@@ -83,8 +83,13 @@ _The rest of the properties are either no longer used or only used for debugging
 
 ICEBAR will generate three files:
 
- * `icebar.info` will contain **status(^)**;**laps**;**tests(^^)**;**test Gen And Model Check Time(ms)(^^^)**;**ARepair time (ms)**;**ARepair calls**
+ * `icebar.info` will contain **status(^)**;**laps**;**tests(^^)**;**test Gen And Model Check Time(ms)(^^^)**;**ARepair time (ms)(^^^)**;**ARepair calls**
+    
     _(^) This can be: **correct** for a fixed model; **timeout**; **exhausted** when no more tests are available; **ARepair once Spurious** when running only ARepair once and the repair was found but spurious; **ARepair once No Fix Found** when running only ARepair once and no repair was found; and any other value represent an error in either ICEBAR, BeAFix, or ARepair_
+   
+   _(^^) How many tests were used in total._
+   
+   _(^^^) Total time spent by BeAFix (for repair acceptance and test generation), and ARepair (for test generation) respectively._
  * `icebar_arepair.info` will contain information about all calls made to ARepair
  * `Repair.log` this will contain the same output as the one shown in the terminal when running ICEBAR, information that will appear in this log will include:
    * Running ARepair: this may end with no fix found, a fix found, no tests available _(this is treated as a fix found, used to bootstrap the test generation)_, or an error ocurred while running ARepair.
