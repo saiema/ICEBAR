@@ -90,7 +90,7 @@ ICEBAR will generate three files:
    _(^^) How many tests were used in total._
    
    _(^^^) Total time spent by BeAFix (for repair acceptance and test generation), and ARepair (for test generation) respectively._
- * `icebar_arepair.info` will contain information about all calls made to ARepair
+ * `icebar_arepair.info` will contain information about all calls made to ARepair. Each column is named in the first line of this file.
  * `Repair.log` this will contain the same output as the one shown in the terminal when running ICEBAR, information that will appear in this log will include:
    * Running ARepair: this may end with no fix found, a fix found, no tests available _(this is treated as a fix found, used to bootstrap the test generation)_, or an error ocurred while running ARepair.
    * Checking a model: this may end with `CHECK FAILED` indicating that the repair produced by ARepair was spurious; `CHECK SUCCEEDED` if the repair produced by ARepair is a proper fix; or an error if there was one while running BeAFix.
