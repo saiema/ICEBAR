@@ -11,7 +11,7 @@ ICEBAR's replication package site can be found at https://sites.google.com/view/
 
 The technique starts from a given faulty specification (with property-based oracles included) and a, potentially empty, test suite, it then runs ARepair to attempt to produce a patch. If a patch is found, we know that is passes the test suite; we take this candidate and contrast it against the property-based oracle in the specification. If, again, the specification meets this oracle, we consider the patch a proper fix. If, on the other hand, some property fails in the candidate patch, we use Alloy to produce instances (assertion counterexamples, violations to predicates), which are in turn translated into new unit tests, to complement the original test suite and start over the ARepair process. Eventually, a fix is found, that passes the corresponding test suite and property-based oracle, and is returned to the user.
 
-# Test generation
+## Test generation
 
 When generating a test from a counterexample **CE**, the generated test represents an undesired behaviour:
 
@@ -27,15 +27,9 @@ When a counterexample is not available and the model is buggy, i.e.: no instance
 
 In both cases, the oracle problem arises: given an instance **I** that satisfies predicate **P**, is this the expected behaviour or not? To solve this issue *ICEBAR* uses branches, in one branch the assumption that `I and P` is the expected behaviour; in the other the opossite asumption is made `I and not P`. 
 
-# Requirements
+# Instalation
 
-**ICEBAR** has the following requirements:
-
-1. Java 8 (as tested, newer versions of Java may work).
-2. [ARepair](https://github.com/kaiyuanw/ARepair), we provide ARepair as a jar in each [release](https://github.com/saiema/ICEBAR/releases) starting from **2.8.1**.
-3. [BeAFix 2.12.1](https://github.com/saiema/BeAFix/releases/tag/2.12.1), this is used for test generation.
-4. Bash if using Linux/GNU, or zsh on macOS.
-5. Our experiments were run with 16Gb of memory as maximum memory available for both the test generation tool and ARepair.
+For instalation instructions please refer to the **INSTALL.md** file.
 
 # Using Docker
 
@@ -149,10 +143,6 @@ The results of running either `icebar-run-arepair.sh` or `icebar-run.sh` are sum
 **model case name** | **repair result** _( correct, not fix found^, exhausted^, spurious^, or timeout)_ | **ICEBAR iterations** _(0 in case of ARepair mode)_ | **# of test generated** | **checking and test generation time (ms)** | **Repair time (ms)** | **# of calls to the ARepair tool**
 
 _(^) not fix found and spurious are reported when running in ARepair mode (0 max iterations); exhausted is used when running with at least one iteration._
-
-# Instalation
-
-For instalation instructions please refer to the **INSTALL.md** file.
 
 # Publications and experiments replication
 
