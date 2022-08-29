@@ -56,19 +56,6 @@ java -jar ICEBAR-2.8.1.jar --help
 
 The same command, changing `--help` with the appropiate arguments, can be used to run ICEBAR on a specific model.
 
-## ICEBAR's output
-
-ICEBAR will generate three files:
-
- * `icebar.info` will contain **status(^)**;**laps**;**tests(^^)**;**test Gen And Model Check Time(ms)(^^^)**;**ARepair time (ms)**;**ARepair calls**
-    _(^) This can be: **correct** for a fixed model; **timeout**; **exhausted** when no more tests are available; **ARepair once Spurious** when running only ARepair once and the repair was found but spurious; **ARepair once No Fix Found** when running only ARepair once and no repair was found; and any other value represent an error in either ICEBAR, BeAFix, or ARepair_
- * `icebar_arepair.info` will contain information about all calls made to ARepair
- * `Repair.log` this will contain the same output as the one shown in the terminal when running ICEBAR, information that will appear in this log will include:
-   * Running ARepair: this may end with no fix found, a fix found, no tests available _(this is treated as a fix found, used to bootstrap the test generation)_, or an error ocurred while running ARepair.
-   * Checking a model: this may end with `CHECK FAILED` indicating that the repair produced by ARepair was spurious; `CHECK SUCCEEDED` if the repair produced by ARepair is a proper fix; or an error if there was one while running BeAFix.
-   * Test generation: this will either state that no tests were generated; tests were generated and which ones; an error ocurred while generating tests.
-   * The result of running ICEBAR: if a fix is found, a path to this fix will be shown.
-
 ## ICEBAR's configuration
 
 ICEBAR relies on a few arguments: a model to repair, an optional initial test suite to use, a property based oracle for repair acceptance and test generation, and a `.properties` file. Although the provided properties files have each property documented, here we will document some of the more important ones.
@@ -92,11 +79,24 @@ ICEBAR relies on a few arguments: a model to repair, an optional initial test su
 
 _The rest of the properties are either no longer used or only used for debugging purposes_
 
+## ICEBAR's output
+
+ICEBAR will generate three files:
+
+ * `icebar.info` will contain **status(^)**;**laps**;**tests(^^)**;**test Gen And Model Check Time(ms)(^^^)**;**ARepair time (ms)**;**ARepair calls**
+    _(^) This can be: **correct** for a fixed model; **timeout**; **exhausted** when no more tests are available; **ARepair once Spurious** when running only ARepair once and the repair was found but spurious; **ARepair once No Fix Found** when running only ARepair once and no repair was found; and any other value represent an error in either ICEBAR, BeAFix, or ARepair_
+ * `icebar_arepair.info` will contain information about all calls made to ARepair
+ * `Repair.log` this will contain the same output as the one shown in the terminal when running ICEBAR, information that will appear in this log will include:
+   * Running ARepair: this may end with no fix found, a fix found, no tests available _(this is treated as a fix found, used to bootstrap the test generation)_, or an error ocurred while running ARepair.
+   * Checking a model: this may end with `CHECK FAILED` indicating that the repair produced by ARepair was spurious; `CHECK SUCCEEDED` if the repair produced by ARepair is a proper fix; or an error if there was one while running BeAFix.
+   * Test generation: this will either state that no tests were generated; tests were generated and which ones; an error ocurred while generating tests.
+   * The result of running ICEBAR: if a fix is found, a path to this fix will be shown.
+
+# Replicating ICEBAR's experiments
+
 We provided scripts to replicate our experiments (in release [2.8.1](https://github.com/saiema/ICEBAR/releases/tag/2.8.1)).
 
 Inside both `.properties` files, and in any new one, the property `icebar.tools.arepair.root=Tools/ARepair` must be edited to have the full path to that directory, e.g.: for a user `bob` who downloaded the replication package inside his `Download` folder, the property should be changed to `icebar.tools.arepair.root=/home/bob/Downloads/ICEBAR-2.8.1/Tools/ARepair/`.
-
-# Replicating ICEBAR's experiments
 
 ## Using Docker
 
@@ -106,7 +106,7 @@ We provide a docker image as an alternative for the replication of our experimen
  2. Pull our docker image `drstein/icebar:2.8.1` by executing `docker push drstein/icebar:2.8.1` or by using Docker Desktop.
  3. Create and run a docker container from our image by executing the command `docker run -it drstein/icebar:2.8.1`.
   
-The folder structure is the same as the one mentioned above, and the instructions are the same as for replicating our experiments natively.
+The folder structure is the same as the one mentioned [above](#folder-structure-and-files), and the instructions are the same as for replicating our experiments natively.
 
 ## Experiments replication
 
