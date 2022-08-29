@@ -66,45 +66,7 @@ After downloading and extracting ICEBAR's zip file (release 2.8.1 and above), th
 
 # Usage
 
-We provided scripts to replicate our experiments (in release [2.8.1](https://github.com/saiema/ICEBAR/releases/tag/2.8.1)).
-
-Inside both `.properties` files, and in any new one, the property `icebar.tools.arepair.root=Tools/ARepair` must be edited to have the full path to that directory, e.g.: for a user `bob` who downloaded the replication package inside his `Download` folder, the property should be changed to `icebar.tools.arepair.root=/home/bob/Downloads/ICEBAR-2.8.1/Tools/ARepair/`.
-
-## Running ICEBAR experiments (given a model and an oracle, search for a test suite that can make ARepair find a non-spurious repair)
-
-The script for running these experiments is `icebar-run.sh` which can take two possible inputs: `--run-ARepair` to use the ARepair's bechmark; and `--run-A4F` to use the Alloy4Fun's benchmark. The cases for each benchmark can be disabled by commenting (prepending `#`) unwanted cases inside `AREPAIR_CASES` in `modelsARepair.sh`, or `A4F_CASES` in `modelsA4F.sh` for ARepair and Alloy4Fun benchmarks respectively.
-
-### Running ICEBAR on ARepair's benchmark
-```
-./icebar-run.sh --run-ARepair
-```
-
-### Running ICEBAR on Alloy4Fun's benchmark
-```
-./icebar-run.sh --run-A4F
-```
-
-## Running ARepair experiments (given a model and 4 test suites, run ARepair once per test suite). The used test suites are an automatic generated one (using AUnit), and three randomly generated test suites.
-
-### Running ARepair on ARepair's benchmark
-```
-./icebar-run-arepair.sh --run-ARepair
-```
-
-### Running ARepair on Alloy4Fun's benchmark
-```
-./icebar-run-arepair.sh --run-A4F
-```
-
-## Scripts output
-
-The results of running either `icebar-run-arepair.sh` or `icebar-run.sh` are summarized in a `.csv` file at the experiment's root folder. For example: if the ICEBAR experiments are executed over the Alloy4Fun benchmark (`./icebar-run.sh --run-A4F`), file `summary-A4F-ICEBAR.csv` will be created by the script, containing the following information:
-
-**model case name** | **repair result** _( correct, not fix found^, exhausted^, spurious^, or timeout)_ | **ICEBAR iterations** _(0 in case of ARepair mode)_ | **# of test generated** | **checking and test generation time (ms)** | **Repair time (ms)** | **# of calls to the ARepair tool**
-
-_(^) not fix found and spurious are reported when running in ARepair mode (0 max iterations); exhausted is used when running with at least one iteration._
-
-## Running ICEBAR independently
+## Running ICEBAR
 
 ICEBAR uses a mixture of `.properties` files to configure ICEBAR's behaviour, and a set of command line arguments. There are two `.properties` files available with the 2.8.1 release as well as part of the repository, these properties have each property documented. And for help with the command line the following command is available:
 
@@ -149,6 +111,44 @@ ICEBAR relies on a few arguments: a model to repair, an optional initial test su
  * `icebar.updatescopefromoracle=true`: when `true`, ARepair scope will be updated from the maximum scope used in the oracle (when `false`, this will         only be done for initial tests).
 
 _The rest of the properties are either no longer used or only used for debugging purposes_
+
+We provided scripts to replicate our experiments (in release [2.8.1](https://github.com/saiema/ICEBAR/releases/tag/2.8.1)).
+
+Inside both `.properties` files, and in any new one, the property `icebar.tools.arepair.root=Tools/ARepair` must be edited to have the full path to that directory, e.g.: for a user `bob` who downloaded the replication package inside his `Download` folder, the property should be changed to `icebar.tools.arepair.root=/home/bob/Downloads/ICEBAR-2.8.1/Tools/ARepair/`.
+
+## Running ICEBAR experiments (given a model and an oracle, search for a test suite that can make ARepair find a non-spurious repair)
+
+The script for running these experiments is `icebar-run.sh` which can take two possible inputs: `--run-ARepair` to use the ARepair's bechmark; and `--run-A4F` to use the Alloy4Fun's benchmark. The cases for each benchmark can be disabled by commenting (prepending `#`) unwanted cases inside `AREPAIR_CASES` in `modelsARepair.sh`, or `A4F_CASES` in `modelsA4F.sh` for ARepair and Alloy4Fun benchmarks respectively.
+
+### Running ICEBAR on ARepair's benchmark
+```
+./icebar-run.sh --run-ARepair
+```
+
+### Running ICEBAR on Alloy4Fun's benchmark
+```
+./icebar-run.sh --run-A4F
+```
+
+## Running ARepair experiments (given a model and 4 test suites, run ARepair once per test suite). The used test suites are an automatic generated one (using AUnit), and three randomly generated test suites.
+
+### Running ARepair on ARepair's benchmark
+```
+./icebar-run-arepair.sh --run-ARepair
+```
+
+### Running ARepair on Alloy4Fun's benchmark
+```
+./icebar-run-arepair.sh --run-A4F
+```
+
+## Scripts output
+
+The results of running either `icebar-run-arepair.sh` or `icebar-run.sh` are summarized in a `.csv` file at the experiment's root folder. For example: if the ICEBAR experiments are executed over the Alloy4Fun benchmark (`./icebar-run.sh --run-A4F`), file `summary-A4F-ICEBAR.csv` will be created by the script, containing the following information:
+
+**model case name** | **repair result** _( correct, not fix found^, exhausted^, spurious^, or timeout)_ | **ICEBAR iterations** _(0 in case of ARepair mode)_ | **# of test generated** | **checking and test generation time (ms)** | **Repair time (ms)** | **# of calls to the ARepair tool**
+
+_(^) not fix found and spurious are reported when running in ARepair mode (0 max iterations); exhausted is used when running with at least one iteration._
 
 # Instalation
 
