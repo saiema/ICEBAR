@@ -5,7 +5,7 @@
 As of version 2.8.1, ICEBAR requirements are the following:
 
 1. Java 8 (newer versions may work).
-2. [ARepair^](https://github.com/kaiyuanw/ARepair), used for test generation. For convenience, ARepair is included in our [2.8.1 release](https://github.com/saiema/ICEBAR/releases/tag/2.8.1).
+2. [ARepair(^)](https://github.com/kaiyuanw/ARepair), used for test generation. For convenience, ARepair is included in our [2.8.1 release](https://github.com/saiema/ICEBAR/releases/tag/2.8.1).
 3. [BeAFix 2.12.1](https://github.com/saiema/BeAFix/releases/tag/2.12.1), also used for test generation. For convenience, BeAFix 2.12.1 is also included in  our [2.8.1 release](https://github.com/saiema/ICEBAR/releases/tag/2.8.1).
 4. Bash if using GNU/Linux, or zsh on macOS (^^).
 
