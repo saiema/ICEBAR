@@ -127,7 +127,9 @@ The script for running these experiments is `icebar-run.sh` which can take two p
 ./icebar-run.sh --run-A4F
 ```
 
-## Running ARepair experiments (given a model and 4 test suites, run ARepair once per test suite). The used test suites are an automatic generated one (using AUnit), and three randomly generated test suites.
+## Running ARepair experiments
+
+Given a model and 4 test suites, run ARepair once per test suite. The used test suites are an automatic generated one (using AUnit), and three randomly generated test suites.
 
 ### Running ARepair on ARepair's benchmark
 ```
