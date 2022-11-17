@@ -1,7 +1,5 @@
 package ar.edu.unrc.exa.dc.icebar.properties;
 
-import org.jetbrains.annotations.Contract;
-
 import java.io.File;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -132,7 +130,6 @@ class ICEBARPropertiesUtils {
         return Paths.get(value);
     }
 
-    @Contract("_, _ -> fail")
     static void throwException(Property key, String value) {
         throw new IllegalArgumentException("Invalid value " + value + " for property " + key.getKey());
     }

@@ -1,5 +1,6 @@
 package ar.edu.unrc.exa.dc.search;
 
+import ar.edu.unrc.exa.dc.icebar.ICEBAR;
 import ar.edu.unrc.exa.dc.icebar.Report;
 import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
 import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties.IcebarSearchAlgorithm;
@@ -46,7 +47,6 @@ public class IterativeCEBasedAlloyRepair {
     private TestHashes untrustedTests;
 
     private IcebarSearchAlgorithm search = IcebarSearchAlgorithm.DFS;
-
     private final TimeCounter arepairTimeCounter = new TimeCounter();
     private final TimeCounter beafixTimeCounter = new TimeCounter();
     private final TimeCounter totalTime = new TimeCounter();

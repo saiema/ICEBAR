@@ -2,8 +2,6 @@ package ar.edu.unrc.exa.dc.icebar.properties;
 
 import ar.edu.unrc.exa.dc.logging.LocalLogging;
 import ar.edu.unrc.exa.dc.util.Utils;
-import org.jetbrains.annotations.Nullable;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -164,7 +162,6 @@ public class ICEBARProperties {
         return toNumber(getProperty(BEAFIX_TESTS));
     }
 
-    @Nullable
     public Path beafixModelOverridesFolder() {
         String pathValue = getProperty(BEAFIX_MODEL_OVERRIDES_FOLDER);
         if (pathValue.trim().isEmpty()) {

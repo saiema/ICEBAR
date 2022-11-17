@@ -75,6 +75,7 @@ public class LocalLogging {
                 return record.getMessage() + "\n";
             }
         }
+
     }
 
 }
