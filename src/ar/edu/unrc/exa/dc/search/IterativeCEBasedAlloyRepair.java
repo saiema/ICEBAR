@@ -1,6 +1,11 @@
 package ar.edu.unrc.exa.dc.search;
 
+import ar.edu.unrc.exa.dc.icebar.ICEBAR;
 import ar.edu.unrc.exa.dc.icebar.Report;
+import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
+import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties.IcebarSearchAlgorithm;
+import ar.edu.unrc.exa.dc.icebar.properties.Property;
+import ar.edu.unrc.exa.dc.logging.LocalLogging;
 import ar.edu.unrc.exa.dc.tools.*;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 import ar.edu.unrc.exa.dc.util.*;
@@ -10,28 +15,14 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.logging.FileHandler;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
+import java.util.stream.Collectors;
 
 import static ar.edu.unrc.exa.dc.util.Utils.*;
 
 public class IterativeCEBasedAlloyRepair {
 
-    private static final Logger logger = Logger.getLogger(IterativeCEBasedAlloyRepair.class.getName());
-    private static final Path logFile = Paths.get("Repair.log");
-
-    static {
-        try {
-            // This block configure the logger with handler and formatter
-            FileHandler fh = new FileHandler(logFile.toString());
-            logger.addHandler(fh);
-            SimpleFormatter formatter = new SimpleFormatter();
-            fh.setFormatter(formatter);
-        } catch (SecurityException | IOException e) {
-            e.printStackTrace();
-        }
-    }
+    private static final Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.getInstance().icebarConsoleLoggingLevel(), ICEBARProperties.getInstance().icebarFileLoggingLevel());
 
     public static final int LAPS_DEFAULT = 4;
 
@@ -39,6 +30,7 @@ public class IterativeCEBasedAlloyRepair {
     private final BeAFix beAFix;
     private final Set<BeAFixTest> trustedCounterexampleTests;
     private final Path modelToRepair;
+    private final String modelToRepairName;
     private final Path oracle;
     private final int laps;
     private int totalTestsGenerated;
@@ -49,24 +41,10 @@ public class IterativeCEBasedAlloyRepair {
     private TestHashes trustedTests;
     private TestHashes untrustedTests;
 
-    public enum ICEBARSearch {
-        DFS, BFS
-    }
-
-    private ICEBARSearch search = ICEBARSearch.DFS;
-    public void setSearch(ICEBARSearch search) {
+    private IcebarSearchAlgorithm search = IcebarSearchAlgorithm.DFS;
+    public void setSearch(IcebarSearchAlgorithm search) {
         this.search = search;
     }
-
-    private boolean allowSecondarySearchSpace = false;
-    public void allowSecondarySearchSpace(boolean allowSecondarySearchSpace) { this.allowSecondarySearchSpace = allowSecondarySearchSpace; }
-
-    public enum ICEBARInitialTestsLocation {
-        PREPEND, APPEND
-    }
-
-    private ICEBARInitialTestsLocation initialTestsLocation = ICEBARInitialTestsLocation.APPEND;
-    public void setInitialTestsLocation(ICEBARInitialTestsLocation initialTestsLocation) { this.initialTestsLocation = initialTestsLocation; }
 
     private boolean allowFactsRelaxation = false;
     public void allowFactsRelaxation(boolean allowFactsRelaxation) { this.allowFactsRelaxation = allowFactsRelaxation; }
@@ -99,6 +77,7 @@ public class IterativeCEBasedAlloyRepair {
         this.beAFix = beAFix;
         this.trustedCounterexampleTests = new HashSet<>();
         this.modelToRepair = modelToRepair;
+        this.modelToRepairName = modelToRepair.getFileName().toString().replace(".als","");
         this.oracle = oracle;
         this.laps = laps;
         this.totalTestsGenerated = 0;
@@ -115,9 +94,9 @@ public class IterativeCEBasedAlloyRepair {
     private InitialTests initialTests;
     public void setInitialTests(InitialTests initialTests) { this.initialTests = initialTests; }
 
-    private boolean usePriorization = false;
-    public void usePriorization(boolean usePriorization) {
-        this.usePriorization = usePriorization;
+    private boolean usePrioritization = false;
+    public void usePrioritization(boolean usePrioritization) {
+        this.usePrioritization = usePrioritization;
     }
 
     public boolean justRunningARepairOnce() {
@@ -125,9 +104,16 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     private CandidateSpace searchSpace = null;
-    private CandidateSpace secondarySearchSpace = null;
+
     public Optional<FixCandidate> repair() throws IOException {
         //watches for different time process recording
+        logger.info("Starting ICEBAR process with:\n" +
+                "\tModel: " + modelToRepair.toString() + "\n" +
+                "\tProperty-based Oracle: " + oracle.toString() + "\n" +
+                "\tInitial tests: " + (initialTests==null?"NONE":initialTests.toString()) + "\n" +
+                "\tLaps: " + laps + "\n");
+        logger.fine("Full ICEBAR configuration:\n\t" +
+                String.join("\n\t", ICEBARProperties.getInstance().getAllRawPropertyValues()));
         TimeCounter arepairTimeCounter = new TimeCounter();
         TimeCounter beafixTimeCounter = new TimeCounter();
         TimeCounter totalTime = new TimeCounter();
@@ -141,6 +127,7 @@ public class IterativeCEBasedAlloyRepair {
             evaluatedCandidates++;
             maxReachedLap = Math.max(maxReachedLap, current.depth());
             ARepairResult aRepairResult = runARepair(arepairTimeCounter, current);
+            logger.info("Running ARepair ended with " + (aRepairResult.hasRepair()?"FIX":"NO FIX"));
             if (aRepairResult.equals(ARepairResult.ERROR)) {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
                 if (aRepairResult.nullPointerExceptionFound() && keepGoingAfterARepairNPE) {
@@ -158,40 +145,42 @@ public class IterativeCEBasedAlloyRepair {
                 boolean fromOriginal = aRepairResult.equals(ARepairResult.NO_TESTS);
                 FixCandidate repairCandidate = fromOriginal?current:FixCandidate.aRepairCheckCandidate(aRepairResult.repair(), current.depth());
                 BeAFixResult beAFixCheckResult = runBeAFixCheck(beafixTimeCounter, repairCandidate);
+                logger.info("Validating ARepair fix against property-based oracle: DOES " + (beAFixCheckResult.checkResult()?"":"NOT") + " SATISFIES ORACLE");
                 int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
                 Pair<Boolean, FixCandidate> beAFixCheckAnalysis = analyzeBeAFixCheck(beAFixCheckResult, beafixTimeCounter, arepairTimeCounter, totalTime, current, repairCandidate);
                 if (beAFixCheckAnalysis.fst())
                     return Optional.ofNullable(beAFixCheckAnalysis.snd());
+                saveFailingTestSuite(aRepairResult.usedTests(),modelToRepairName);
                 if (current.depth() < laps) {
                     beafixTimeCounter.clockStart();
                     BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);
                     beafixTimeCounter.clockEnd();
                     if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                         return Optional.empty();
+                    logger.info("Generated " + beAFixResult.generatedTests() + " tests from spurious fix");
                     List<BeAFixTest> counterexampleTests = beAFixResult.getCounterexampleTests();
                     List<BeAFixTest> counterexampleUntrustedTests = beAFixResult.getCounterExampleUntrustedTests();
                     List<BeAFixTest> predicateTests = beAFixResult.getPredicateTests();
                     List<BeAFixTest> relaxedPredicateTests = null;
                     List<BeAFixTest> relaxedAssertionsTests = null;
-                    if (allowFactsRelaxation && ((counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty()) || allowSecondarySearchSpace) && predicateTests.isEmpty()) {
-                        if (counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty())
-                            logger.info("No tests available, generating with relaxed facts...");
-                        else
-                            logger.info("Counterexamples are available but secondary search space is enabled, generating with relaxed facts...");
+                    if (allowFactsRelaxation && ((counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty())) && predicateTests.isEmpty()) {
+                        logger.fine("No tests available, generating with relaxed facts...");
                         beafixTimeCounter.clockStart();
                         beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, true, false);
                         beafixTimeCounter.clockEnd();
                         if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                             return Optional.empty();
+                        logger.info("Generated " + beAFixResult.generatedTests() + " tests from spurious fix by relaxing facts");
                         relaxedPredicateTests = beAFixResult.getPredicateTests();
                         if (forceAssertionGeneration) {
-                            logger.info("Generating with assertion forced test generation...");
+                            logger.fine("Generating with assertion forced test generation...");
                             beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
                             beafixTimeCounter.clockStart();
                             BeAFixResult beAFixResult_forcedAssertionTestGeneration = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, true);
                             beafixTimeCounter.clockEnd();
                             if (checkIfInvalidAndReportBeAFixResults(beAFixResult_forcedAssertionTestGeneration, current, beafixTimeCounter, arepairTimeCounter))
                                 return Optional.empty();
+                            logger.info("Generated " + beAFixResult_forcedAssertionTestGeneration.generatedTests() + " tests from spurious fix by forcing generation from assertions");
                             relaxedAssertionsTests = beAFixResult_forcedAssertionTestGeneration.getCounterExampleUntrustedTests();
                         }
                     }
@@ -230,60 +219,28 @@ public class IterativeCEBasedAlloyRepair {
                     boolean predicates = !predicateTests.isEmpty();
                     boolean relaxedPredicates = relaxedPredicateTests != null && !relaxedPredicateTests.isEmpty();
                     boolean relaxedAssertions = relaxedAssertionsTests != null && !relaxedAssertionsTests.isEmpty();
-                    if ((!counterexamples || allowSecondarySearchSpace) && untrustedCounterexamples) {
-                        if (!counterexamples) {
-                            if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
-                            }
-                        } else {
-                            logger.info("Adding untrusted counterexamples candidates into secondary search space...");
-                            if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, secondarySearchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
-                            }
+                    if ((!counterexamples) && untrustedCounterexamples) {
+                        if ((newBranches = createBranches(current, counterexampleUntrustedTests, true, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                            logger.severe("Branching error!");
+                            return Optional.empty();
                         }
                     }
-                    if (((!counterexamples && !untrustedCounterexamples) || allowSecondarySearchSpace) && predicates) {
-                        if (!counterexamples && !untrustedCounterexamples) {
-                            if ((newBranches = createBranches(current, predicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
-                            }
-                        } else {
-                            logger.info("Adding untrusted predicate candidates into secondary search space...");
-                            if ((newBranches = createBranches(current, predicateTests, false, secondarySearchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
-                            }
+                    if (((!counterexamples && !untrustedCounterexamples)) && predicates) {
+                        if ((newBranches = createBranches(current, predicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                            logger.severe("Branching error!");
+                            return Optional.empty();
                         }
                     }
-                    if (((!counterexamples && !untrustedCounterexamples && !predicates) || allowSecondarySearchSpace) && relaxedPredicates) {
-                        if (!counterexamples && !untrustedCounterexamples && !predicates) {
-                            if ((newBranches = createBranches(current, relaxedPredicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
-                            }
-                        } else {
-                            logger.info("Adding untrusted relaxed candidates into secondary search space...");
-                            if ((newBranches = createBranches(current, relaxedPredicateTests, false, secondarySearchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
-                            }
+                    if (((!counterexamples && !untrustedCounterexamples && !predicates)) && relaxedPredicates) {
+                        if ((newBranches = createBranches(current, relaxedPredicateTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                            logger.severe("Branching error!");
+                            return Optional.empty();
                         }
                     }
-                    if (((!counterexamples && !untrustedCounterexamples && !predicates && !relaxedPredicates) || allowSecondarySearchSpace) && relaxedAssertions) {
-                        if (!counterexamples && !untrustedCounterexamples && !predicates && !relaxedPredicates) {
-                            if ((newBranches = createBranches(current, relaxedAssertionsTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
-                            }
-                        } else {
-                            logger.info("Adding untrusted relaxed assertions candidates into secondary search space...");
-                            if ((newBranches = createBranches(current, relaxedAssertionsTests, false, secondarySearchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
-                                logger.severe("Branching error!");
-                                return Optional.empty();
-                            }
+                    if (((!counterexamples && !untrustedCounterexamples && !predicates && !relaxedPredicates)) && relaxedAssertions) {
+                        if ((newBranches = createBranches(current, relaxedAssertionsTests, false, searchSpace, repairedPropertiesForCurrent)) == BRANCHING_ERROR) {
+                            logger.severe("Branching error!");
+                            return Optional.empty();
                         }
                     }
                     totalTestsGenerated += beAFixResult.generatedTests() + (relaxedPredicateTests==null?0:relaxedPredicateTests.size()) + (relaxedAssertionsTests==null?0:relaxedAssertionsTests.size());
@@ -296,7 +253,7 @@ public class IterativeCEBasedAlloyRepair {
             } else {
                 evaluatedCandidatesLeadingToNoFix++;
                 if (aRepairResult.hasMessage()) {
-                    logger.info("ARepair ended with the following message:\n" + aRepairResult.message());
+                    logger.fine("ARepair ended with the following message:\n" + aRepairResult.message());
                 }
             }
             if (justRunningARepairOnce() && !noTests && !repairFound) {
@@ -325,18 +282,18 @@ public class IterativeCEBasedAlloyRepair {
             writeReport(report);
             return new Pair<>(true, null);
         } else if (beAFixCheckResult.checkResult()) {
-            logger.info("BeAFix validated the repair, fix found");
+            logger.fine("BeAFix validated the repair, fix found");
             Report report = Report.repairFound(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
             writeReport(report);
             return new Pair<>(true, repairCandidate);
         } else {
-            logger.info("BeAFix found the model to be invalid, generate tests and continue searching");
+            logger.fine("BeAFix found the model to be invalid, generate tests and continue searching");
             evaluatedCandidatesLeadingToSpurious++;
             if (current.depth() < laps) {
                 if (timeout > 0) {
                     totalTime.updateTotalTime();
                     if (totalTime.toMinutes() >= timeout) {
-                        logger.info("ICEBAR timeout (" + timeout + " minutes) reached");
+                        logger.fine("ICEBAR timeout (" + timeout + " minutes) reached");
                         Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
                         writeReport(report);
                         return new Pair<>(true, null);
@@ -348,33 +305,29 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     private BeAFixResult runBeAFixCheck(TimeCounter beafixTimeCounter, FixCandidate repairCandidate) {
-        logger.info("Validating current candidate with BeAFix");
+        logger.fine("Validating current candidate with BeAFix");
         beafixTimeCounter.clockStart();
         BeAFixResult beAFixCheckResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.CHECK, false, false);
         beafixTimeCounter.clockEnd();
-        logger.info( "BeAFix check finished\n" + beAFixCheckResult.toString());
+        logger.fine( "BeAFix check finished\n" + beAFixCheckResult.toString());
         return beAFixCheckResult;
     }
 
     private ARepairResult runARepair(TimeCounter arepairTimeCounter, FixCandidate current) throws IOException {
-        logger.info("Repairing current candidate\n" + current);
+        logger.fine("Repairing current candidate\n" + current);
         arepairTimeCounter.clockStart();
         ARepairResult aRepairResult = runARepairWithCurrentConfig(current);
         arepairTimeCounter.clockEnd();
         writeCandidateInfo(current, trustedCounterexampleTests, aRepairResult);
-        logger.info("ARepair finished\n" + aRepairResult.toString());
+        logger.fine("ARepair finished\n" + aRepairResult.toString());
         return aRepairResult;
     }
 
     private void initializeSearchSpaces() {
-        if (search.equals(ICEBARSearch.DFS)) {
-            searchSpace = usePriorization?CandidateSpace.priorityStack():CandidateSpace.normalStack();
-            if (allowSecondarySearchSpace)
-                secondarySearchSpace = usePriorization?CandidateSpace.priorityStack():CandidateSpace.normalStack();
-        } else if (search.equals(ICEBARSearch.BFS)) {
-            searchSpace = usePriorization?CandidateSpace.priorityQueue():CandidateSpace.normalQueue();
-            if (allowSecondarySearchSpace)
-                secondarySearchSpace = usePriorization?CandidateSpace.priorityQueue():CandidateSpace.normalQueue();
+        if (search.equals(IcebarSearchAlgorithm.DFS)) {
+            searchSpace = usePrioritization ?CandidateSpace.priorityStack():CandidateSpace.normalStack();
+        } else if (search.equals(IcebarSearchAlgorithm.BFS)) {
+            searchSpace = usePrioritization ?CandidateSpace.priorityQueue():CandidateSpace.normalQueue();
         } else {
             throw new IllegalStateException("Search mode unavailable (" + search + ")");
         }
@@ -385,10 +338,6 @@ public class IterativeCEBasedAlloyRepair {
     private FixCandidate nextCandidate() {
         if (!searchSpace.isEmpty())
             return searchSpace.pop();
-        else if (allowSecondarySearchSpace && secondarySearchSpace != null && !secondarySearchSpace.isEmpty()) {
-            logger.info("Search space is empty, but secondary search space is enabled and not empty, redirecting one candidate from secondary to primary...");
-            return secondarySearchSpace.pop();
-        }
         return null;
     }
 
@@ -446,34 +395,28 @@ public class IterativeCEBasedAlloyRepair {
                 BeAFixTest positive = positiveAndNegativeBranch.fst();
                 BeAFixTest negative = positiveAndNegativeBranch.snd();
                 for (List<BeAFixTest> combination : allCombinations) {
-                    if (positive.isMultipleBranch()) {
-                        for (BeAFixTest positiveBranch : positive.getAlternateBranches()) {
-                            List<BeAFixTest> newCombination = new LinkedList<>(combination);
-                            newCombination.add(positiveBranch);
-                            newCombinations.add(newCombination);
-                        }
-                    } else {
-                        List<BeAFixTest> newCombination = new LinkedList<>(combination);
-                        newCombination.add(positive);
-                        newCombinations.add(newCombination);
-                    }
-                    if (negative.isMultipleBranch()) {
-                        for (BeAFixTest negativeBranch : negative.getAlternateBranches()) {
-                            List<BeAFixTest> newCombination = new LinkedList<>(combination);
-                            newCombination.add(negativeBranch);
-                            newCombinations.add(newCombination);
-                        }
-                    } else {
-                        List<BeAFixTest> newCombination = new LinkedList<>(combination);
-                        newCombination.add(negative);
-                        newCombinations.add(newCombination);
-                    }
+                    updateCombinations(newCombinations, positive, combination);
+                    updateCombinations(newCombinations, negative, combination);
                 }
                 allCombinations.clear();
                 allCombinations.addAll(newCombinations);
             }
         }
         return allCombinations;
+    }
+
+    private void updateCombinations(List<List<BeAFixTest>> newCombinations, BeAFixTest currentBranch, List<BeAFixTest> combination) {
+        if (currentBranch.isMultipleBranch()) {
+            for (BeAFixTest positiveBranch : currentBranch.getAlternateBranches()) {
+                List<BeAFixTest> newCombination = new LinkedList<>(combination);
+                newCombination.add(positiveBranch);
+                newCombinations.add(newCombination);
+            }
+        } else {
+            List<BeAFixTest> newCombination = new LinkedList<>(combination);
+            newCombination.add(currentBranch);
+            newCombinations.add(newCombination);
+        }
     }
 
     private boolean checkIfInvalidAndReportBeAFixResults(BeAFixResult beAFixResult, FixCandidate current, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter) throws IOException {
@@ -514,10 +457,7 @@ public class IterativeCEBasedAlloyRepair {
         int testCount;
         try {
             if (initialTests != null) {
-                if (initialTestsLocation.equals(ICEBARInitialTestsLocation.PREPEND))
-                    tests.addAll(0, initialTests.getInitialTests());
-                else
-                    tests.addAll(initialTests.getInitialTests());
+                tests.addAll(0, initialTests.getInitialTests());
             }
             testCount = generateTestsFile(tests, testsPath);
         } catch (IOException e) {
@@ -526,11 +466,12 @@ public class IterativeCEBasedAlloyRepair {
             error.message(Utils.exceptionToString(e));
             return error;
         }
-        logger.info("Running ARepair with " + testCount + " tests");
+        logger.fine("Running ARepair with " + testCount + " tests");
         writeTestsToLog(tests, logger);
         aRepair.testsPath(testsPath);
-        logger.info("Executing ARepair:\n" + aRepair.aRepairCommandToString());
+        logger.fine("Executing ARepair:\n" + aRepair.aRepairCommandToString());
         ARepairResult aRepairResult = aRepair.run();
+        aRepairResult.usedTests(tests);
         arepairCalls++;
         return aRepairResult;
     }

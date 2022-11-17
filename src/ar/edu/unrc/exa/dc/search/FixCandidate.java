@@ -1,5 +1,6 @@
 package ar.edu.unrc.exa.dc.search;
 
+import ar.edu.unrc.exa.dc.logging.LocalLogging;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 import ar.edu.unrc.exa.dc.util.TestHashes;
 
@@ -16,20 +17,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.*;
 
 public final class FixCandidate {
 
-    private static final Logger logger = Logger.getLogger(IterativeCEBasedAlloyRepair.class.getName());
-    private static final Path logFile = Paths.get("Candidates.log");
-
-    static {
-        try {
-            // This block configure the logger with handler and formatter
-            FileHandler fh = new FileHandler(logFile.toString());
-            logger.addHandler(fh);
-            SimpleFormatter formatter = new SimpleFormatter();
-            fh.setFormatter(formatter);
-        } catch (SecurityException | IOException e) {
-            e.printStackTrace();
-        }
-    }
+    private static final Logger logger = LocalLogging.getLogger(FixCandidate.class);
 
     private static boolean checkRepeated = false;
     public static void checkRepeated(boolean checkRepeated) { FixCandidate.checkRepeated = checkRepeated; }

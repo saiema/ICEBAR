@@ -1,6 +1,8 @@
 package ar.edu.unrc.exa.dc.tools;
 
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
 
 public enum ARepairResult {
 
@@ -13,6 +15,8 @@ public enum ARepairResult {
     private String message = null;
     private Path repair = null;
     private boolean npeFound = false;
+
+    private List<BeAFixResult.BeAFixTest> usedTests = Collections.emptyList();
 
     public String message() {
         return message;
@@ -44,6 +48,14 @@ public enum ARepairResult {
 
     public boolean nullPointerExceptionFound() {
         return npeFound;
+    }
+
+    public void usedTests(List<BeAFixResult.BeAFixTest> usedTests) {
+        this.usedTests = usedTests;
+    }
+
+    public List<BeAFixResult.BeAFixTest> usedTests() {
+        return usedTests;
     }
 
     @Override

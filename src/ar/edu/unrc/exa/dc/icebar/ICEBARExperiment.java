@@ -1,7 +1,9 @@
 package ar.edu.unrc.exa.dc.icebar;
 
+import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
 import ar.edu.unrc.exa.dc.util.Utils;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 public final class ICEBARExperiment {
@@ -10,6 +12,7 @@ public final class ICEBARExperiment {
     private Path oraclePath;
     private Path propertiesPath;
     private Path initialTestsPath;
+    private Path failedTestSuitesFolderPath;
 
     private static ICEBARExperiment instance;
 
@@ -21,10 +24,19 @@ public final class ICEBARExperiment {
 
     private ICEBARExperiment() {}
 
-    public void modelPath(Path modelPath) {
+    public void modelPath(Path modelPath) throws IOException {
         if (!Utils.isValidPath(modelPath, Utils.PathCheck.ALS))
             throw new IllegalArgumentException("invalid model path (" + modelPath + ")");
         this.modelPath = modelPath;
+        if (ICEBARProperties.getInstance().saveAllTestSuites()) {
+            String modelFileName = modelPath.getFileName().toString();
+            String modelName = modelFileName;
+            int lastDot = modelFileName.lastIndexOf(".");
+            if (lastDot > 0) {
+                modelName = modelFileName.substring(0, lastDot);
+            }
+            failedTestSuitesFolderPath = Utils.createFailedTestSuitesFolder(modelName);
+        }
     }
 
     public void oraclePath(Path oraclePath) {
@@ -61,6 +73,10 @@ public final class ICEBARExperiment {
         return initialTestsPath;
     }
 
+    public Path failedTestSuitesFolderPath() {
+        return failedTestSuitesFolderPath;
+    }
+
     public boolean hasModel() {
         return modelPath != null;
     }
@@ -75,6 +91,10 @@ public final class ICEBARExperiment {
 
     public boolean hasInitialTests() {
         return initialTestsPath != null;
+    }
+
+    public boolean hasFailedTestSuitesFolderPath() {
+        return failedTestSuitesFolderPath != null;
     }
 
 }

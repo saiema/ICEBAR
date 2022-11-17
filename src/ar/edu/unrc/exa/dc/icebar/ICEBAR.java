@@ -1,5 +1,8 @@
 package ar.edu.unrc.exa.dc.icebar;
 
+import ar.edu.unrc.exa.dc.icebar.properties.ICEBARFileBasedProperties;
+import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
+import ar.edu.unrc.exa.dc.logging.LocalLogging;
 import ar.edu.unrc.exa.dc.search.FixCandidate;
 import ar.edu.unrc.exa.dc.search.IterativeCEBasedAlloyRepair;
 import ar.edu.unrc.exa.dc.tools.ARepair;
@@ -12,27 +15,37 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 import static ar.edu.unrc.exa.dc.util.Utils.getMaxScopeFromAlsFile;
 import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.9.0rc";
+    private static final Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.IcebarLoggingLevel.FINE,ICEBARProperties.IcebarLoggingLevel.FINE);
+
+    private static final String VERSION = "2.10.0";
+    private static final String BEAFIX_MIN_VERSION = "2.12.1";
+    private static final String AREPAIR_MIN_VERSION = "*";
 
     private static final String AREPAIR_SAT_SOLVERS = "sat-solvers";
     private static final String AREPAIR_LIBS_ROOT = "libs";
     private static final String AREPAIR_TARGET_ROOT = "target";
     private static final String ALLOY_JAR = "alloy.jar";
-    private static final String APARSER_JAR = "aparser-1.0.jar";
+    private static final String AREPAIR_PARSER_JAR = "aparser-1.0.jar";
     private static final String AREPAIR_JAR = "arepair-1.0-jar-with-dependencies.jar";
 
     private static final String HELP_FLAG = "--help";
     private static final String VERSION_FLAG = "--version";
 
+    private static final String OPTIONS_FLAG = "--options";
+
+    private static final String GENERATE_TEMPLATE_PROPERTIES_FLAG = "--generateTemplateProperties";
+
     /**
-     * Runs CEGAR with a model, oracle, and a properties file
+     * Runs ICEBAR with a model, oracle, and a properties file
      * @param args the arguments to be used, must be three, two als files and one .properties file
      */
     public static void main(String[] args) throws IOException {
@@ -44,17 +57,26 @@ public class ICEBAR {
             version();
             return;
         }
+        if (args[0].trim().compareToIgnoreCase(OPTIONS_FLAG) == 0) {
+            options();
+            return;
+        }
+        if (args[0].trim().compareToIgnoreCase(GENERATE_TEMPLATE_PROPERTIES_FLAG) == 0) {
+            if (args.length != 2) {
+                logger.severe("Expected a path to a .properties file as second argument");
+                return;
+            }
+            String path = args[1];
+            generateTemplateProperties(path);
+            return;
+        }
         parseCommandLine(args);
-        ICEBARProperties.getInstance().loadConfig(
-                ICEBARExperiment.getInstance().hasProperties()?
-                        ICEBARExperiment.getInstance().propertiesPath().toString():
-                        ICEBARProperties.DEFAULT_PROPERTIES
-        );
+        if (ICEBARExperiment.getInstance().hasProperties()) {
+            ICEBARFileBasedProperties.ICEBAR_PROPERTIES = ICEBARExperiment.getInstance().propertiesPath().toAbsolutePath().toString();
+        }
         BeAFix beafix = beafix();
         ARepair arepair = arepair();
-        int laps = IterativeCEBasedAlloyRepair.LAPS_DEFAULT;
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_LAPS))
-            laps = ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.ICEBAR_LAPS);
+        int laps = ICEBARProperties.getInstance().icebarLaps();
         IterativeCEBasedAlloyRepair iterativeCEBasedAlloyRepair = new IterativeCEBasedAlloyRepair(
                 ICEBARExperiment.getInstance().modelPath(),
                 ICEBARExperiment.getInstance().oraclePath(),
@@ -62,87 +84,48 @@ public class ICEBAR {
                 beafix,
                 laps
         );
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE)) {
-            boolean updateScopeFromOracle = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE);
-            if (updateScopeFromOracle)
-                arepair.setScope(Math.max(arepair.scope(), getMaxScopeFromAlsFile(ICEBARExperiment.getInstance().oraclePath())));
-        }
+        boolean updateScopeFromOracle = ICEBARProperties.getInstance().updateARepairScopeFromOracle();
+        if (updateScopeFromOracle)
+            arepair.setScope(Math.max(arepair.scope(), getMaxScopeFromAlsFile(ICEBARExperiment.getInstance().oraclePath())));
         if (ICEBARExperiment.getInstance().hasInitialTests()) {
             InitialTests initialTests = new InitialTests(ICEBARExperiment.getInstance().initialTestsPath());
             iterativeCEBasedAlloyRepair.setInitialTests(initialTests);
             beafix.testsStartingIndex(initialTests.getMaxIndex() + 1);
             arepair.setScope(Math.max(arepair.scope(), initialTests.getMaxScope()));
         }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_PRIORIZATION)) {
-            iterativeCEBasedAlloyRepair.usePriorization(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_PRIORIZATION));
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_SEARCH)) {
-            String search = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.ICEBAR_SEARCH);
-            if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.ICEBARSearch.DFS.toString()) == 0) {
-                iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.ICEBARSearch.DFS);
-            } else if (search.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.ICEBARSearch.BFS.toString()) == 0) {
-                iterativeCEBasedAlloyRepair.setSearch(IterativeCEBasedAlloyRepair.ICEBARSearch.BFS);
-            } else {
-                throw new IllegalArgumentException("Invalid configuration value for " + ICEBARProperties.ConfigKey.ICEBAR_SEARCH.getKey() + " (" + search + ")");
-            }
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_INITIAL_TESTS_POSITION)) {
-            String initialTestsPosition = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.ICEBAR_INITIAL_TESTS_POSITION);
-            if (initialTestsPosition.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.ICEBARInitialTestsLocation.APPEND.toString()) == 0) {
-                iterativeCEBasedAlloyRepair.setInitialTestsLocation(IterativeCEBasedAlloyRepair.ICEBARInitialTestsLocation.APPEND);
-            } else if (initialTestsPosition.trim().compareToIgnoreCase(IterativeCEBasedAlloyRepair.ICEBARInitialTestsLocation.PREPEND.toString()) == 0) {
-                iterativeCEBasedAlloyRepair.setInitialTestsLocation(IterativeCEBasedAlloyRepair.ICEBARInitialTestsLocation.PREPEND);
-            } else {
-                throw new IllegalArgumentException("Invalid configuration value for " + ICEBARProperties.ConfigKey.ICEBAR_INITIAL_TESTS_POSITION.getKey() + "(" + initialTestsPosition + ")");
-            }
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_ENABLE_RELAXEDFACTS_GENERATION)) {
-            boolean allowNoFacts = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_ENABLE_RELAXEDFACTS_GENERATION);
-            iterativeCEBasedAlloyRepair.allowFactsRelaxation(allowNoFacts);
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_GLOBAL_TRUSTED_TESTS)) {
-            boolean globalTrustedTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_GLOBAL_TRUSTED_TESTS);
-            iterativeCEBasedAlloyRepair.globalTrustedTests(globalTrustedTests);
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_ENABLE_FORCE_ASSERTION_TESTS)) {
-            boolean forceAssertionsTests = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_ENABLE_FORCE_ASSERTION_TESTS);
-            iterativeCEBasedAlloyRepair.forceAssertionGeneration(forceAssertionsTests);
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_TIMEOUT)) {
-            long timeout = ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.ICEBAR_TIMEOUT);
-            if (timeout < 0)
-                throw new IllegalArgumentException("invalid value for " + ICEBARProperties.ConfigKey.ICEBAR_TIMEOUT + " (" + timeout + ")");
-            iterativeCEBasedAlloyRepair.timeout(timeout);
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_KEEP_GOING_ON_AREPAIR_NPE)) {
-            boolean keepGoingAfterARepairNPE = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_KEEP_GOING_ON_AREPAIR_NPE);
-            iterativeCEBasedAlloyRepair.keepGoingAfterARepairNPE(keepGoingAfterARepairNPE);
-        }
-        boolean checkRepeated = false;
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_CHECK_REPEATED_TESTS)) {
-            checkRepeated = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_CHECK_REPEATED_TESTS);
-        }
-        FixCandidate.checkRepeated(checkRepeated);
-        boolean treatARepairPartialFixesAsFixes = false;
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES)) {
-            treatARepairPartialFixesAsFixes = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.AREPAIR_TREAT_PARTIAL_REPAIRS_AS_FIXES);
-        }
-        arepair.treatPartialRepairsAsFixes(treatARepairPartialFixesAsFixes);
-        boolean allowSecondarySearchSpace = false;
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.ICEBAR_SECONDARY_SEARCH_SPACE)) {
-            allowSecondarySearchSpace = ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.ICEBAR_SECONDARY_SEARCH_SPACE);
-        }
-        iterativeCEBasedAlloyRepair.allowSecondarySearchSpace(allowSecondarySearchSpace);
+        iterativeCEBasedAlloyRepair.usePrioritization(ICEBARProperties.getInstance().enableCandidatePrioritization());
+        iterativeCEBasedAlloyRepair.setSearch(ICEBARProperties.getInstance().icebarSearchAlgorithm());
+        iterativeCEBasedAlloyRepair.allowFactsRelaxation(ICEBARProperties.getInstance().enableRelaxedFactsTestGeneration());
+        iterativeCEBasedAlloyRepair.globalTrustedTests(ICEBARProperties.getInstance().globalTrustedTests());
+        iterativeCEBasedAlloyRepair.forceAssertionGeneration(ICEBARProperties.getInstance().forceAssertionTestGeneration());
+        iterativeCEBasedAlloyRepair.timeout(ICEBARProperties.getInstance().icebarTimeout());
+        iterativeCEBasedAlloyRepair.keepGoingAfterARepairNPE(ICEBARProperties.getInstance().keepGoingOnARepairNPE());
+        arepair.treatPartialRepairsAsFixes(ICEBARProperties.getInstance().arepairTreatPartialRepairsAsFixes());
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
         if (fix.isPresent()) {
-            System.out.println("Fix found\n" + fix.get() + "\n");
+            logger.info("Fix found\n" + fix.get() +
+                    "\n\tRepaired model located at " + Paths.get(
+                            ICEBARProperties.getInstance().arepairRootFolder().toAbsolutePath().toString(),
+                            ARepair.FIX_FILE
+                    ) +
+                    "\n\tTest suite used located at " + ICEBARExperiment.getInstance().modelPath().toAbsolutePath().toString().replace(".als", "_tests.als")
+            );
         } else {
-            System.out.println("No Fix Found for model: " + ICEBARExperiment.getInstance().modelPath().toString() + "\n");
+            logger.info(
+                    "No Fix Found for model: " +
+                    ICEBARExperiment.getInstance().modelPath().toString() + "\n"
+            );
+        }
+        if (ICEBARProperties.getInstance().saveAllTestSuites()) {
+            logger.info(
+                    "All test suites that did not produce a valid fix, can be found at " +
+                         ICEBARExperiment.getInstance().failedTestSuitesFolderPath().toAbsolutePath()
+            );
         }
     }
 
-    private static void parseCommandLine(String[] args) {
+    private static void parseCommandLine(String[] args) throws IOException {
         if (args.length == 0)
             return;
         boolean configKeyRead = false;
@@ -168,7 +151,7 @@ public class ICEBAR {
     private static final String ORACLE_KEY = "oracle";
     private static final String PROPERTIES_KEY = "properties";
     private static final String INITIAL_TESTS_KEY = "initialtests";
-    private static void setConfig(String key, String value) {
+    private static void setConfig(String key, String value) throws IOException {
         Path path = Paths.get(value);
         switch (key.toLowerCase()) {
             case MODEL_KEY: {
@@ -204,15 +187,24 @@ public class ICEBAR {
     }
 
     private static void help() {
-        String help = "ICEBAR CLI\nVERSION " + VERSION + "\n" +
+        String help = "ICEBAR CLI" +
+                "\nVERSION " + VERSION +
+                "\nBeAFix Minimum Version " + BEAFIX_MIN_VERSION +
+                "\nARepair Minimum Version " + AREPAIR_MIN_VERSION +
+                "\n" +
                 "Iterative Counter Example-Based Alloy Repair\n" +
-                "Usage:\n" +
-                "\t--help                                   :  Shows this message\n" +
-                "\t--version                                :  Shows the current version of ICEBAR\n" +
-                "\t--" + MODEL_KEY + "<path to .als file>               :  The path to the model to repair (anything in this file can be modified to repair) (*).\n" +
-                "\t--" + ORACLE_KEY + "<path to .als file>              :  The path to the oracle (containing predicates, assertions, and anything related to those which can't be modified to repair) (*).\n" +
-                "\t--" + PROPERTIES_KEY + "<path to .properties file>   :  ICEBAR properties, please look at 'icebar_stein.properties' as an example (**).\n" +
-                "\t--" + INITIAL_TESTS_KEY + "<path to .tests file>      :  Initial tests set which will be used in conjunction with counterexample based tests (***).\n" +
+                "Usage: java -jar Icebar.jar [CONFIGURATION VALUES] <ARGUMENTS>\n" +
+                "Where <ARGUMENTS> can be one of the following:\n" +
+                "  --help...............................................................Shows this message\n" +
+                "  --options............................................................Show all configuration options\n" +
+                "  --generateTemplateProperties <path to new .properties file>..........Generates a template properties file\n" +
+                "  --version............................................................Shows the current version of ICEBAR\n" +
+                "  --" + MODEL_KEY + "<path to .als file>...........................................The path to the model to repair (anything in this file can be modified to repair) (*).\n" +
+                "  --" + ORACLE_KEY + "<path to .als file>..........................................The path to the oracle (containing predicates, assertions, and anything related to those which can't be modified to repair) (*).\n" +
+                "  --" + PROPERTIES_KEY + "<path to .properties file>...............................ICEBAR properties, please look at 'icebar_stein.properties' as an example (**).\n" +
+                "  --" + INITIAL_TESTS_KEY + "<path to .tests file>..................................Initial tests set which will be used in conjunction with counterexample based tests (***).\n" +
+                "The CONFIGURATION VALUES are defined by `-D<key>=<value>`, where each key is an ICEBAR option (see --options argument)\n" +
+                "Each configuration defined in this way, will override the configuration defined by the .properties file\n" +
                 "(*)   : This is a required argument.\n" +
                 "(**)  : Default properties will be used instead (from icebar.properties).\n" +
                 "(***) : Optional argument, default is no initial tests.\n" +
@@ -227,41 +219,47 @@ public class ICEBAR {
         System.out.println(VERSION);
     }
 
+    private static void options() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\nICEBAR's properties/configuration arguments\n");
+        sb.append("ICEBAR can be configure both by a .properties file having lines with <key>=<value> or by using `-D<key>=<value>` command line arguments.\n");
+        sb.append("The command line arguments will always override the configurations defined in the .properties file, available options are:\n\n");
+        for (Map.Entry<String, String> optionAndDescription : ICEBARProperties.getOptionsAndDescriptions().entrySet()) {
+            sb.append("Key: ").append(optionAndDescription.getKey()).append("\n");
+            sb.append("Description: ").append(optionAndDescription.getValue()).append("\n");
+            sb.append("\n");
+        }
+        System.out.println(sb);
+    }
+
+    private static void generateTemplateProperties(String path) throws IOException {
+        Path newPropertiesTemplate = ICEBARProperties.generateTemplatePropertiesFile(path);
+        if (newPropertiesTemplate == null) {
+            System.err.println("The path to the new .properties template appears to be incorrect, please check it and try again (" + path + ")");
+        } else {
+            System.out.println("The new .properties template was successfully created at " + path);
+        }
+    }
+
     private static BeAFix beafix() {
         BeAFix beAFix = new BeAFix();
-        beAFix.setBeAFixJar(Paths.get(ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.BEAFIX_JAR)));
+        beAFix.setBeAFixJar(ICEBARProperties.getInstance().beafixJar());
         beAFix.setOutputDir(Paths.get("BeAFixOutput").toAbsolutePath());
         beAFix.createOutDirIfNonExistent(true);
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS))
-            beAFix.instanceTests(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.BEAFIX_INSTANCE_TESTS));
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_TESTS))
-            beAFix.testsToGenerate(ICEBARProperties.getInstance().getIntArgument(ICEBARProperties.ConfigKey.BEAFIX_TESTS));
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_MODEL_OVERRIDES_FOLDER)) {
-            String modelOverridesFolderValue = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.BEAFIX_MODEL_OVERRIDES_FOLDER);
-            Path modelOverridesFolder = modelOverridesFolderValue.trim().isEmpty()?null:Paths.get(modelOverridesFolderValue);
-            beAFix.modelOverridesFolder(modelOverridesFolder);
-            beAFix.modelOverrides(modelOverridesFolder != null);
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_BUGGY_FUNCS_FILE)) {
-            String buggyFuncsFileValue = ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.BEAFIX_BUGGY_FUNCS_FILE);
-            Path buggyFuncsFile = buggyFuncsFileValue.trim().isEmpty()?null:Paths.get(buggyFuncsFileValue);
-            beAFix.buggyFunctions(buggyFuncsFile);
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE)) {
-            beAFix.aRepairCompatibilityRelaxedMode(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.BEAFIX_AREPAIR_COMPAT_RELAXED_MODE));
-        }
-        if (ICEBARProperties.getInstance().argumentExist(ICEBARProperties.ConfigKey.BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS)) {
-            beAFix.noInstanceTestForNegativeTestWhenNoFacts(ICEBARProperties.getInstance().getBooleanArgument(ICEBARProperties.ConfigKey.BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS));
-        }
+        beAFix.testsToGenerate(ICEBARProperties.getInstance().testsToGenerateUpperBound());
+        beAFix.instanceTests(ICEBARProperties.getInstance().enableBeAFixInstanceTestsGeneration());
+        beAFix.noInstanceTestForNegativeTestWhenNoFacts(ICEBARProperties.getInstance().noInstanceTestForNegativeBranchWhenNoFacts());
+        beAFix.modelOverrides(ICEBARProperties.getInstance().beafixModelOverridesFolder() != null);
+        beAFix.modelOverridesFolder(ICEBARProperties.getInstance().beafixModelOverridesFolder());
         return beAFix;
     }
 
     private static ARepair arepair() {
         List<Path> classpath = new LinkedList<>();
-        Path aRepairRoot = Paths.get(ICEBARProperties.getInstance().getStringArgument(ICEBARProperties.ConfigKey.AREPAIR_ROOT));
-        Path aRepairSatSolvers = Paths.get(AREPAIR_SAT_SOLVERS);
+        Path aRepairRoot = ICEBARProperties.getInstance().arepairRootFolder();
+        Path aRepairSatSolvers = Paths.get(aRepairRoot.toString(), AREPAIR_SAT_SOLVERS);
         Path aRepairAlloyJar = Paths.get(aRepairRoot.toString(), AREPAIR_LIBS_ROOT, ALLOY_JAR);
-        Path aRepairAParserJar = Paths.get(aRepairRoot.toString(), AREPAIR_LIBS_ROOT, APARSER_JAR);
+        Path aRepairAParserJar = Paths.get(aRepairRoot.toString(), AREPAIR_LIBS_ROOT, AREPAIR_PARSER_JAR);
         Path aRepairJar = Paths.get(aRepairRoot.toString(), AREPAIR_TARGET_ROOT, AREPAIR_JAR);
         classpath.add(aRepairJar);
         classpath.add(aRepairAParserJar);
