@@ -1,6 +1,5 @@
 package ar.edu.unrc.exa.dc.search;
 
-import ar.edu.unrc.exa.dc.icebar.ICEBAR;
 import ar.edu.unrc.exa.dc.icebar.Report;
 import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
 import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties.IcebarSearchAlgorithm;

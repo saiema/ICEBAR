@@ -27,6 +27,7 @@ public class ICEBAR {
     private static final Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.getInstance().icebarConsoleLoggingLevel(), ICEBARProperties.getInstance().icebarFileLoggingLevel());
 
     private static final String VERSION = "2.11.0";
+
     private static final String BEAFIX_MIN_VERSION = "2.12.1";
     private static final String AREPAIR_MIN_VERSION = "*";
 
