@@ -32,3 +32,6 @@ beafix.properties
 *.svg
 *.xml
 *.tests
+
+#IntelliJ project and configuration files
+*.iml
