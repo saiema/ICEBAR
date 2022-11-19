@@ -1,11 +1,8 @@
 package ar.edu.unrc.exa.dc.search;
 
-import ar.edu.unrc.exa.dc.icebar.ICEBAR;
 import ar.edu.unrc.exa.dc.icebar.Report;
 import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
 import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties.IcebarSearchAlgorithm;
-import ar.edu.unrc.exa.dc.icebar.properties.Property;
-import ar.edu.unrc.exa.dc.logging.LocalLogging;
 import ar.edu.unrc.exa.dc.tools.*;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 import ar.edu.unrc.exa.dc.util.*;
@@ -16,15 +13,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import static ar.edu.unrc.exa.dc.util.Utils.*;
 
 public class IterativeCEBasedAlloyRepair {
 
-    private static final Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.getInstance().icebarConsoleLoggingLevel(), ICEBARProperties.getInstance().icebarFileLoggingLevel());
-
-    public static final int LAPS_DEFAULT = 4;
+    private final Logger logger;
 
     private final ARepair aRepair;
     private final BeAFix beAFix;
@@ -61,7 +55,7 @@ public class IterativeCEBasedAlloyRepair {
     private boolean keepGoingAfterARepairNPE = false;
     public void keepGoingAfterARepairNPE(boolean keepGoingAfterARepairNPE) { this.keepGoingAfterARepairNPE =keepGoingAfterARepairNPE; }
 
-    public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps) {
+    public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps, Logger logger) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
             throw new IllegalArgumentException("Invalid model to repair path (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
         if (!isValidPath(oracle, Utils.PathCheck.ALS))
@@ -72,6 +66,7 @@ public class IterativeCEBasedAlloyRepair {
             throw new IllegalArgumentException("null BeAFix instance");
         if (laps < 0)
             throw new IllegalArgumentException("Negative value for laps");
+        this.logger = logger;
         this.aRepair = aRepair;
         this.aRepair.modelToRepair(modelToRepair);
         this.beAFix = beAFix;
@@ -85,10 +80,6 @@ public class IterativeCEBasedAlloyRepair {
         this.evaluatedCandidates = 0;
         this.evaluatedCandidatesLeadingToNoFix = 0;
         this.evaluatedCandidatesLeadingToSpurious = 0;
-    }
-
-    public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix) {
-        this(modelToRepair, oracle, aRepair, beAFix, LAPS_DEFAULT);
     }
 
     private InitialTests initialTests;
@@ -113,7 +104,7 @@ public class IterativeCEBasedAlloyRepair {
                 "\tInitial tests: " + (initialTests==null?"NONE":initialTests.toString()) + "\n" +
                 "\tLaps: " + laps + "\n");
         logger.fine("Full ICEBAR configuration:\n\t" +
-                String.join("\n\t", ICEBARProperties.getInstance().getAllRawPropertyValues()));
+                String.join("\n\t", ICEBARProperties.getInstance().getAllRawProperties()));
         TimeCounter arepairTimeCounter = new TimeCounter();
         TimeCounter beafixTimeCounter = new TimeCounter();
         TimeCounter totalTime = new TimeCounter();
@@ -426,7 +417,7 @@ public class IterativeCEBasedAlloyRepair {
                 beAFixResult.parseAllTests();
             }
             beafixMsg += beAFixResult + "\n";
-            logger.info(beafixMsg);
+            logger.fine(beafixMsg);
             return false;
         } else {
             logger.severe("BeAFix test generation ended in error, ending search");

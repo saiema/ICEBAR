@@ -1,5 +1,6 @@
 package ar.edu.unrc.exa.dc.icebar.properties;
 
+import ar.edu.unrc.exa.dc.logging.LocalLogging;
 import ar.edu.unrc.exa.dc.util.Utils;
 import org.jetbrains.annotations.Nullable;
 
@@ -10,12 +11,15 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static ar.edu.unrc.exa.dc.icebar.properties.ICEBARPropertiesUtils.*;
 import static ar.edu.unrc.exa.dc.icebar.properties.Property.*;
 
 public class ICEBARProperties {
+
+    private static final Logger logger = LocalLogging.getLogger(ICEBARProperties.class, IcebarLoggingLevel.INFO, IcebarLoggingLevel.OFF);
 
     private boolean useDefaultOnInvalidValue = false;
 
@@ -60,7 +64,7 @@ public class ICEBARProperties {
         } else {
             throwException(
                     property,
-                    "Couldn't get a value for property (" + property + ") and a value is needed (no default value is available)."
+                    "Couldn't get a valid value for property (" + property + ") and a value is needed (no default value is available). Check the information regarding the property, maybe the value is invalid."
             );
         }
         throw new IllegalStateException("Shouldn't have reached this point!");
@@ -78,6 +82,9 @@ public class ICEBARProperties {
                 if (isValidValue(property, propertiesFileValue)) {
                     return Optional.of(propertiesFileValue);
                 } else if (useDefaultOnInvalidValue) {
+                    logger.warning("Value for property (" + property + ") is not valid, will be using the default value instead.\n" +
+                            "Please check the description for the property to see if the value (" + propertiesFileValue + ") is valid\n" +
+                            property.getDescription());
                     return defaultValue(property);
                 }
             }
@@ -96,16 +103,17 @@ public class ICEBARProperties {
             if (isValidValue(property, vmValue)) {
                 return Optional.of(vmValue);
             } else if (useDefaultOnInvalidValue) {
+                logger.warning("Value for property (" + property + ") is not valid, will be using the default value instead.\n" +
+                        "Please check the description for the property to see if the value (" + vmValue + ") is valid\n" +
+                        property.getDescription());
                 return defaultValue(property);
             }
-            return Optional.empty();
-        } else {
-            return defaultValue(property);
-        }
-    }
-
-    public boolean useDefaultOnInvalidValue() {
-        return useDefaultOnInvalidValue;
+        }  /*
+            VM properties only overwrite properties from file if one of the following situations happen:
+            1. The properties file does not define a value for the property
+            2. The VM properties has a -D<property>=value
+             */
+        return Optional.empty();
     }
 
     public boolean enableBeAFixInstanceTestsGeneration() {
@@ -212,8 +220,10 @@ public class ICEBARProperties {
         return IcebarLoggingLevel.valueOf(getProperty(ICEBAR_LOGGING_FILE_VERBOSITY).toUpperCase());
     }
 
-    public List<String> getAllRawPropertyValues() {
-        return Arrays.stream(values()).map(this::getRawProperty).map(v -> v.orElse("UNSET")).collect(Collectors.toList());
+    public List<String> getAllRawProperties() {
+        return Arrays.stream(values()).map(p ->
+            p.getKey() + "=" + getRawProperty(p).orElse("UNSET")
+        ).collect(Collectors.toList());
     }
 
     public static Map<String, String> getOptionsAndDescriptions() {

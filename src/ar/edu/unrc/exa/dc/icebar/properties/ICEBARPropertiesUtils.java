@@ -63,9 +63,9 @@ class ICEBARPropertiesUtils {
             case ICEBAR_SEARCH : return isValidSearchAlgorithm(value);
             case ICEBAR_LOGGING_FILE_VERBOSITY:
             case ICEBAR_LOGGING_CONSOLE_VERBOSITY: {
-                return "NONE".compareToIgnoreCase(value) == 0
-                || "SIMPLE".compareToIgnoreCase(value) == 0
-                || "FULL".compareToIgnoreCase(value) == 0;
+                return ICEBARProperties.IcebarLoggingLevel.OFF.toString().compareToIgnoreCase(value) == 0
+                || ICEBARProperties.IcebarLoggingLevel.INFO.toString().compareToIgnoreCase(value) == 0
+                || ICEBARProperties.IcebarLoggingLevel.FINE.toString().compareToIgnoreCase(value) == 0;
             }
         }
         throw new IllegalArgumentException("Invalid or unsupported property (" + property + ")");

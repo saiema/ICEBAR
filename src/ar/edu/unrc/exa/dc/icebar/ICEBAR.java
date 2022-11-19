@@ -24,9 +24,9 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.IcebarLoggingLevel.FINE,ICEBARProperties.IcebarLoggingLevel.FINE);
+    private static final Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.getInstance().icebarConsoleLoggingLevel(), ICEBARProperties.getInstance().icebarFileLoggingLevel());
 
-    private static final String VERSION = "2.10.0";
+    private static final String VERSION = "2.10.1";
     private static final String BEAFIX_MIN_VERSION = "2.12.1";
     private static final String AREPAIR_MIN_VERSION = "*";
 
@@ -82,7 +82,8 @@ public class ICEBAR {
                 ICEBARExperiment.getInstance().oraclePath(),
                 arepair,
                 beafix,
-                laps
+                laps,
+                logger
         );
         boolean updateScopeFromOracle = ICEBARProperties.getInstance().updateARepairScopeFromOracle();
         if (updateScopeFromOracle)
@@ -257,7 +258,7 @@ public class ICEBAR {
     private static ARepair arepair() {
         List<Path> classpath = new LinkedList<>();
         Path aRepairRoot = ICEBARProperties.getInstance().arepairRootFolder();
-        Path aRepairSatSolvers = Paths.get(aRepairRoot.toString(), AREPAIR_SAT_SOLVERS);
+        Path aRepairSatSolvers = Paths.get(AREPAIR_SAT_SOLVERS);
         Path aRepairAlloyJar = Paths.get(aRepairRoot.toString(), AREPAIR_LIBS_ROOT, ALLOY_JAR);
         Path aRepairAParserJar = Paths.get(aRepairRoot.toString(), AREPAIR_LIBS_ROOT, AREPAIR_PARSER_JAR);
         Path aRepairJar = Paths.get(aRepairRoot.toString(), AREPAIR_TARGET_ROOT, AREPAIR_JAR);

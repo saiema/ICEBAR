@@ -97,14 +97,19 @@ public final class Utils {
                     ICEBARExperiment.getInstance().failedTestSuitesFolderPath().toString(),
                     modelName + "_failing_test_suite_" + testSuiteCount++ + ".als"
             );
-            writeTestsToFile(tests,testsPath,true);
+            writeTestsToFile(tests,testsPath,true, true);
         }
     }
 
     public static int writeTestsToFile(Collection<BeAFixTest> tests, Path output, boolean newFile) throws IOException {
+        return writeTestsToFile(tests, output, newFile, false);
+    }
+
+    private static int writeTestsToFile(Collection<BeAFixTest> tests, Path output, boolean newFile, boolean allowEmptyTests) throws IOException {
         int testCount = 0;
-        if (tests == null || tests.isEmpty())
+        if (!allowEmptyTests && (tests == null || tests.isEmpty())) {
             throw new IllegalArgumentException("null or empty tests");
+        }
         if (output == null)
             throw new IllegalArgumentException("output path is null");
         if (newFile && output.toFile().exists())
@@ -114,6 +119,10 @@ public final class Utils {
         File testsFile = output.toFile();
         if (newFile && !testsFile.createNewFile()) {
             throw new Error("Couldn't create tests file (" + (testsFile) + ")");
+        }
+        if (tests == null || tests.isEmpty()) {
+            Files.write(output, "-- NO TESTS".getBytes(), StandardOpenOption.APPEND);
+            return 0;
         }
         Files.write(output, "\n".getBytes(), StandardOpenOption.APPEND);
         for (BeAFixTest test : tests) {

@@ -19,14 +19,16 @@ public class LocalLogging {
 
     public static Logger getLogger(Class<?> forClass, IcebarLoggingLevel consoleLoggingLevel, IcebarLoggingLevel fileLoggingLevel) {
         Logger logger = Logger.getLogger(forClass.getName());
+        logger.setLevel(Level.FINE);
         final Path logsFolder = Paths.get("", "logs");
         try{
             Files.createDirectories(logsFolder);
             Handler[] handlers = logger.getHandlers();
             Arrays.stream(handlers).forEach(logger::removeHandler);
-            ConsoleHandler consoleHandler = new ConsoleHandler();
+            CoolConsoleHandler consoleHandler = new CoolConsoleHandler();
             FileHandler fileHandler = new FileHandler(Paths.get(logsFolder.toString(), forClass.getName() +  ".log").toString());
             fileHandler.setLevel(fileLoggingLevel.getLoggerLevel());
+            fileHandler.setFormatter(new SimpleFormatter());
             consoleHandler.setLevel(consoleLoggingLevel.getLoggerLevel());
             logger.addHandler(consoleHandler);
             logger.addHandler(fileHandler);
@@ -37,7 +39,6 @@ public class LocalLogging {
         return logger;
     }
 
-    @Deprecated
     public static class CoolConsoleHandler extends StreamHandler {
 
         private final ConsoleHandler stderrHandler = new ConsoleHandler();
@@ -48,20 +49,17 @@ public class LocalLogging {
 
         @Override
         public void publish(LogRecord record) {
-            if (record.getLevel().intValue() == Level.SEVERE.intValue()) {
-                stderrHandler.publish(record);
-                stderrHandler.flush();
-            }
-            if (record.getLevel().intValue() == Level.OFF.intValue()) {
-                return;
-            }
-            if (record.getLevel().intValue() <= Level.INFO.intValue()) {
+            if (record.getLevel().intValue() >= getLevel().intValue()) {
                 super.publish(record);
                 super.flush();
-            } else {
+            } else if (goesToErr(record.getLevel().intValue())) {
                 stderrHandler.publish(record);
                 stderrHandler.flush();
             }
+        }
+
+        private boolean goesToErr(int level) {
+            return level == Level.SEVERE.intValue() || level == Level.WARNING.intValue();
         }
 
     }
