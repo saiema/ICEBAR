@@ -127,7 +127,7 @@ public class IterativeCEBasedAlloyRepair {
         logger.info("Starting ICEBAR process with:\n" +
                 "\tModel: " + modelToRepair.toString() + "\n" +
                 "\tProperty-based Oracle: " + oracle.toString() + "\n" +
-                "\tInitial tests: " + (initialTests==null?"NONE":initialTests.toString()) + "\n" +
+                "\tInitial tests: " + (initialTests==null?"NONE":initialTests.getInitialTestsPath().toString()) + "\n" +
                 "\tLaps: " + laps + "\n");
         logger.fine("Full ICEBAR configuration:\n\t" +
                 String.join("\n\t", ICEBARProperties.getInstance().getAllRawProperties()));
@@ -297,6 +297,7 @@ public class IterativeCEBasedAlloyRepair {
     }
 
     private Pair<Boolean, FixCandidate> analyzeBeAFixCheck(BeAFixResult beAFixCheckResult, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter, TimeCounter totalTime, FixCandidate current, FixCandidate repairCandidate) throws IOException {
+        totalTime.updateTotalTime();
         if (beAFixCheckResult.error()) {
             logger.severe("BeAFix check ended in error, ending search");
             Report report = Report.beafixCheckFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
@@ -312,7 +313,6 @@ public class IterativeCEBasedAlloyRepair {
             evaluatedCandidatesLeadingToSpurious++;
             if (current.depth() < laps) {
                 if (timeout > 0) {
-                    totalTime.updateTotalTime();
                     if (totalTime.toMinutes() >= timeout) {
                         logger.fine("ICEBAR timeout (" + timeout + " minutes) reached");
                         Report report = Report.timeout(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());

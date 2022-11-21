@@ -39,6 +39,10 @@ public final class InitialTests {
         return initialTests;
     }
 
+    public Path getInitialTestsPath() {
+        return initialTestsPath;
+    }
+
     @Override
     public String toString() {
         return "{\n\t Initial tests from : " + initialTestsPath.toString()

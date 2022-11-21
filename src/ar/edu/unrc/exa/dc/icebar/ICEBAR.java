@@ -26,7 +26,7 @@ public class ICEBAR {
 
     private static final Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.getInstance().icebarConsoleLoggingLevel(), ICEBARProperties.getInstance().icebarFileLoggingLevel());
 
-    private static final String VERSION = "2.11.0";
+    private static final String VERSION = "2.11.1";
 
     private static final String BEAFIX_MIN_VERSION = "2.12.1";
     private static final String AREPAIR_MIN_VERSION = "*";
@@ -139,6 +139,9 @@ public class ICEBAR {
         boolean configKeyRead = false;
         String configKey = null;
         for (String arg : args) {
+            if (isVMArgument(arg)) {
+                throw new IllegalArgumentException("VM argument detected as program argument (-D<key>=<value), VM arguments must go before the classname or before `-jar <jar file>` if running a jar.");
+            }
             arg = arg.replaceAll("\"", "");
             if (arg.trim().startsWith("--")) {
                 if (configKeyRead)
@@ -153,6 +156,10 @@ public class ICEBAR {
                 configKey = null;
             }
         }
+    }
+
+    private static boolean isVMArgument(String argument) {
+        return argument.startsWith("-D");
     }
 
     private static final String MODEL_KEY = "model";
