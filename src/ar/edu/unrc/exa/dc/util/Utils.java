@@ -14,6 +14,7 @@ import java.io.StringWriter;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Random;
@@ -378,7 +379,7 @@ public final class Utils {
     }
 
     private static String simpleInstant() {
-        String rawInstant = Instant.now().toString();
+        String rawInstant = Instant.now().atZone(ZoneId.systemDefault()).toString();
         String noColons = rawInstant.replaceAll(":", "-");
         int finalDot = noColons.lastIndexOf(".");
         if (finalDot > 0) {

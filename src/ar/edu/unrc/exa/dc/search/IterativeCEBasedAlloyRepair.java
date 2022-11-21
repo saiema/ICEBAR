@@ -28,7 +28,17 @@ public class IterativeCEBasedAlloyRepair {
     private final Path oracle;
     private final int laps;
     private int totalTestsGenerated;
+
+    public int totalTestsGenerated() {
+        return totalTestsGenerated;
+    }
+
     private int arepairCalls;
+
+    public int arepairCalls() {
+        return arepairCalls;
+    }
+
     private int evaluatedCandidates;
     private int evaluatedCandidatesLeadingToNoFix;
     private int evaluatedCandidatesLeadingToSpurious;
@@ -36,6 +46,23 @@ public class IterativeCEBasedAlloyRepair {
     private TestHashes untrustedTests;
 
     private IcebarSearchAlgorithm search = IcebarSearchAlgorithm.DFS;
+
+    private final TimeCounter arepairTimeCounter = new TimeCounter();
+    private final TimeCounter beafixTimeCounter = new TimeCounter();
+    private final TimeCounter totalTime = new TimeCounter();
+
+    public TimeCounter arepairTimeCounter() {
+        return arepairTimeCounter;
+    }
+
+    public TimeCounter beafixTimeCounter() {
+        return beafixTimeCounter;
+    }
+
+    public TimeCounter totalTime() {
+        return totalTime;
+    }
+
     public void setSearch(IcebarSearchAlgorithm search) {
         this.search = search;
     }
@@ -105,9 +132,6 @@ public class IterativeCEBasedAlloyRepair {
                 "\tLaps: " + laps + "\n");
         logger.fine("Full ICEBAR configuration:\n\t" +
                 String.join("\n\t", ICEBARProperties.getInstance().getAllRawProperties()));
-        TimeCounter arepairTimeCounter = new TimeCounter();
-        TimeCounter beafixTimeCounter = new TimeCounter();
-        TimeCounter totalTime = new TimeCounter();
         initializeSearchSpaces();
         int maxReachedLap = 0;
         trustedTests = new TestHashes();
@@ -118,7 +142,14 @@ public class IterativeCEBasedAlloyRepair {
             evaluatedCandidates++;
             maxReachedLap = Math.max(maxReachedLap, current.depth());
             ARepairResult aRepairResult = runARepair(arepairTimeCounter, current);
-            logger.info("Running ARepair ended with " + (aRepairResult.hasRepair()?"FIX":"NO FIX"));
+            logger.info("Running ARepair ended with " +
+                    (aRepairResult.equals(ARepairResult.NO_TESTS)?
+                            "NO TESTS (will consider as spurious fix to bootstrap ICEBAR process)"
+                            :aRepairResult.hasRepair()?
+                                "FIX"
+                                :"NO FIX"
+                    )
+            );
             if (aRepairResult.equals(ARepairResult.ERROR)) {
                 logger.severe("ARepair call ended in error:\n" + aRepairResult.message());
                 if (aRepairResult.nullPointerExceptionFound() && keepGoingAfterARepairNPE) {
@@ -136,7 +167,7 @@ public class IterativeCEBasedAlloyRepair {
                 boolean fromOriginal = aRepairResult.equals(ARepairResult.NO_TESTS);
                 FixCandidate repairCandidate = fromOriginal?current:FixCandidate.aRepairCheckCandidate(aRepairResult.repair(), current.depth());
                 BeAFixResult beAFixCheckResult = runBeAFixCheck(beafixTimeCounter, repairCandidate);
-                logger.info("Validating ARepair fix against property-based oracle: DOES " + (beAFixCheckResult.checkResult()?"":"NOT") + " SATISFIES ORACLE");
+                logger.info("Validating ARepair fix against property-based oracle: DOES" + (beAFixCheckResult.checkResult()?"":" NOT") + " SATISFIES ORACLE");
                 int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
                 Pair<Boolean, FixCandidate> beAFixCheckAnalysis = analyzeBeAFixCheck(beAFixCheckResult, beafixTimeCounter, arepairTimeCounter, totalTime, current, repairCandidate);
                 if (beAFixCheckAnalysis.fst())

@@ -30,6 +30,7 @@ public class LocalLogging {
             fileHandler.setLevel(fileLoggingLevel.getLoggerLevel());
             fileHandler.setFormatter(new SimpleFormatter());
             consoleHandler.setLevel(consoleLoggingLevel.getLoggerLevel());
+            consoleHandler.setFormatter(new JustMessageFormatter());
             logger.addHandler(consoleHandler);
             logger.addHandler(fileHandler);
             logger.setUseParentHandlers(false);
@@ -62,6 +63,18 @@ public class LocalLogging {
             return level == Level.SEVERE.intValue() || level == Level.WARNING.intValue();
         }
 
+    }
+
+    public static class JustMessageFormatter extends SimpleFormatter {
+
+        @Override
+        public String format(LogRecord record) {
+            if (record.getLevel().intValue() == Level.WARNING.intValue() || record.getLevel().intValue() == Level.SEVERE.intValue()) {
+                return super.format(record);
+            } else {
+                return record.getMessage() + "\n";
+            }
+        }
     }
 
 }

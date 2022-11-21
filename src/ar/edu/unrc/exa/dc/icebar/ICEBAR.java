@@ -26,7 +26,7 @@ public class ICEBAR {
 
     private static final Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.getInstance().icebarConsoleLoggingLevel(), ICEBARProperties.getInstance().icebarFileLoggingLevel());
 
-    private static final String VERSION = "2.10.1";
+    private static final String VERSION = "2.11.0";
     private static final String BEAFIX_MIN_VERSION = "2.12.1";
     private static final String AREPAIR_MIN_VERSION = "*";
 
@@ -104,18 +104,24 @@ public class ICEBAR {
         arepair.treatPartialRepairsAsFixes(ICEBARProperties.getInstance().arepairTreatPartialRepairsAsFixes());
         startCandidateInfoFile();
         Optional<FixCandidate> fix = iterativeCEBasedAlloyRepair.repair();
+        String timingsAndARepairCalls = "\n\tBeAFix total time (Candidate validation and test generation): " + iterativeCEBasedAlloyRepair.beafixTimeCounter().toMilliSeconds() + "ms" +
+                "\n\tARepair total time: " + iterativeCEBasedAlloyRepair.arepairTimeCounter().toMilliSeconds() + "ms" +
+                "\n\tICEBAR total time: " + iterativeCEBasedAlloyRepair.totalTime().toMilliSeconds() + "ms" +
+                "\n\tARepair total calls: " + iterativeCEBasedAlloyRepair.arepairCalls() +
+                "\n\tTotal tests generated: " + iterativeCEBasedAlloyRepair.totalTestsGenerated();
         if (fix.isPresent()) {
             logger.info("Fix found\n" + fix.get() +
                     "\n\tRepaired model located at " + Paths.get(
                             ICEBARProperties.getInstance().arepairRootFolder().toAbsolutePath().toString(),
                             ARepair.FIX_FILE
                     ) +
-                    "\n\tTest suite used located at " + ICEBARExperiment.getInstance().modelPath().toAbsolutePath().toString().replace(".als", "_tests.als")
+                    "\n\tTest suite used located at " + ICEBARExperiment.getInstance().modelPath().toAbsolutePath().toString().replace(".als", "_tests.als") +
+                    timingsAndARepairCalls
             );
         } else {
             logger.info(
                     "No Fix Found for model: " +
-                    ICEBARExperiment.getInstance().modelPath().toString() + "\n"
+                    ICEBARExperiment.getInstance().modelPath() + timingsAndARepairCalls
             );
         }
         if (ICEBARProperties.getInstance().saveAllTestSuites()) {
