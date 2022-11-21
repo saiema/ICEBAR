@@ -1,5 +1,9 @@
 package ar.edu.unrc.exa.dc.tools;
 
+import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.TestType;
+import ar.edu.unrc.exa.dc.util.OneTypePair;
+import ar.edu.unrc.exa.dc.util.Utils;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,10 +11,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.stream.Collectors;
-import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.TestType;
-import ar.edu.unrc.exa.dc.util.OneTypePair;
-import ar.edu.unrc.exa.dc.util.TestHashes;
-import ar.edu.unrc.exa.dc.util.Utils;
 
 import static ar.edu.unrc.exa.dc.util.Utils.getMaxScopeFromCommandSegments;
 import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
@@ -125,8 +125,6 @@ public final class BeAFixResult {
         }
 
         public int getIndex() { return index; }
-
-        public int getSubIndex() { return subIndex; }
 
         public int getMaxScope() { return maxScope; }
 
@@ -429,10 +427,6 @@ public final class BeAFixResult {
 
     public void message(String message) {
         this.message = message;
-    }
-
-    public String message() {
-        return this.message;
     }
 
     public int getMaxIndex() {

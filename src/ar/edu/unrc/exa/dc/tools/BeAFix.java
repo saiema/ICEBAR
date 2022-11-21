@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 import static ar.edu.unrc.exa.dc.util.Utils.exceptionToString;
 import static ar.edu.unrc.exa.dc.util.Utils.isValidPath;
@@ -18,13 +19,10 @@ public final class BeAFix {
     public static final int TESTS_TO_GENERATE_DEFAULT = 4;
     public static final String BASE_TESTS_NAME_DEFAULT = "test";
     public static final boolean CREATE_OUT_DIR_DEFAULT = true;
-    public static final boolean AREPAIR_COMPAT_DEFAULT = true;
-    public static final boolean AREPAIR_COMPAT_RELAX_MODE_DEFAULT = false;
     public static final int TESTS_STARTING_INDEX_DEFAULT = 1;
     public static final boolean MODEL_OVERRIDES_DEFAULT = true;
     public static final Path MODEL_OVERRIDES_FOLDER_DEFAULT = null;
     public static final boolean INSTANCE_TESTS_DEFAULT = true;
-    public static final Path BUGGY_FUNCTIONS_DEFAULT = null;
     public static final boolean FACTS_RELAXATION_DEFAULT = false;
     public static final boolean FORCE_ASSERTION_TESTS_GENERATION_DEFAULT = false;
     public static final boolean BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS_DEFAULT = false;
@@ -35,14 +33,11 @@ public final class BeAFix {
     private Path outputDirectory;
     private boolean createOutDirIfNonExistent = CREATE_OUT_DIR_DEFAULT;
     private int testsToGenerate = TESTS_TO_GENERATE_DEFAULT;
-    private boolean aRepairCompatibility = AREPAIR_COMPAT_DEFAULT;
-    private boolean aRepairCompatibilityRelaxedMode = AREPAIR_COMPAT_RELAX_MODE_DEFAULT;
     private String baseTestsName = BASE_TESTS_NAME_DEFAULT;
     private int testsStartingIndex = TESTS_STARTING_INDEX_DEFAULT;
     private boolean modelOverrides = MODEL_OVERRIDES_DEFAULT;
     private Path modelOverridesFolder = MODEL_OVERRIDES_FOLDER_DEFAULT;
     private boolean instanceTests = INSTANCE_TESTS_DEFAULT;
-    private Path buggyFunctions = BUGGY_FUNCTIONS_DEFAULT;
     private boolean factsRelaxationGeneration = FACTS_RELAXATION_DEFAULT;
     private boolean forceAssertionTestsGeneration = FORCE_ASSERTION_TESTS_GENERATION_DEFAULT;
     private boolean noInstanceTestForNegativeTestWhenNoFacts = BEAFIX_NO_INSTANCE_TEST_FOR_NEGATIVE_TEST_WHEN_NO_FACTS_DEFAULT;
@@ -81,14 +76,6 @@ public final class BeAFix {
         this.testsToGenerate = testsToGenerate;
     }
 
-    public void aRepairCompatibility(boolean aRepairCompatibility) {
-        this.aRepairCompatibility = aRepairCompatibility;
-    }
-
-    public void aRepairCompatibilityRelaxedMode(boolean aRepairCompatibilityRelaxedMode) {
-        this.aRepairCompatibilityRelaxedMode = aRepairCompatibilityRelaxedMode;
-    }
-
     public void baseTestsName(String baseTestsName) {
         if (baseTestsName == null || baseTestsName.trim().isEmpty())
             throw new IllegalArgumentException("null or empty base name for tests");
@@ -117,10 +104,6 @@ public final class BeAFix {
         this.instanceTests = instanceTests;
     }
 
-    public void buggyFunctions(Path buggyFunctions) {
-        this.buggyFunctions = buggyFunctions;
-    }
-
     public void factsRelaxationGeneration(boolean factsRelaxationGeneration) {
         this.factsRelaxationGeneration = factsRelaxationGeneration;
     }
@@ -139,10 +122,12 @@ public final class BeAFix {
         if (!isValidPath(outputDirectory, Utils.PathCheck.EXISTS))
             return true;
         AtomicBoolean result = new AtomicBoolean(false);
-        Files.walk(outputDirectory)
-                .sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(f -> result.set(f.delete()));
+        try (Stream<Path> walk = Files.walk(outputDirectory)) {
+            walk
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(f -> result.set(f.delete()));
+        }
         return result.get();
     }
 
@@ -151,16 +136,7 @@ public final class BeAFix {
     private BeAFixResult executeBeAFix() {
         BeAFixResult beAFixResult;
         try {
-            String[] args = getBeAFixCommand();
-            ProcessBuilder pb = new ProcessBuilder(args);
-            File errorLog = new File("beAFixExternalError.log");
-            if (errorLog.exists() && !errorLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + errorLog);
-            pb.redirectError(ProcessBuilder.Redirect.appendTo(errorLog));
-            File outputLog = new File("beAFixExternalOutput.log");
-            if (outputLog.exists() && !outputLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + outputLog);
-            pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLog));
+            ProcessBuilder pb = beafixProcessBuilder(BeAFixMode.TEST);
             Process p = pb.start();
             int exitCode = p.waitFor();
             if (exitCode != 0) {
@@ -177,16 +153,7 @@ public final class BeAFix {
     private BeAFixResult executeBeAFixCheck() {
         BeAFixResult beAFixResult;
         try {
-            String[] args = getBeAFixCheckCommand();
-            ProcessBuilder pb = new ProcessBuilder(args);
-            File errorLog = new File("beAFixExternalError.log");
-            if (errorLog.exists() && !errorLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + errorLog);
-            pb.redirectError(ProcessBuilder.Redirect.appendTo(errorLog));
-            File outputLog = new File("beAFixExternalOutput.log");
-            if (outputLog.exists() && !outputLog.delete())
-                throw new IllegalStateException("An error occurred while trying to delete " + outputLog);
-            pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLog));
+            ProcessBuilder pb = beafixProcessBuilder(BeAFixMode.CHECK);
             Process p = pb.start();
             int exitCode = p.waitFor();
             if (exitCode != 0) {
@@ -198,6 +165,39 @@ public final class BeAFix {
             beAFixResult = BeAFixResult.error("An exception was caught when executing BeAFix\n" + exceptionToString(e));
         }
         return beAFixResult;
+    }
+
+    private enum BeAFixMode {CHECK, TEST}
+    private ProcessBuilder beafixProcessBuilder(BeAFixMode beafixMode) {
+        ProcessBuilder pb;
+        switch (beafixMode) {
+            case TEST: {
+                pb = new ProcessBuilder(getBeAFixCommand());
+                break;
+            }
+            case CHECK: {
+                pb = new ProcessBuilder(getBeAFixCheckCommand());
+                break;
+            }
+            default: throw new IllegalArgumentException("Invalid or unsupported mode (" + beafixMode + ")");
+        }
+        pb.redirectError(ProcessBuilder.Redirect.appendTo(getBeAFixErrorLog()));
+        pb.redirectOutput(ProcessBuilder.Redirect.appendTo(getBeAFixOutputLog()));
+        return pb;
+    }
+
+    private File getBeAFixErrorLog() {
+        File errorLog = new File("beAFixExternalError.log");
+        if (errorLog.exists() && !errorLog.delete())
+            throw new IllegalStateException("An error occurred while trying to delete " + errorLog);
+        return errorLog;
+    }
+
+    private File getBeAFixOutputLog() {
+        File outputLog = new File("beAFixExternalOutput.log");
+        if (outputLog.exists() && !outputLog.delete())
+            throw new IllegalStateException("An error occurred while trying to delete " + outputLog);
+        return outputLog;
     }
 
     private static final String CE_POSTFIX = "_counterexamples.tests";
@@ -229,21 +229,19 @@ public final class BeAFix {
             return true;
         if (outputDirectory != null && !isValidPath(outputDirectory, Utils.PathCheck.DIR))
             return true;
-        if (modelOverridesFolder != null && !isValidPath(modelOverridesFolder, Utils.PathCheck.DIR))
-            return true;
-        return buggyFunctions != null && !isValidPath(buggyFunctions, Utils.PathCheck.FILE);
+        return (modelOverridesFolder != null && !isValidPath(modelOverridesFolder, Utils.PathCheck.DIR));
     }
 
     private String pathsInformation() {
-        String pinfo = "";
-        pinfo += "BeAFix Jar             : " + (beAFixJar==null?"NULL":beAFixJar.toString()) + "\n";
-        pinfo += "Path to model          : " + (pathToModel==null?"NULL":pathToModel.toString()) + "\n";
-        pinfo += "Output Directory       : " + (outputDirectory==null?"Unset (will use the directory of the model)":outputDirectory.toString()) + "\n";
-        pinfo += "Model Overrides folder : " + (modelOverridesFolder==null?"Unset (no overrides will be used)":modelOverridesFolder.toString()) + "\n";
-        pinfo += "Buggy Functions file   : " + (buggyFunctions==null?"Unset (no buggy functions file will be used)":buggyFunctions.toString()) + "\n";
-        return pinfo;
+        String pathInformation = "";
+        pathInformation += "BeAFix Jar             : " + (beAFixJar==null?"NULL":beAFixJar.toString()) + "\n";
+        pathInformation += "Path to model          : " + (pathToModel==null?"NULL":pathToModel.toString()) + "\n";
+        pathInformation += "Output Directory       : " + (outputDirectory==null?"Unset (will use the directory of the model)":outputDirectory.toString()) + "\n";
+        pathInformation += "Model Overrides folder : " + (modelOverridesFolder==null?"Unset (no overrides will be used)":modelOverridesFolder.toString()) + "\n";
+        return pathInformation;
     }
 
+    @SuppressWarnings("SpellCheckingInspection")
     private String[] getBeAFixCommand() {
         String[] args = new String[33];
         args[0] = "java";
@@ -252,14 +250,14 @@ public final class BeAFix {
         args[4] = "TESTS";
         args[5] = "--generate"; args[6] = Integer.toString(testsToGenerate);
         args[7] = "--out"; args[8] = outputDirectory.toString();
-        args[9] = "--arepair"; args[10] = Boolean.toString(aRepairCompatibility);
-        args[11] = "--arelaxed"; args[12] = Boolean.toString(aRepairCompatibilityRelaxedMode);
+        args[9] = "--arepair"; args[10] = "true";
+        args[11] = "--arelaxed"; args[12] = "true";
         args[13] = "--tname"; args[14] = baseTestsName;
         args[15] = "--tindex"; args[16] = Integer.toString(testsStartingIndex);
         args[17] = "--modeloverriding"; args[18] = Boolean.toString(modelOverrides);
         args[19] = "--mofolder"; args[20] = (modelOverridesFolder == null?"\" \"":modelOverridesFolder.toString());
         args[21] = "--itests"; args[22] = Boolean.toString(instanceTests);
-        args[23] = "--buggyfuncs"; args[24] = (buggyFunctions == null?"\" \"":buggyFunctions.toString());
+        args[23] = "--buggyfuncs"; args[24] = "\" \"";
         args[25] = "--relaxedfacts"; args[26] = Boolean.toString(factsRelaxationGeneration);
         args[27] = "--fassertiontests"; args[28] = Boolean.toString(forceAssertionTestsGeneration);
         args[29] = "--noexpectinstancewhennofacts"; args[30] = Boolean.toString(noInstanceTestForNegativeTestWhenNoFacts);

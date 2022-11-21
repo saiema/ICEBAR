@@ -1,8 +1,10 @@
 package ar.edu.unrc.exa.dc.util;
 
+import ar.edu.unrc.exa.dc.icebar.ICEBARExperiment;
 import ar.edu.unrc.exa.dc.icebar.Report;
+import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
 import ar.edu.unrc.exa.dc.search.FixCandidate;
-import ar.edu.unrc.exa.dc.tools.ARepair;
+import ar.edu.unrc.exa.dc.tools.ARepairResult;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 
 import java.io.File;
@@ -11,8 +13,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Random;
 import java.util.logging.Logger;
@@ -20,6 +23,8 @@ import java.util.logging.Logger;
 import static ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest.NO_SCOPE;
 
 public final class Utils {
+
+    private static final String failedTestSuitesPrefix = "failed_test_suites";
 
     public static String exceptionToString(Exception e) {
         StringWriter sw = new StringWriter();
@@ -33,46 +38,34 @@ public final class Utils {
     }
 
     public static boolean isValidPath(String pathToCheck, PathCheck check) {
-        if (pathToCheck == null)
-            return false;
-        return isValidPath(Paths.get(pathToCheck), check);
+        return isValidPath(pathToCheck, check, true);
     }
 
     public static boolean isValidPath(Path pathToCheck, PathCheck check) {
+        return isValidPath(pathToCheck, check, true);
+    }
+
+    public static boolean isValidPath(String pathToCheck, PathCheck check, boolean exist) {
         if (pathToCheck == null)
             return false;
-        if (!pathToCheck.toFile().exists())
+        return isValidPath(Paths.get(pathToCheck), check, exist);
+    }
+
+    public static boolean isValidPath(Path pathToCheck, PathCheck check, boolean exist) {
+        if (pathToCheck == null)
+            return false;
+        if (pathToCheck.toFile().exists() != exist)
             return false;
         switch (check) {
             case DIR: return pathToCheck.toFile().isDirectory() || !pathToCheck.toFile().isFile();
             case ALS: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".als");
             case JAR: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".jar");
-            case PROPERTIES: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".properties");
+            case PROPERTIES: return (pathToCheck.toFile().isFile() || !exist) && pathToCheck.toString().endsWith(".properties");
             case TESTS: return pathToCheck.toFile().isFile() && pathToCheck.toString().endsWith(".tests");
             case FILE: return pathToCheck.toFile().isFile();
             case EXISTS: return true;
         }
         return false;
-    }
-
-    /**
-     * Checks if a folder exists but is empty, or it does not exist, if it doesn't exist it will create an empty folder.
-     *
-     * @param folderPath : the folder to check/create.
-     * @return {@code true} iff either the folder exists and is empty or it does not exist and could be created.
-     */
-    public static boolean checkAndCreateDirectory(Path folderPath)  {
-        if (folderPath.toFile().isDirectory() || !folderPath.toFile().isFile()) {
-            File folder = folderPath.toFile();
-            if (folder.exists()) {
-                String[] names = folder.list();
-                return names == null || names.length == 0;
-            } else {
-                return folder.mkdirs();
-            }
-        } else {
-            throw new IllegalArgumentException("folderPath is not a folder (" + folderPath + ")");
-        }
     }
 
     public static void mergeFiles(Path a, Path b, Path result) throws IOException {
@@ -98,10 +91,26 @@ public final class Utils {
         return writeTestsToFile(tests, output, true);
     }
 
+    private static int testSuiteCount = 0;
+    public static void saveFailingTestSuite(Collection<BeAFixTest> tests, String modelName) throws IOException {
+        if (ICEBARProperties.getInstance().saveAllTestSuites()) {
+            Path testsPath = Paths.get(
+                    ICEBARExperiment.getInstance().failedTestSuitesFolderPath().toString(),
+                    modelName + "_failing_test_suite_" + testSuiteCount++ + ".als"
+            );
+            writeTestsToFile(tests,testsPath,true, true);
+        }
+    }
+
     public static int writeTestsToFile(Collection<BeAFixTest> tests, Path output, boolean newFile) throws IOException {
+        return writeTestsToFile(tests, output, newFile, false);
+    }
+
+    private static int writeTestsToFile(Collection<BeAFixTest> tests, Path output, boolean newFile, boolean allowEmptyTests) throws IOException {
         int testCount = 0;
-        if (tests == null || tests.isEmpty())
+        if (!allowEmptyTests && (tests == null || tests.isEmpty())) {
             throw new IllegalArgumentException("null or empty tests");
+        }
         if (output == null)
             throw new IllegalArgumentException("output path is null");
         if (newFile && output.toFile().exists())
@@ -111,6 +120,10 @@ public final class Utils {
         File testsFile = output.toFile();
         if (newFile && !testsFile.createNewFile()) {
             throw new Error("Couldn't create tests file (" + (testsFile) + ")");
+        }
+        if (tests == null || tests.isEmpty()) {
+            Files.write(output, "-- NO TESTS".getBytes(), StandardOpenOption.APPEND);
+            return 0;
         }
         Files.write(output, "\n".getBytes(), StandardOpenOption.APPEND);
         for (BeAFixTest test : tests) {
@@ -129,20 +142,6 @@ public final class Utils {
         return testCount;
     }
 
-    public static void writeToFile(Path file, boolean newFile, String content) throws IOException {
-        if (file == null)
-            throw new IllegalArgumentException("file path is null");
-        if (newFile && file.toFile().exists())
-            throw new IllegalArgumentException("file path point to an existing file while newFile mode is used (" + file + ")");
-        if (!newFile && !file.toFile().exists())
-            throw new IllegalArgumentException("file path points to a non existing file while append mode (!newFile) is used (" + file + ")");
-        File testsFile = file.toFile();
-        if (newFile && !testsFile.createNewFile()) {
-            throw new Error("Couldn't create tests file (" + (testsFile) + ")");
-        }
-        Files.write(file, content.getBytes(), StandardOpenOption.APPEND);
-    }
-
     public static void writeTestsToLog(Collection<BeAFixTest> tests, Logger logger) {
         StringBuilder sb = new StringBuilder("\n");
         for (BeAFixTest test : tests) {
@@ -151,7 +150,7 @@ public final class Utils {
                 sb.append("--").append(test.relatedBeAFixTest().testType().toString()).append("\n").append(test.relatedBeAFixTest().predicate()).append("\n").append(test.relatedBeAFixTest().command()).append("\n");
             }
         }
-        logger.info(sb.toString());
+        logger.fine(sb.toString());
     }
 
     /**
@@ -248,7 +247,7 @@ public final class Utils {
         Files.write(candidateInfoFilePath, CANDIDATE_REPORT_HEADER.getBytes(), StandardOpenOption.APPEND);
     }
 
-    public static void writeCandidateInfo(FixCandidate candidate, Collection<BeAFixTest> globalCounterexampleTests, ARepair.ARepairResult aRepairResult) throws IOException {
+    public static void writeCandidateInfo(FixCandidate candidate, Collection<BeAFixTest> globalCounterexampleTests, ARepairResult aRepairResult) throws IOException {
         Path candidateInfoFilePath = Paths.get(CANDIDATE_FILE);
         File candidateInfoFile = candidateInfoFilePath.toFile();
         if (!candidateInfoFile.exists())
@@ -370,6 +369,23 @@ public final class Utils {
             }
         }
         return sb.toString();
+    }
+
+    public static Path createFailedTestSuitesFolder(String modelName) throws IOException {
+        String fullName = failedTestSuitesPrefix + "_" + modelName + "_" + generateRandomName() + "_" + simpleInstant();
+        Path failedTestSuitesFolderPath = Paths.get(fullName);
+        Files.createDirectories(failedTestSuitesFolderPath);
+        return failedTestSuitesFolderPath;
+    }
+
+    private static String simpleInstant() {
+        String rawInstant = Instant.now().atZone(ZoneId.systemDefault()).toString();
+        String noColons = rawInstant.replaceAll(":", "-");
+        int finalDot = noColons.lastIndexOf(".");
+        if (finalDot > 0) {
+            return noColons.substring(0, finalDot);
+        }
+        return noColons;
     }
 
 }

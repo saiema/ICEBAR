@@ -14,67 +14,6 @@ import static ar.edu.unrc.exa.dc.util.Utils.*;
 
 public final class ARepair {
 
-    public enum ARepairResult {
-
-        REPAIRED,
-        NOT_REPAIRED,
-        ERROR,
-        NO_TESTS,
-        PARTIAL_REPAIR;
-
-        private String message = null;
-        private Path repair = null;
-        private boolean npeFound = false;
-
-        public String message() {
-            return message;
-        }
-
-        public void message(String msg) {
-            this.message = msg;
-        }
-
-        public boolean hasMessage() {
-            return message != null && !message.trim().isEmpty();
-        }
-
-        public Path repair() {
-            return repair;
-        }
-
-        public void repair(Path repair) {
-            this.repair = repair;
-        }
-
-        public boolean hasRepair() {
-            return repair != null;
-        }
-
-        public void npeFound() {
-            this.npeFound = true;
-        }
-
-        public boolean nullPointerExceptionFound() {
-            return npeFound;
-        }
-
-        @Override
-        public String toString() {
-            String rep = "{\n\t"  + name();
-            if (!equals(NO_TESTS)) {
-                if (hasMessage()) {
-                    rep += "\n\tMessage: " + message;
-                }
-                if (hasRepair()) {
-                    rep += "\n\tRepair found: " + repair.toAbsolutePath();
-                }
-            }
-            rep += "\n}";
-            return rep;
-        }
-
-    }
-
     private enum SearchStrategy {
         BASE_CHOICE {
             @Override
@@ -102,46 +41,14 @@ public final class ARepair {
     public static final int MAX_TRY_PER_DEPTH_DEFAULT = 10000;
     public static final Path WORKING_DIRECTORY_DEFAULT = Paths.get("");
 
-    /*
-    java
-    -Xmx16g
-    -Xmx16g
-    -Djava.library.path="sat-solvers"
-    -cp
-    "arepair-1.0-jar-with-dependencies.jar:libs/aparser-1.0.jar:libs/alloy.jar"
-    patcher.Patcher
-    --model-path
-    ".hidden/toFix.als"
-    --test-path
-    ".hidden/tests.als"
-    --scope
-    "3"
-    --minimum-cost
-    "3"
-    --search-strategy
-    "base-choice" "all-combination"
-    --enable-cache
-    --max-try-per-hole
-    1000
-    --partition-num
-    10           //
-    --max-try-per-depth
-    10000    //
-     */
-    /*
-    -e,--enable-cache: This argument is optional. If this argument is specified, ARepair uses the hierarchical caching for repair. Otherwise, it does not.
-    -h,--max-try-per-hole: This argument is optional and is used when the search strategy is base-choice. Pass the maximum number of candidate expressions to consider for each hole during repair as the argument. If the argument is not specified, a default value of 1000 is used.
-    -p,--partition-num: This argument is optional and is used when the search strategy is all-combinations. Pass the number of partitions of the search space for a given hole as the argument. If the argument is not specified, a default value of 10 is used.
-    -d,--max-try-per-depth: This argument is optional and is used when the search strategy is all-combinations. Pass the maximum number of combinations of candidate expressions to consider for each depth of holes during repair as the argument. If the argument is not specified, a default value of 10000 is used.
-    */
-    //repair is saved at the same location as model-path inside a folder named .hidden with name fix.als
+
     private int memory = MEMORY_DEFAULT;
     private Path satSolvers;
     private List<Path> classpath;
     private Path workingDirectory = WORKING_DIRECTORY_DEFAULT;
     private static final String PATCHER_CLASS = "patcher.Patcher";
     private static final String AREPAIR_HIDDEN_DIR = ".hidden";
-    private static final String FIX_FILE = AREPAIR_HIDDEN_DIR + "/fix.als";
+    public static final String FIX_FILE = AREPAIR_HIDDEN_DIR + "/fix.als";
     private Path modelToRepair;
     private Path testsPath;
     private SearchStrategy searchStrategy = SEARCH_STRATEGY_DEFAULT;
