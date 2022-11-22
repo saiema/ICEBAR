@@ -25,7 +25,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.11.2";
+    private static final String VERSION = "2.11.3";
 
     private static final String BEAFIX_MIN_VERSION = "2.12.1";
     private static final String AREPAIR_MIN_VERSION = "*";
@@ -233,7 +233,7 @@ public class ICEBAR {
                 "  --version............................................................Shows the current version of ICEBAR\n" +
                 "  --" + MODEL_KEY + "<path to .als file>...........................................The path to the model to repair (anything in this file can be modified to repair) (*).\n" +
                 "  --" + ORACLE_KEY + "<path to .als file>..........................................The path to the oracle (containing predicates, assertions, and anything related to those which can't be modified to repair) (*).\n" +
-                "  --" + PROPERTIES_KEY + "<path to .properties file>...............................ICEBAR properties, please look at 'icebar_stein.properties' as an example (**).\n" +
+                "  --" + PROPERTIES_KEY + "<path to .properties file>...............................ICEBAR properties, please look at 'icebar.properties' as an example (**).\n" +
                 "  --" + INITIAL_TESTS_KEY + "<path to .tests file>..................................Initial tests set which will be used in conjunction with counterexample based tests (***).\n" +
                 "The CONFIGURATION VALUES are defined by `-D<key>=<value>`, where each key is an ICEBAR option (see --options argument)\n" +
                 "Each configuration defined in this way, will override the configuration defined by the .properties file\n" +
