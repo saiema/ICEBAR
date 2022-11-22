@@ -38,14 +38,14 @@ After downloading and extracting ICEBAR's zip file (release [2.8.1](https://gith
  * `experiments` folder contains ARepair's and Alloy4Fun's benchmarks.
  * `Tools` folder contains both ARepair and BeAFix, the second one is used by ICEBAR to generate tests.
  * `<ICEBAR JAR>`, this can be used by executing `java -jar <ICEBAR JAR> <arguments>`, use `--help` to get information about the arguments to use. Using `--version` will show ICEBAR's version, this should be `2.8.1` or above, and it depends on the downloaded release.
- * `icebar.properties^`, a properties file with the configuration used in our experiments. You can use this file as a template for you own configurations.
+ * `icebar.properties^`, a properties file with the configuration used in our experiments. This file can be used as a template for makin custom configurations.
  * `icebar_ARepairMode.properties^^`, a properties file to run ARepair once and check the fix against a property-based oracle. The main difference of this configuration with respect to the previous one is the amount of laps (iterations) used, in this case we used **0** laps, this is equivalent to just running ARepair.
  * `icebar-run.sh`, this script runs all ICEBAR experiments.
  * `icebar-run-arepair.sh`, this script runs all ARepair experiments.
  * `modelsA4F.sh`, this script defines all Alloy4Fun's models to use. Variable `A4F_CASES` can be modified to remove specific cases by prefixing them        with the `#` symbol.
  * `modelsARepair.sh`, this script defines all ARepair's models to use. Variable `AREPAIR_CASES` can be modified to remove specific cases by prefixing      them with the `#` symbol.
  
- _^ From version `2.11.3` and above, you can generate a new `.properties` file by using `--generateTemplateProperties <path to new .properties file>`._
+ _^ From version `2.11.3` and above, it is possible to generate a new `.properties` file by using `--generateTemplateProperties <path to new .properties file>`._
  
 _^^ From version `2.11.3` and above, this file is no longer present (no longer needed)._
 
