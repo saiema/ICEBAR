@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
+import static ar.edu.unrc.exa.dc.icebar.properties.ICEBARPropertiesUtils.*;
 
 public class ICEBARFileBasedProperties {
     
@@ -36,29 +37,38 @@ public class ICEBARFileBasedProperties {
         loadPropertiesFromFile();
     }
 
-    private void loadPropertiesFromFile() throws IOException {
+    private void loadPropertiesFromFile() {
         prop.clear();
         String cwd = System.getProperty("user.dir");
-        File propFile = createConfigFileIfMissing(Paths.get(cwd, ICEBAR_PROPERTIES).toString());
-        InputStream inputStream = Files.newInputStream(propFile.toPath());
-        prop.load(inputStream);
+        File propFile;
+        try {
+            if (Paths.get(ICEBAR_PROPERTIES).isAbsolute()) {
+                propFile = Paths.get(ICEBAR_PROPERTIES).toFile();
+            } else {
+                propFile = Paths.get(cwd, ICEBAR_PROPERTIES).toFile();
+            }
+            InputStream inputStream = Files.newInputStream(propFile.toPath());
+            prop.load(inputStream);
+            noPropertiesMode = false;
+        } catch (IOException e) {
+            noPropertiesMode = true;
+        }
     }
 
     private final Properties prop;
-
-    private File createConfigFileIfMissing(String configFile) throws IOException {
-        File propFile = new File(configFile);
-        if (!propFile.exists())
-            if (!propFile.createNewFile())
-                throw new IllegalStateException("Couldn't create new file " + configFile);
-        return propFile;
-    }
+    private boolean noPropertiesMode;
 
     boolean argumentExist(Property property) {
+        if (noPropertiesMode) {
+            return defaultValue(property).isPresent();
+        }
         return prop.get(property.getKey()) != null;
     }
 
     String getValue(Property property) {
+        if (noPropertiesMode) {
+            return defaultValue(property).orElse(null);
+        }
         return prop.getProperty(property.getKey());
     }
     

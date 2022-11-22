@@ -61,9 +61,9 @@ class ICEBARPropertiesUtils {
             case ICEBAR_SEARCH : return isValidSearchAlgorithm(value);
             case ICEBAR_LOGGING_FILE_VERBOSITY:
             case ICEBAR_LOGGING_CONSOLE_VERBOSITY: {
-                return ICEBARProperties.IcebarLoggingLevel.OFF.toString().compareToIgnoreCase(value) == 0
+                return value != null && (ICEBARProperties.IcebarLoggingLevel.OFF.toString().compareToIgnoreCase(value) == 0
                 || ICEBARProperties.IcebarLoggingLevel.INFO.toString().compareToIgnoreCase(value) == 0
-                || ICEBARProperties.IcebarLoggingLevel.FINE.toString().compareToIgnoreCase(value) == 0;
+                || ICEBARProperties.IcebarLoggingLevel.FINE.toString().compareToIgnoreCase(value) == 0);
             }
         }
         throw new IllegalArgumentException("Invalid or unsupported property (" + property + ")");
@@ -85,14 +85,14 @@ class ICEBARPropertiesUtils {
         if (stringRep == null) {
             return false;
         }
-        return "true".compareToIgnoreCase(stringRep) == 0 || "false".compareToIgnoreCase(stringRep) == 0;
+        return Boolean.TRUE.toString().compareToIgnoreCase(stringRep) == 0 || Boolean.FALSE.toString().compareToIgnoreCase(stringRep) == 0;
     }
 
     private static boolean isValidSearchAlgorithm(String stringRep) {
         if (stringRep == null) {
             return false;
         }
-        return "DFS".compareToIgnoreCase(stringRep) == 0 || "BFS".compareToIgnoreCase(stringRep) == 0;
+        return ICEBARProperties.IcebarSearchAlgorithm.DFS.toString().compareToIgnoreCase(stringRep) == 0 || ICEBARProperties.IcebarSearchAlgorithm.BFS.toString().compareToIgnoreCase(stringRep) == 0;
     }
 
     private enum PathType {JAR, FOLDER}
@@ -130,8 +130,8 @@ class ICEBARPropertiesUtils {
         return Paths.get(value);
     }
 
-    static void throwException(Property key, String value) {
-        throw new IllegalArgumentException("Invalid value " + value + " for property " + key.getKey());
+    static void throwException(Property key, String value, String message) {
+        throw new IllegalArgumentException(message + " (value: " + value + ") (property: " + key.getKey() + ")");
     }
 
 }

@@ -30,16 +30,23 @@ public class ICEBARProperties {
     }
 
     private ICEBARProperties() {
-        Optional<String> vmValue = getPropertyFromVMProperties(ICEBAR_USE_DEFAULT_ON_INVALID_VALUE);
+        PropertyValue vmValue = getPropertyFromVMProperties(ICEBAR_USE_DEFAULT_ON_INVALID_VALUE);
         try {
-            Optional<String> propertiesFileValue = getPropertyFromPropertiesFile(ICEBAR_USE_DEFAULT_ON_INVALID_VALUE, true);
-            propertiesFileValue.ifPresent(s -> useDefaultOnInvalidValue = toBoolean(s));
-            vmValue.ifPresent(s -> useDefaultOnInvalidValue = toBoolean(s));
+            PropertyValue propertiesFileValue = getPropertyFromPropertiesFile(ICEBAR_USE_DEFAULT_ON_INVALID_VALUE, true);
+            if (propertiesFileValue.hasValidValue()) {
+                useDefaultOnInvalidValue = toBoolean(propertiesFileValue.value());
+            }
+            if (vmValue.hasValidValue()) {
+                useDefaultOnInvalidValue = toBoolean(vmValue.value());
+            }
         } catch (Exception e) {
-            vmValue.ifPresent(s -> useDefaultOnInvalidValue = toBoolean(s));
+            if (vmValue.hasValidValue()) {
+                useDefaultOnInvalidValue = toBoolean(vmValue.value());
+            }
             if (!useDefaultOnInvalidValue) {
                 throwException(
                         ICEBAR_USE_DEFAULT_ON_INVALID_VALUE,
+                        null,
                         "There was an exception getting the value from the properties file (" + ICEBARFileBasedProperties.ICEBAR_PROPERTIES + ") and the VM Arguments set this property to false.\n" +
                                 Utils.exceptionToString(e)
                 );
@@ -47,71 +54,83 @@ public class ICEBARProperties {
         }
     }
 
-    private Optional<String> getRawProperty(Property property) {
-        Optional<String> propertiesFileValue = getPropertyFromPropertiesFile(property);
-        Optional<String> vmPropertiesValue = getPropertyFromVMProperties(property);
-        if (vmPropertiesValue.isPresent()) {
-            return vmPropertiesValue;
-        } else return propertiesFileValue;
+    private Optional<String> getValidProperty(Property property) {
+        PropertyValue propertiesFileValue = getPropertyFromPropertiesFile(property);
+        PropertyValue vmPropertiesValue = getPropertyFromVMProperties(property);
+        if (vmPropertiesValue.hasValidValue()) {
+            return Optional.of(vmPropertiesValue.value());
+        } else if (!vmPropertiesValue.error() && propertiesFileValue.hasValidValue()) {
+            return Optional.of(propertiesFileValue.value());
+        } else if (vmPropertiesValue.error()) {
+            throwException(property, vmPropertiesValue.value(),"Got an invalid value from VM arguments");
+        } else if (propertiesFileValue.error()) {
+            throwException(property,propertiesFileValue.value(), "Got an invalid value from the .properties file and there is no related VM argument that overrides it");
+        }
+        return Optional.empty();
     }
 
     private String getProperty(Property property) {
-        Optional<String> propertyValue = getRawProperty(property);
+        Optional<String> propertyValue = getValidProperty(property);
         if (propertyValue.isPresent()) {
             return propertyValue.get();
         } else {
             throwException(
                     property,
+                    null,
                     "Couldn't get a valid value for property (" + property + ") and a value is needed (no default value is available). Check the information regarding the property, maybe the value is invalid."
             );
         }
         throw new IllegalStateException("Shouldn't have reached this point!");
     }
 
-    private Optional<String> getPropertyFromPropertiesFile(Property property) {
+    private PropertyValue getPropertyFromPropertiesFile(Property property) {
         return getPropertyFromPropertiesFile(property, false);
     }
 
-    private Optional<String> getPropertyFromPropertiesFile(Property property, boolean throwException) {
+    private PropertyValue getPropertyFromPropertiesFile(Property property, boolean throwException) {
         try {
             String propertiesFileValue;
             if (ICEBARFileBasedProperties.getInstance().argumentExist(property)) {
                 propertiesFileValue = ICEBARFileBasedProperties.getInstance().getValue(property);
                 if (isValidValue(property, propertiesFileValue)) {
-                    return Optional.of(propertiesFileValue);
+                    return PropertyValue.validValue(propertiesFileValue);
                 } else if (useDefaultOnInvalidValue) {
                     logger.warning("Value for property (" + property + ") is not valid, will be using the default value instead.\n" +
                             "Please check the description for the property to see if the value (" + propertiesFileValue + ") is valid\n" +
                             property.getDescription());
-                    return defaultValue(property);
+                    return defaultValue(property).map(PropertyValue::validValue).orElseGet(PropertyValue::noValue);
+                } else {
+                    return PropertyValue.invalidValue(propertiesFileValue);
                 }
             }
-            return Optional.empty();
+            return PropertyValue.noValue();
         } catch (Exception e) {
             if (throwException) {
-                throw e;
+                throwException(property, null, "An exception occurred while trying to get value from properties file");
             }
-            return Optional.empty();
+            return PropertyValue.noValue();
         }
     }
 
-    private Optional<String> getPropertyFromVMProperties(Property property) {
+    private PropertyValue getPropertyFromVMProperties(Property property) {
         if (doesVMPropertyExists(property)) {
             String vmValue = getVMPropertyValue(property);
             if (isValidValue(property, vmValue)) {
-                return Optional.of(vmValue);
+                return PropertyValue.validValue(vmValue);
             } else if (useDefaultOnInvalidValue) {
                 logger.warning("Value for property (" + property + ") is not valid, will be using the default value instead.\n" +
                         "Please check the description for the property to see if the value (" + vmValue + ") is valid\n" +
                         property.getDescription());
-                return defaultValue(property);
+                return defaultValue(property).map(PropertyValue::validValue).orElseGet(PropertyValue::noValue);
+            } else {
+                return PropertyValue.invalidValue(vmValue);
             }
         }  /*
             VM properties only overwrite properties from file if one of the following situations happen:
             1. The properties file does not define a value for the property
             2. The VM properties has a -D<property>=value
              */
-        return Optional.empty();
+        return PropertyValue.noValue();
     }
 
     public boolean enableBeAFixInstanceTestsGeneration() {
@@ -221,6 +240,17 @@ public class ICEBARProperties {
         return Arrays.stream(values()).map(p ->
             p.getKey() + "=" + getRawProperty(p).orElse("UNSET")
         ).collect(Collectors.toList());
+    }
+
+    private Optional<String> getRawProperty(Property property) {
+        String propertyFileValue = ICEBARFileBasedProperties.getInstance().getValue(property);
+        String vmPropertyValue = getVMPropertyValue(property);
+        if (isValidValue(property, vmPropertyValue)) {
+            return vmPropertyValue == null?Optional.of(""):Optional.of(vmPropertyValue);
+        } else if (isValidValue(property, propertyFileValue)) {
+            return propertyFileValue==null?Optional.of(""):Optional.of(propertyFileValue);
+        }
+        return defaultValue(property);
     }
 
     public static Map<String, String> getOptionsAndDescriptions() {

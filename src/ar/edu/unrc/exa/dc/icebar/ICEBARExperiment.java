@@ -1,9 +1,6 @@
 package ar.edu.unrc.exa.dc.icebar;
 
-import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
 import ar.edu.unrc.exa.dc.util.Utils;
-
-import java.io.IOException;
 import java.nio.file.Path;
 
 public final class ICEBARExperiment {
@@ -24,19 +21,10 @@ public final class ICEBARExperiment {
 
     private ICEBARExperiment() {}
 
-    public void modelPath(Path modelPath) throws IOException {
+    public void modelPath(Path modelPath) {
         if (!Utils.isValidPath(modelPath, Utils.PathCheck.ALS))
             throw new IllegalArgumentException("invalid model path (" + modelPath + ")");
         this.modelPath = modelPath;
-        if (ICEBARProperties.getInstance().saveAllTestSuites()) {
-            String modelFileName = modelPath.getFileName().toString();
-            String modelName = modelFileName;
-            int lastDot = modelFileName.lastIndexOf(".");
-            if (lastDot > 0) {
-                modelName = modelFileName.substring(0, lastDot);
-            }
-            failedTestSuitesFolderPath = Utils.createFailedTestSuitesFolder(modelName);
-        }
     }
 
     public void oraclePath(Path oraclePath) {
@@ -55,6 +43,13 @@ public final class ICEBARExperiment {
         if (!Utils.isValidPath(initialTestsPath, Utils.PathCheck.TESTS))
             throw new IllegalArgumentException("invalid initial tests path (" + initialTestsPath + ")");
         this.initialTestsPath = initialTestsPath;
+    }
+
+    public void failedTestSuitesFolderPath(Path failedTestSuitesFolderPath) {
+        if (!Utils.isValidPath(failedTestSuitesFolderPath, Utils.PathCheck.DIR)) {
+            throw new IllegalArgumentException("invalid failed test suites folder path (" + failedTestSuitesFolderPath + ")");
+        }
+        this.failedTestSuitesFolderPath = failedTestSuitesFolderPath;
     }
 
     public Path modelPath() {
@@ -91,10 +86,6 @@ public final class ICEBARExperiment {
 
     public boolean hasInitialTests() {
         return initialTestsPath != null;
-    }
-
-    public boolean hasFailedTestSuitesFolderPath() {
-        return failedTestSuitesFolderPath != null;
     }
 
 }

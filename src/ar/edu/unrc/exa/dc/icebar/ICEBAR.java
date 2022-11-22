@@ -9,6 +9,7 @@ import ar.edu.unrc.exa.dc.tools.ARepair;
 import ar.edu.unrc.exa.dc.tools.BeAFix;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult;
 import ar.edu.unrc.exa.dc.tools.InitialTests;
+import ar.edu.unrc.exa.dc.util.Utils;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -24,9 +25,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.getInstance().icebarConsoleLoggingLevel(), ICEBARProperties.getInstance().icebarFileLoggingLevel());
-
-    private static final String VERSION = "2.11.1";
+    private static final String VERSION = "2.11.2";
 
     private static final String BEAFIX_MIN_VERSION = "2.12.1";
     private static final String AREPAIR_MIN_VERSION = "*";
@@ -64,7 +63,7 @@ public class ICEBAR {
         }
         if (args[0].trim().compareToIgnoreCase(GENERATE_TEMPLATE_PROPERTIES_FLAG) == 0) {
             if (args.length != 2) {
-                logger.severe("Expected a path to a .properties file as second argument");
+                System.err.println("Expected a path to a .properties file as second argument");
                 return;
             }
             String path = args[1];
@@ -75,6 +74,11 @@ public class ICEBAR {
         if (ICEBARExperiment.getInstance().hasProperties()) {
             ICEBARFileBasedProperties.ICEBAR_PROPERTIES = ICEBARExperiment.getInstance().propertiesPath().toAbsolutePath().toString();
         }
+        Logger logger = LocalLogging.getLogger(ICEBAR.class, ICEBARProperties.getInstance().icebarConsoleLoggingLevel(), ICEBARProperties.getInstance().icebarFileLoggingLevel());
+        if (ICEBARExperiment.getInstance().hasProperties()) {
+            logger.info("Using custom .properties file: " + ICEBARExperiment.getInstance().propertiesPath());
+        }
+        updateICEBARExperimentTestSuiteProperty();
         BeAFix beafix = beafix();
         ARepair arepair = arepair();
         int laps = ICEBARProperties.getInstance().icebarLaps();
@@ -133,7 +137,20 @@ public class ICEBAR {
         }
     }
 
-    private static void parseCommandLine(String[] args) throws IOException {
+    private static void updateICEBARExperimentTestSuiteProperty() throws IOException {
+        if (ICEBARProperties.getInstance().saveAllTestSuites()) {
+            String modelFileName = ICEBARExperiment.getInstance().modelPath().getFileName().toString();
+            String modelName = modelFileName;
+            int lastDot = modelFileName.lastIndexOf(".");
+            if (lastDot > 0) {
+                modelName = modelFileName.substring(0, lastDot);
+            }
+            Path failedTestSuitesFolderPath = Utils.createFailedTestSuitesFolder(modelName);
+            ICEBARExperiment.getInstance().failedTestSuitesFolderPath(failedTestSuitesFolderPath);
+        }
+    }
+
+    private static void parseCommandLine(String[] args) {
         if (args.length == 0)
             return;
         boolean configKeyRead = false;
@@ -166,7 +183,7 @@ public class ICEBAR {
     private static final String ORACLE_KEY = "oracle";
     private static final String PROPERTIES_KEY = "properties";
     private static final String INITIAL_TESTS_KEY = "initialtests";
-    private static void setConfig(String key, String value) throws IOException {
+    private static void setConfig(String key, String value) {
         Path path = Paths.get(value);
         switch (key.toLowerCase()) {
             case MODEL_KEY: {
