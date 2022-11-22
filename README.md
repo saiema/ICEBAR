@@ -37,24 +37,63 @@ After downloading and extracting ICEBAR's zip file (release [2.8.1](https://gith
 
  * `experiments` folder contains ARepair's and Alloy4Fun's benchmarks.
  * `Tools` folder contains both ARepair and BeAFix, the second one is used by ICEBAR to generate tests.
- * `ICEBAR-<version>.jar`, this can be used by executing `java -jar ICEBAR-<version>.jar <arguments>`, use `--help` to get information about the             arguments to use. The `<version>` will be `2.8.1` or above, and it depends on the downloaded release.
- * `icebar.properties`, a properties file with the configuration used in our experiments. You can use this file as a template for you own configurations.
- * `icebar_ARepairMode.properties`, a properties file to run ARepair once and check the fix against a property-based oracle. The main difference of this     configuration with respect to the previous one is the amount of laps (iterations) used, in this case we used **0** laps, this is equivalent to just       running ARepair.
+ * `<ICEBAR JAR>`, this can be used by executing `java -jar <ICEBAR JAR> <arguments>`, use `--help` to get information about the arguments to use. Using `--version` will show ICEBAR's version, this should be `2.8.1` or above, and it depends on the downloaded release.
+ * `icebar.properties^`, a properties file with the configuration used in our experiments. You can use this file as a template for you own configurations.
+ * `icebar_ARepairMode.properties^^`, a properties file to run ARepair once and check the fix against a property-based oracle. The main difference of this configuration with respect to the previous one is the amount of laps (iterations) used, in this case we used **0** laps, this is equivalent to just running ARepair.
  * `icebar-run.sh`, this script runs all ICEBAR experiments.
  * `icebar-run-arepair.sh`, this script runs all ARepair experiments.
  * `modelsA4F.sh`, this script defines all Alloy4Fun's models to use. Variable `A4F_CASES` can be modified to remove specific cases by prefixing them        with the `#` symbol.
  * `modelsARepair.sh`, this script defines all ARepair's models to use. Variable `AREPAIR_CASES` can be modified to remove specific cases by prefixing      them with the `#` symbol.
+ 
+ _^ From version `2.11.3` and above, you can generate a new `.properties` file by using `--generateTemplateProperties <path to new .properties file>`._
+ 
+_^^ From version `2.11.3` and above, this file is no longer present (no longer needed)._
 
 # Usage
+
+### Quik command guide
+
+As a quick reference, these are the different ways to run ICEBAR:
+
+ * [VERSION] `java -jar <ICEBAR JAR> --version`, this will show the current version of ICEBAR.
+ * [HELP] `java -jar <ICEBAR JAR> --help`, this will show ICEBAR's help.
+ * [REPAIR] `java -jar <ICEBAR JAR> --model <ALS FILE> --oracle <ALS FILE> [--properties <PROPERTIES FILE>] [--initialtests <TESTS FILE>]`, this will execute the ICEBAR repair process as explained in previous sections.
+ * [PROPERTIES SUMMARY^] `java -jar <ICEBAR JAR> --options`, this will show a summary of all properties and their description.
+ * [PROPERTIES FILE GENERATION^] `java -jar <ICEBAR JAR> --generateTemplateProperties <PATH TO NEW PROPERTIES FILE>`, this will generate a new `.properties` file with all properties set to either a default value or `UNSET` when none exist.
+ 
+ _^ from version `2.11.3` and above_
+
 ### Running ICEBAR
 
-ICEBAR uses a mixture of `.properties` files to configure ICEBAR's behaviour, and a set of command line arguments. There are two `.properties` files available with the 2.8.1 release as well as part of the repository, these properties have each property documented. And for help with the command line the following command is available:
+ICEBAR uses a mixture of `.properties` files to configure ICEBAR's behaviour, and a set of command line arguments. There are two `.properties` files available with the `2.8.1` release as well as part of the repository, these properties have each property documented. And for help with the command line the following command is available:
 
 ```
-java -jar ICEBAR-2.8.1.jar --help
+java -jar <ICEBAR JAR> --help
 ```
 
-The same command, changing `--help` with the appropiate arguments, can be used to run ICEBAR on a specific model.
+To repair a model using ICEBAR, the command to run is: 
+
+```
+java -jar <ICEBAR JAR> <MODEL AND ORACLE> [<PROPERTIES FILE>] [<INITIAL TESTS>]
+```
+
+#### Model and Oracle arguments
+
+These define the model to repair (`--model <PATH>`), and the property-based oracle to use (`--oracle <PATH>`). Both refer to a `.als` file.
+
+#### Properties file argument
+
+This defines a `.properties` file to use, it's optional from version `2.11.3` and above. A new `.properties` file can be generated with the `--generateTemplateProperties` argument, some properties will be set with `UNSET` as value, as a default value cannot be defined.
+
+#### Initial tests argument
+
+It is possible to start ICEBAR with an existing set of trusted tests. These will be used as globally trusted. The expected argument is a path to a `.tests` file containing predicates and `run` commands.
+
+### ICEBAR 2.11.3 and above
+
+From this version onward, properties can be set both by a `.properties` file and by JVM arguments (`-D<key>=<value>`). Properties defined by JVM arguments will override those from the used `.properties` file. It is also possible to use only JVM arguments, any property without a defined value will use a default value instead. Default values can be seen by generating a default `.properties` file.
+
+To list all properties and their description, use `java -jar <ICEBAR JAR> --options`. To generate a new `.properties` file using default values, use `java -jar <ICEBAR JAR> --generateTemplateProperties <PATH TO NEW .properties FILE>`.
 
 ## ICEBAR's configuration
 
@@ -77,7 +116,7 @@ ICEBAR relies on a few arguments: a model to repair, an optional initial test su
  * `icebar.globaltrustedtests=false`: a trusted test generated from a candidate that includes untrusted tests will be used globaly when this property is     set to `true`, otherwise it will use these tests locally.
  * `icebar.updatescopefromoracle=true`: when `true`, ARepair scope will be updated from the maximum scope used in the oracle (when `false`, this will         only be done for initial tests).
 
-_The rest of the properties are either no longer used or only used for debugging purposes_
+_The rest of the properties are either no longer used or only used for debugging purposes (from version `2.11.3` and above, these other properties are no longer present)._
 
 ## ICEBAR's output
 
@@ -101,7 +140,7 @@ ICEBAR will generate three files:
 
 We provided scripts to replicate our experiments (in release [2.8.1](https://github.com/saiema/ICEBAR/releases/tag/2.8.1)).
 
-Inside both `.properties` files, and in any new one, the property `icebar.tools.arepair.root=Tools/ARepair` must be edited to have the full path to that directory, e.g.: for a user `bob` who downloaded the replication package inside his `Download` folder, the property should be changed to `icebar.tools.arepair.root=/home/bob/Downloads/ICEBAR-2.8.1/Tools/ARepair/`.
+Inside both `.properties` files, and in any new one, the property `icebar.tools.arepair.root=Tools/ARepair` must be edited to have the full path to that directory, e.g.: for a user `bob` who downloaded the replication package inside his `Download` folder, the property should be changed to `icebar.tools.arepair.root=/home/bob/Downloads/ICEBAR-2.8.1/Tools/ARepair/`. When using a released version from `2.11.3` and above, the scripts `icebar-run.sh` and `icebar-run-arepair.sh` will update `icebar.properties` ARepair and BeAFix properties with their correct values. 
 
 ## Using Docker
 
