@@ -508,12 +508,24 @@ public final class BeAFixResult {
             List<BeAFixTest> ttTests = parseTrustedTests();
             List<BeAFixTest> utTests = parseUntrustedTests();
             generatedTests = ceTests.size() + ttTests.size() + utTests.size();
+            transferCETestsWithUntrustedRelatedTestsToUnrelatedTests(ceTests, utTests);
             mergeRelated(ceTests, ttTests);
             mergeRelated(utTests);
             mergeMultipleBranches(utTests);
             mergePositiveAndNegativeBranches(utTests);
             testsParsed = true;
         }
+    }
+
+    private void transferCETestsWithUntrustedRelatedTestsToUnrelatedTests(List<BeAFixTest> ceTests, List<BeAFixTest> utTests) {
+        List<BeAFixTest> transferredTests = new LinkedList<>();
+        for (BeAFixTest utTest : utTests) {
+            if (utTest.isRelated()) {
+                Optional<BeAFixTest> relatedTest = searchAndRemoveRelatedTest(utTest, ceTests);
+                relatedTest.ifPresent(transferredTests::add);
+            }
+        }
+        utTests.addAll(transferredTests);
     }
 
     private List<BeAFixTest> parseCounterexampleTests() throws IOException {

@@ -25,7 +25,7 @@ import static ar.edu.unrc.exa.dc.util.Utils.startCandidateInfoFile;
 
 public class ICEBAR {
 
-    private static final String VERSION = "2.11.3";
+    private static final String VERSION = "2.11.4";
 
     private static final String BEAFIX_MIN_VERSION = "2.12.1";
     private static final String AREPAIR_MIN_VERSION = "*";

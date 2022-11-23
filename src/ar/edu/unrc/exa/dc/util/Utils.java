@@ -92,11 +92,11 @@ public final class Utils {
     }
 
     private static int testSuiteCount = 0;
-    public static void saveFailingTestSuite(Collection<BeAFixTest> tests, String modelName) throws IOException {
+    public static void saveFailingTestSuite(Collection<BeAFixTest> tests, String modelName, boolean noFix) throws IOException {
         if (ICEBARProperties.getInstance().saveAllTestSuites()) {
             Path testsPath = Paths.get(
                     ICEBARExperiment.getInstance().failedTestSuitesFolderPath().toString(),
-                    modelName + "_failing_test_suite_" + testSuiteCount++ + ".als"
+                    modelName + "_failing_test_suite_" + (noFix?"no_fix_":"spurious_") + testSuiteCount++ + ".als"
             );
             writeTestsToFile(tests,testsPath,true, true);
         }

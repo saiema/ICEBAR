@@ -171,7 +171,7 @@ public class IterativeCEBasedAlloyRepair {
                 Pair<Boolean, FixCandidate> beAFixCheckAnalysis = analyzeBeAFixCheck(beAFixCheckResult, beafixTimeCounter, arepairTimeCounter, totalTime, current, repairCandidate);
                 if (beAFixCheckAnalysis.fst())
                     return Optional.ofNullable(beAFixCheckAnalysis.snd());
-                saveFailingTestSuite(aRepairResult.usedTests(),modelToRepairName);
+                saveFailingTestSuite(aRepairResult.usedTests(), modelToRepairName, false);
                 if (current.depth() < laps) {
                     beafixTimeCounter.clockStart();
                     BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);
@@ -273,6 +273,7 @@ public class IterativeCEBasedAlloyRepair {
                 }
             } else {
                 evaluatedCandidatesLeadingToNoFix++;
+                saveFailingTestSuite(aRepairResult.usedTests(), modelToRepairName, true);
                 if (aRepairResult.hasMessage()) {
                     logger.fine("ARepair ended with the following message:\n" + aRepairResult.message());
                 }
