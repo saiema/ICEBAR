@@ -265,7 +265,7 @@ public final class Utils {
                         localTrustedCounterexampleTestsCount + Report.SEPARATOR +
                         localUntrustedCounterexampleTestsCount + Report.SEPARATOR +
                         localUntrustedPredicateTestsCount + Report.SEPARATOR +
-                        aRepairResult.name()  +
+                        aRepairResult.name()  + Report.SEPARATOR +
                         totalTrustedTests + Report.SEPARATOR +
                         totalUntrustedTests + "\n"
                 ;
