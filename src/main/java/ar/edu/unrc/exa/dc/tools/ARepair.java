@@ -227,7 +227,7 @@ public final class ARepair {
             if (fixNotFound.isPresent()){
                 result = ARepairResult.PARTIAL_REPAIR;
                 result.message("Fix is only a partial fix");
-            } else if (!fixFound.isPresent()) {
+            } else if (fixFound.isEmpty()) {
                 result = ARepairResult.REPAIRED;
                 result.message("All tests passed with no modifications required");
             } else {

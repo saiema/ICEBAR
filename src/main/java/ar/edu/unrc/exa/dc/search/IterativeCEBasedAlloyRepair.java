@@ -3,9 +3,11 @@ package ar.edu.unrc.exa.dc.search;
 import ar.edu.unrc.exa.dc.icebar.Report;
 import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
 import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties.IcebarSearchAlgorithm;
+import ar.edu.unrc.exa.dc.openai.managers.SuggestionManager;
 import ar.edu.unrc.exa.dc.tools.*;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 import ar.edu.unrc.exa.dc.util.*;
+import io.github.cdimascio.dotenv.Dotenv;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +25,7 @@ public class IterativeCEBasedAlloyRepair {
     private final ARepair aRepair;
     private final BeAFix beAFix;
     private final Set<BeAFixTest> trustedCounterexampleTests;
-    private final Path modelToRepair;
+    private Path modelToRepair;
     private final String modelToRepairName;
     private final Path oracle;
     private final int laps;
@@ -80,6 +82,9 @@ public class IterativeCEBasedAlloyRepair {
 
     private boolean keepGoingAfterARepairNPE = false;
     public void keepGoingAfterARepairNPE(boolean keepGoingAfterARepairNPE) { this.keepGoingAfterARepairNPE =keepGoingAfterARepairNPE; }
+
+    private boolean enableOpenAISuggestions = false;
+    public void enableOpenAISuggestions(boolean enableOpenAISuggestions) { this.enableOpenAISuggestions = enableOpenAISuggestions; }
 
     public IterativeCEBasedAlloyRepair(Path modelToRepair, Path oracle, ARepair aRepair, BeAFix beAFix, int laps, Logger logger) {
         if (!isValidPath(modelToRepair, Utils.PathCheck.ALS))
@@ -173,6 +178,13 @@ public class IterativeCEBasedAlloyRepair {
                     return Optional.ofNullable(beAFixCheckAnalysis.snd());
                 saveFailingTestSuite(aRepairResult.usedTests(), modelToRepairName, false);
                 if (current.depth() < laps) {
+                    if (enableOpenAISuggestions) {
+                        Pair<Boolean, FixCandidate> suggestion = updateModelWithSuggestion(beAFixCheckResult, repairCandidate);
+                        if (suggestion.fst()) {
+                            logger.info("OpenAI suggestion fixed the model.");
+                            return Optional.ofNullable(suggestion.snd());
+                        }
+                    }
                     beafixTimeCounter.clockStart();
                     BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);
                     beafixTimeCounter.clockEnd();
@@ -295,6 +307,58 @@ public class IterativeCEBasedAlloyRepair {
         Report report = Report.exhaustedSearchSpace(maxReachedLap, totalTestsGenerated, beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
         writeReport(report);
         return Optional.empty();
+    }
+
+    private SuggestionManager suggestionManager = null;
+
+    private Pair<Boolean, FixCandidate> updateModelWithSuggestion(BeAFixResult beAFixCheckResult, FixCandidate repairCandidate) {
+        logger.info("Asking for OpenAI suggestion");
+        if (suggestionManager == null) {
+            initSuggestionManager();
+        }
+        Path buggyModel = repairCandidate.modelToRepair();
+        try {
+            Optional<Path> suggestedFix = suggestionManager.askForSuggestion(buggyModel, oracle);
+            if (suggestedFix.isEmpty()) {
+                logger.info("No suggestion obtained, continuing with ARepair fix and the original model");
+            } else {
+                logger.info("Got suggestion, saved at " + suggestedFix.get());
+                FixCandidate suggestedFixCandidate = FixCandidate.aRepairCheckCandidate(suggestedFix.get(), repairCandidate.depth());
+                BeAFixResult suggestionBeAFixCheckResult = runBeAFixCheck(beafixTimeCounter, suggestedFixCandidate);
+                logger.info("Validating OpenAI suggestion against property-based oracle: DOES" + (suggestionBeAFixCheckResult.checkResult()?"":" NOT") + " SATISFIES ORACLE");
+                Pair<Boolean, FixCandidate> beAFixCheckAnalysis = analyzeBeAFixCheck(beAFixCheckResult, beafixTimeCounter, arepairTimeCounter, totalTime, suggestedFixCandidate, repairCandidate);
+                if (beAFixCheckAnalysis.fst())
+                    return beAFixCheckAnalysis;
+                int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
+                int suggestionRepairedProperties = suggestionBeAFixCheckResult.passingProperties();
+                logger.info("Suggested model fixes " +
+                        (suggestionRepairedProperties>repairedPropertiesForCurrent?"MORE":"SAME OR LESS") +
+                        " properties than the ARepair fix " +
+                        "(" + suggestionRepairedProperties + " satisfied properties for the suggestion " +
+                        "VS " + repairedPropertiesForCurrent + " satisfied properties for the ARepair fix" + ")");
+                if (suggestionRepairedProperties > repairedPropertiesForCurrent) {
+                    logger.info("Changing current buggy model to OpenAI suggestion");
+                    modelToRepair = suggestedFixCandidate.modelToRepair();
+                    return beAFixCheckAnalysis;
+                }
+            }
+            return new Pair<>(Boolean.FALSE, repairCandidate);
+        } catch (IOException e) {
+            logger.severe(
+                    "An error occurred while trying to get a suggestion" +
+                            "(will continue with the original model) :\n" + Utils.exceptionToString(e));
+            return new Pair<>(Boolean.FALSE, repairCandidate);
+        }
+    }
+
+    private void initSuggestionManager() {
+        Dotenv dotenv = Dotenv.configure().filename(ICEBARProperties.getInstance().icebarOpenAIEnvFile().toString()).load();
+        Path suggestionsFolder = modelToRepair.getParent();
+        int maximumContent = Integer.parseInt(dotenv.get("ICEBAR_OPENAI_CONTEXT_MAX_MESSAGES", "1"));
+        suggestionManager = new SuggestionManager(suggestionsFolder, maximumContent);
+        logger.info("Initialized SuggestionManager with:" +
+                "\n\tSuggestions folder: " + suggestionsFolder +
+                "\n\tMaximum suggestion memory: " + maximumContent);
     }
 
     private Pair<Boolean, FixCandidate> analyzeBeAFixCheck(BeAFixResult beAFixCheckResult, TimeCounter beafixTimeCounter, TimeCounter arepairTimeCounter, TimeCounter totalTime, FixCandidate current, FixCandidate repairCandidate) throws IOException {

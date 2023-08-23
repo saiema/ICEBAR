@@ -213,9 +213,32 @@ public enum Property {
             public String getDescription() {
                 return "[BOOLEAN] When true, all used test suites will be saved to files, not only the one that lead to a proper fix.";
             }
+        },
+        ICEBAR_OPENAI_ENABLE {
+            @Override
+            public String getKey() { return ICEBAR_OPENAI_PREFIX + ".enable"; }
+
+            @Override
+            public String getDescription() {
+                return "[BOOLEAN] When true, ICEBAR will ask for fix suggestions to OpenAI Chat Completion API." +
+                        "\n\tBy default, this option is disabled.";
+            }
+        },
+        ICEBAR_OPENAI_CONFIG_FILE {
+            @Override
+            public String getKey() { return ICEBAR_OPENAI_PREFIX + ".envfile"; }
+
+            @Override
+            public String getDescription() {
+                return "[PATH] The path to an .env file to be used for all OPENAI related configurations." +
+                        "\n\tBy default, \"config.env\" will be used." +
+                        "\n\tUsing an absolute path is suggested, relative paths may work but is not guaranteed.";
+            }
         }
         ;
         private static final String ICEBAR_PREFIX = "icebar";
+
+        private static final String ICEBAR_OPENAI_PREFIX = ICEBAR_PREFIX + ".openai";
         private static final String ICEBAR_SEARCH_PREFIX = ICEBAR_PREFIX + ".search";
         private static final String BEAFIX_PREFIX = ICEBAR_PREFIX + ".tools.beafix";
         private static final String AREPAIR_PREFIX = ICEBAR_PREFIX + ".tools.arepair";

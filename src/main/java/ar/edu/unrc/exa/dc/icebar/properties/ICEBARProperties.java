@@ -2,6 +2,8 @@ package ar.edu.unrc.exa.dc.icebar.properties;
 
 import ar.edu.unrc.exa.dc.logging.LocalLogging;
 import ar.edu.unrc.exa.dc.util.Utils;
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -92,16 +94,7 @@ public class ICEBARProperties {
             String propertiesFileValue;
             if (ICEBARFileBasedProperties.getInstance().argumentExist(property)) {
                 propertiesFileValue = ICEBARFileBasedProperties.getInstance().getValue(property);
-                if (isValidValue(property, propertiesFileValue)) {
-                    return PropertyValue.validValue(propertiesFileValue);
-                } else if (useDefaultOnInvalidValue) {
-                    logger.warning("Value for property (" + property + ") is not valid, will be using the default value instead.\n" +
-                            "Please check the description for the property to see if the value (" + propertiesFileValue + ") is valid\n" +
-                            property.getDescription());
-                    return defaultValue(property).map(PropertyValue::validValue).orElseGet(PropertyValue::noValue);
-                } else {
-                    return PropertyValue.invalidValue(propertiesFileValue);
-                }
+                return valueToProperty(property, propertiesFileValue);
             }
             return PropertyValue.noValue();
         } catch (Exception e) {
@@ -112,19 +105,24 @@ public class ICEBARProperties {
         }
     }
 
+    @NotNull
+    private PropertyValue valueToProperty(Property property, String value) {
+        if (isValidValue(property, value)) {
+            return PropertyValue.validValue(value);
+        } else if (useDefaultOnInvalidValue) {
+            logger.warning("Value for property (" + property + ") is not valid, will be using the default value instead.\n" +
+                    "Please check the description for the property to see if the value (" + value + ") is valid\n" +
+                    property.getDescription());
+            return defaultValue(property).map(PropertyValue::validValue).orElseGet(PropertyValue::noValue);
+        } else {
+            return PropertyValue.invalidValue(value);
+        }
+    }
+
     private PropertyValue getPropertyFromVMProperties(Property property) {
         if (doesVMPropertyExists(property)) {
             String vmValue = getVMPropertyValue(property);
-            if (isValidValue(property, vmValue)) {
-                return PropertyValue.validValue(vmValue);
-            } else if (useDefaultOnInvalidValue) {
-                logger.warning("Value for property (" + property + ") is not valid, will be using the default value instead.\n" +
-                        "Please check the description for the property to see if the value (" + vmValue + ") is valid\n" +
-                        property.getDescription());
-                return defaultValue(property).map(PropertyValue::validValue).orElseGet(PropertyValue::noValue);
-            } else {
-                return PropertyValue.invalidValue(vmValue);
-            }
+            return valueToProperty(property, vmValue);
         }  /*
             VM properties only overwrite properties from file if one of the following situations happen:
             1. The properties file does not define a value for the property
@@ -199,6 +197,14 @@ public class ICEBARProperties {
 
     public int icebarTimeout() {
         return toNumber(getProperty(ICEBAR_TIMEOUT));
+    }
+
+    public boolean icebarOpenAI() {
+        return toBoolean(getProperty(ICEBAR_OPENAI_ENABLE));
+    }
+
+    public Path icebarOpenAIEnvFile() {
+        return toPath(getProperty(ICEBAR_OPENAI_CONFIG_FILE));
     }
 
     public enum IcebarSearchAlgorithm {BFS, DFS}

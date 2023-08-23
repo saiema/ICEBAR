@@ -18,6 +18,7 @@ class ICEBARPropertiesUtils {
             case ICEBAR_ENABLE_FORCE_ASSERTION_TESTS :
             case ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE :
             case ICEBAR_KEEP_GOING_ON_AREPAIR_NPE :
+            case ICEBAR_OPENAI_ENABLE:
                 return Optional.of(Boolean.toString(true));
             case BEAFIX_JAR :
             case AREPAIR_ROOT :
@@ -33,6 +34,7 @@ class ICEBARPropertiesUtils {
             case ICEBAR_TIMEOUT : return Optional.of(Integer.toString(60));
             case ICEBAR_LOGGING_FILE_VERBOSITY: return Optional.of(ICEBARProperties.IcebarLoggingLevel.FINE.toString());
             case ICEBAR_LOGGING_CONSOLE_VERBOSITY: return Optional.of(ICEBARProperties.IcebarLoggingLevel.INFO.toString());
+            case ICEBAR_OPENAI_CONFIG_FILE: return Optional.of("config.env");
         }
         return Optional.empty();
     }
@@ -50,6 +52,7 @@ class ICEBARPropertiesUtils {
             case ICEBAR_UPDATE_AREPAIR_SCOPE_FROM_ORACLE :
             case ICEBAR_KEEP_GOING_ON_AREPAIR_NPE :
             case ICEBAR_SAVE_ALL_TEST_SUITES:
+            case ICEBAR_OPENAI_ENABLE:
                 return isBoolean(value);
             case BEAFIX_JAR : return isPath(value, PathType.JAR, false);
             case BEAFIX_TESTS : return isNumber(value, false);
@@ -65,6 +68,7 @@ class ICEBARPropertiesUtils {
                 || ICEBARProperties.IcebarLoggingLevel.INFO.toString().compareToIgnoreCase(value) == 0
                 || ICEBARProperties.IcebarLoggingLevel.FINE.toString().compareToIgnoreCase(value) == 0);
             }
+            case ICEBAR_OPENAI_CONFIG_FILE: return value == null || value.isEmpty() || isPath(value, PathType.ENV, false);
         }
         throw new IllegalArgumentException("Invalid or unsupported property (" + property + ")");
     }
@@ -95,7 +99,7 @@ class ICEBARPropertiesUtils {
         return ICEBARProperties.IcebarSearchAlgorithm.DFS.toString().compareToIgnoreCase(stringRep) == 0 || ICEBARProperties.IcebarSearchAlgorithm.BFS.toString().compareToIgnoreCase(stringRep) == 0;
     }
 
-    private enum PathType {JAR, FOLDER}
+    private enum PathType {JAR, FOLDER, ENV}
     private static boolean isPath(String stringRep, PathType pathType, boolean absolute) {
         if (stringRep == null) {
             return false;
@@ -114,6 +118,9 @@ class ICEBARPropertiesUtils {
         }
         if (pathType.equals(PathType.FOLDER)) {
             return file.isDirectory();
+        }
+        if (pathType.equals(PathType.ENV)) {
+            return file.isFile() && file.getName().endsWith(".env");
         }
         return false;
     }

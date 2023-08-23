@@ -87,6 +87,34 @@ public final class Utils {
         }
     }
 
+    public static Path writeSuggestedModel(Path suggestionsFolder, String modelName, String modelContent) throws IOException {
+        File suggestionsFolderAsFile = suggestionsFolder.toFile();
+        if (!suggestionsFolderAsFile.isDirectory()) {
+            throw new IllegalArgumentException("Suggestion folder is not a path to a directory (" + suggestionsFolder + ")");
+        }
+        if (!suggestionsFolderAsFile.exists() && !suggestionsFolderAsFile.mkdirs()) {
+            throw new Error("Suggestions folder does not exists but couldn't be created (" + suggestionsFolder + ")");
+        }
+        String suggestionName = modelName + "_" + simpleInstant();
+        Path suggestionPath = Paths.get(suggestionsFolder.toString(), suggestionName + ".als");
+        File suggestionFile = suggestionPath.toFile();
+        if (!suggestionFile.createNewFile()) {
+            throw new Error("Couldn't create suggestion file (" + suggestionPath + ")");
+        }
+        Files.write(suggestionPath, modelContent.getBytes(), StandardOpenOption.APPEND);
+        return suggestionPath;
+    }
+
+    public static String readFile(Path path) throws IOException {
+        if (!isValidPath(path, PathCheck.FILE))
+            throw new IllegalArgumentException("first path is not valid (" + (path==null?"NULL":path.toString()) + ")");
+        StringBuilder sb = new StringBuilder();
+        for (String line : Files.readAllLines(path)) {
+            sb.append(line).append("\n");
+        }
+        return sb.toString();
+    }
+
     public static int generateTestsFile(Collection<BeAFixTest> tests, Path output) throws IOException {
         return writeTestsToFile(tests, output, true);
     }
