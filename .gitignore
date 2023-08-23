@@ -36,6 +36,7 @@ beafix.properties
 
 #IntelliJ project and configuration files
 *.iml
+.idea
 
 #secrets
 *.env
