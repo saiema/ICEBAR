@@ -12,6 +12,8 @@ import io.github.cdimascio.dotenv.Dotenv;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,6 +28,8 @@ public class SuggestionManager {
     private final String context;
     private int currentContext = 0;
     private final TransactionLimiter transactionLimiter;
+    private List<String> additionalRestrictions;
+    private static final String ADDITIONAL_RESTRICTIONS_KEY = "ICEBAR_OPENAI_PROMPTS_RESTRICTION";
 
     public SuggestionManager(Path suggestionsFolder, int maximumContext) {
         this.suggestionsFolder = suggestionsFolder;
@@ -49,6 +53,11 @@ public class SuggestionManager {
         this.oraclePrompt = dotenv.get("ICEBAR_OPENAI_PROMPTS_ORACLE",
                 "Any mention to 'oracle' will be referring to the following Alloy code");
         this.context = dotenv.get("ICEBAR_OPENAI_CONTEXT", "You are a helpful assistant.");
+        this.additionalRestrictions = new LinkedList<>();
+        dotenv.entries().forEach(dotenvEntry -> {
+            if (dotenvEntry.getKey().startsWith(ADDITIONAL_RESTRICTIONS_KEY))
+                additionalRestrictions.add(dotenvEntry.getValue());
+        });
     }
 
     public Optional<Path> askForSuggestion(Path model, Path oracle) throws IOException, OpenAIChatConnectorException {
@@ -93,6 +102,9 @@ public class SuggestionManager {
         }
         String oraclePrompt = this.oraclePrompt + "\n" + oracleCode;
         ChatManager.getInstance().addRestriction(new Message(Role.SYSTEM, oraclePrompt));
+        for (String additionalRestriction : additionalRestrictions) {
+            ChatManager.getInstance().addRestriction(new Message(Role.SYSTEM, additionalRestriction));
+        }
     }
 
     private String getModelFromResponse(String rawSuggestion) {
