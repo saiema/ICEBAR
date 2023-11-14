@@ -5,9 +5,9 @@ import ar.edu.unrc.exa.dc.openai.models.Message;
 
 public class OpenAIResponse {
 
-    private Message message;
-    private boolean error;
-    private OpenAIChatConnectorException exception;
+    private final Message message;
+    private final boolean error;
+    private final OpenAIChatConnectorException exception;
 
     public static OpenAIResponse validResponse(Message message) {
         return new OpenAIResponse(message, null);

@@ -1,12 +1,10 @@
 package ar.edu.unrc.exa.dc.openai.managers;
 
 import ar.edu.unrc.exa.dc.icebar.properties.ICEBARProperties;
-import ar.edu.unrc.exa.dc.openai.connector.OpenAIChatConnector;
 import ar.edu.unrc.exa.dc.openai.connector.OpenAIChatConnectorException;
-import ar.edu.unrc.exa.dc.openai.connector.OpenAIRequest;
-import ar.edu.unrc.exa.dc.openai.models.Chat;
 import ar.edu.unrc.exa.dc.openai.models.Message;
 import ar.edu.unrc.exa.dc.openai.models.Role;
+import ar.edu.unrc.exa.dc.search.ModelToRepair;
 import ar.edu.unrc.exa.dc.util.Utils;
 import io.github.cdimascio.dotenv.Dotenv;
 
@@ -28,7 +26,7 @@ public class SuggestionManager {
     private final String context;
     private int currentContext = 0;
     private final TransactionLimiter transactionLimiter;
-    private List<String> additionalRestrictions;
+    private final List<String> additionalRestrictions;
     private static final String ADDITIONAL_RESTRICTIONS_KEY = "ICEBAR_OPENAI_PROMPTS_RESTRICTION";
 
     public SuggestionManager(Path suggestionsFolder, int maximumContext) {
@@ -60,12 +58,12 @@ public class SuggestionManager {
         });
     }
 
-    public Optional<Path> askForSuggestion(Path model, Path oracle) throws IOException, OpenAIChatConnectorException {
+    public Optional<Path> askForSuggestion(ModelToRepair modelToRepair) throws IOException, OpenAIChatConnectorException {
         if (!transactionLimiter.markTransaction()) {
             return Optional.empty();
         }
-        String modelCode = Utils.readFile(model);
-        String oracleCode = Utils.readFile(oracle);
+        String modelCode = Utils.readFile(modelToRepair.path());
+        String oracleCode = Utils.readFile(modelToRepair.oraclePath());
         if (currentContext++ >= maximumContext) {
             ChatManager.getInstance().clearChat();
             currentContext = 0;
@@ -88,7 +86,7 @@ public class SuggestionManager {
         String rawSuggestion = suggestion.get().message().message();
         if (rawSuggestion.startsWith("Yes")) {
             String suggestedModel = getModelFromResponse(rawSuggestion);
-            String modelFileName = model.getFileName().toString();
+            String modelFileName = modelToRepair.path().getFileName().toString();
             Path suggestedModelPath = Utils.writeSuggestedModel(suggestionsFolder, modelFileName.replace(".als", ""), suggestedModel);
             return Optional.of(suggestedModelPath);
         } else {

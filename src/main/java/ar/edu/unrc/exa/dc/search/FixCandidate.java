@@ -4,14 +4,9 @@ import ar.edu.unrc.exa.dc.logging.LocalLogging;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 import ar.edu.unrc.exa.dc.util.TestHashes;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.LinkedList;
-import java.util.logging.FileHandler;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import static ar.edu.unrc.exa.dc.util.Utils.*;
 
@@ -22,7 +17,7 @@ public final class FixCandidate {
     private static boolean checkRepeated = false;
     public static void checkRepeated(boolean checkRepeated) { FixCandidate.checkRepeated = checkRepeated; }
 
-    private final Path modelToRepair;
+    private final ModelToRepair modelToRepair;
     private final int depth;
     private final Collection<BeAFixTest> untrustedTests; //only untrusted tests
     private final Collection<BeAFixTest> trustedTests; //only trusted tests
@@ -32,29 +27,29 @@ public final class FixCandidate {
     private final FixCandidate from;
     private final boolean hasLocalTests;
 
-    public static FixCandidate initialCandidate(Path modelToRepair) {
+    public static FixCandidate initialCandidate(ModelToRepair modelToRepair) {
         return new FixCandidate(modelToRepair, 0, null, null, null);
     }
 
-    public static FixCandidate aRepairCheckCandidate(Path modelToRepair, int depth) {
+    public static FixCandidate aRepairCheckCandidate(ModelToRepair modelToRepair, int depth) {
         return new FixCandidate(modelToRepair, depth, null, null, null);
     }
 
-    public static FixCandidate descendant(Path modelToRepair, Collection<BeAFixTest> untrustedTests, FixCandidate parent) {
+    public static FixCandidate descendant(ModelToRepair modelToRepair, Collection<BeAFixTest> untrustedTests, FixCandidate parent) {
         return descendant(modelToRepair, untrustedTests, null, parent);
     }
 
-    public static FixCandidate descendant(Path modelToRepair, Collection<BeAFixTest> untrustedTests, Collection<BeAFixTest> trustedTests, FixCandidate parent) {
+    public static FixCandidate descendant(ModelToRepair modelToRepair, Collection<BeAFixTest> untrustedTests, Collection<BeAFixTest> trustedTests, FixCandidate parent) {
         if (parent == null)
             throw new IllegalArgumentException("Can't have a descendant with a null parent");
         return new FixCandidate(modelToRepair, parent.depth() + 1, untrustedTests, trustedTests, parent);
     }
 
-    private FixCandidate(Path modelToRepair, int depth, Collection<BeAFixTest> untrustedTests, Collection<BeAFixTest> trustedTests, FixCandidate from) {
+    private FixCandidate(ModelToRepair modelToRepair, int depth, Collection<BeAFixTest> untrustedTests, Collection<BeAFixTest> trustedTests, FixCandidate from) {
         id = generateRandomName();
         this.from = from;
-        if (!isValidPath(modelToRepair, PathCheck.ALS))
-            throw new IllegalArgumentException("Invalid model to repair (" + (modelToRepair==null?"NULL":modelToRepair.toString()) + ")");
+        if (!isValidPath(modelToRepair.path(), PathCheck.ALS))
+            throw new IllegalArgumentException("Invalid model to repair (" + (modelToRepair.path()==null?"NULL":modelToRepair.path().toString()) + ")");
         if (depth < 0)
             throw new IllegalArgumentException("negative depth (" + depth + ")");
         if (untrustedTests != null) {
@@ -96,7 +91,7 @@ public final class FixCandidate {
         return false;
     }
 
-    public Path modelToRepair() {
+    public ModelToRepair modelToRepair() {
         return this.modelToRepair;
     }
 
@@ -121,7 +116,7 @@ public final class FixCandidate {
     }
 
     public String modelName() {
-        return modelToRepair.getFileName().toString().replace(".als","");
+        return modelToRepair.name();
     }
 
     public boolean hasLocalTests() {
@@ -136,7 +131,7 @@ public final class FixCandidate {
 
     @Override
     public String toString() {
-        return "Model: " + modelToRepair.toString() + "\n" + "Depth: " + depth + "\n" + "Repaired properties: " + repairedProperties;
+        return "Model: " + modelToRepair.path().toString() + "\n" + "Depth: " + depth + "\n" + "Repaired properties: " + repairedProperties;
     }
 
 }

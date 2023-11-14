@@ -8,6 +8,7 @@ import ar.edu.unrc.exa.dc.tools.*;
 import ar.edu.unrc.exa.dc.tools.BeAFixResult.BeAFixTest;
 import ar.edu.unrc.exa.dc.util.*;
 import io.github.cdimascio.dotenv.Dotenv;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,9 +26,7 @@ public class IterativeCEBasedAlloyRepair {
     private final ARepair aRepair;
     private final BeAFix beAFix;
     private final Set<BeAFixTest> trustedCounterexampleTests;
-    private Path modelToRepair;
-    private final String modelToRepairName;
-    private final Path oracle;
+    private final ModelToRepair modelToRepair;
     private final int laps;
     private int totalTestsGenerated;
 
@@ -98,13 +97,10 @@ public class IterativeCEBasedAlloyRepair {
         if (laps < 0)
             throw new IllegalArgumentException("Negative value for laps");
         this.logger = logger;
+        this.modelToRepair = new ModelToRepair(modelToRepair, oracle);
         this.aRepair = aRepair;
-        this.aRepair.modelToRepair(modelToRepair);
         this.beAFix = beAFix;
         this.trustedCounterexampleTests = new HashSet<>();
-        this.modelToRepair = modelToRepair;
-        this.modelToRepairName = modelToRepair.getFileName().toString().replace(".als","");
-        this.oracle = oracle;
         this.laps = laps;
         this.totalTestsGenerated = 0;
         this.arepairCalls = 0;
@@ -130,8 +126,8 @@ public class IterativeCEBasedAlloyRepair {
     public Optional<FixCandidate> repair() throws IOException {
         //watches for different time process recording
         logger.info("Starting ICEBAR process with:\n" +
-                "\tModel: " + modelToRepair.toString() + "\n" +
-                "\tProperty-based Oracle: " + oracle.toString() + "\n" +
+                "\tModel: " + modelToRepair.path().toString() + "\n" +
+                "\tProperty-based Oracle: " + modelToRepair.oraclePath().toString() + "\n" +
                 "\tInitial tests: " + (initialTests==null?"NONE":initialTests.getInitialTestsPath().toString()) + "\n" +
                 "\tLaps: " + laps + "\n");
         logger.fine("Full ICEBAR configuration:\n\t" +
@@ -169,24 +165,46 @@ public class IterativeCEBasedAlloyRepair {
             boolean checkAndGenerate = repairFound || noTests;
             if (checkAndGenerate) {
                 boolean fromOriginal = aRepairResult.equals(ARepairResult.NO_TESTS);
-                FixCandidate repairCandidate = fromOriginal?current:FixCandidate.aRepairCheckCandidate(aRepairResult.repair(), current.depth());
-                BeAFixResult beAFixCheckResult = runBeAFixCheck(beafixTimeCounter, repairCandidate);
+                FixCandidate repairCandidate;
+                if (fromOriginal) {
+                    repairCandidate = current;
+                } else {
+                    ModelToRepair aRepairFix = new ModelToRepair(aRepairResult.repair(), current.modelToRepair().oraclePath());
+                    repairCandidate = FixCandidate.aRepairCheckCandidate(aRepairFix, current.depth());
+                }
+                BeAFixResult beAFixCheckResult = runBeAFixCheck(beafixTimeCounter, repairCandidate, repairCandidate.modelToRepair().oraclePath());
                 logger.info("Validating ARepair fix against property-based oracle: DOES" + (beAFixCheckResult.checkResult()?"":" NOT") + " SATISFIES ORACLE");
                 int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
                 Pair<Boolean, FixCandidate> beAFixCheckAnalysis = analyzeBeAFixCheck(beAFixCheckResult, beafixTimeCounter, arepairTimeCounter, totalTime, current, repairCandidate);
                 if (beAFixCheckAnalysis.fst())
                     return Optional.ofNullable(beAFixCheckAnalysis.snd());
-                saveFailingTestSuite(aRepairResult.usedTests(), modelToRepairName, false);
+                saveFailingTestSuite(aRepairResult.usedTests(), repairCandidate.modelName(), false);
                 if (current.depth() < laps) {
                     if (enableOpenAISuggestions) {
-                        Pair<Boolean, FixCandidate> suggestion = updateModelWithSuggestion(beAFixCheckResult, repairCandidate);
-                        if (suggestion.fst()) {
-                            logger.info("OpenAI suggestion fixed the model.");
-                            return Optional.ofNullable(suggestion.snd());
+                        Pair<SuggestionResult, FixCandidate> suggestion = updateModelWithSuggestion(beAFixCheckResult, repairCandidate);
+                        switch (suggestion.fst()) {
+                            case SUGGESTION_IS_FIX: {
+                                logger.info("OpenAI suggestion fixed the model.");
+                                return Optional.ofNullable(suggestion.snd());
+                            }
+                            case SUGGESTION_IS_BETTER: {
+                                logger.info("OpenAI suggestion is better than current model, changing to suggestion.");
+                                repairCandidate = suggestion.snd();
+                                break;
+                            }
+                            case SUGGESTION_KEEP_ORIGINAL: {
+                                logger.info("OpenAI suggestion is worse or non existent, keeping current candidate and model-to-repair.");
+                                break;
+                            }
+                            case SUGGESTION_CREATES_BRANCH: {
+                                logger.info("OpenAI suggestion will create a new ICEBAR branch with a different model-to-repair.");
+                                searchSpace.push(suggestion.snd());
+                                break;
+                            }
                         }
                     }
                     beafixTimeCounter.clockStart();
-                    BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false);
+                    BeAFixResult beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, false, repairCandidate.modelToRepair().oraclePath());
                     beafixTimeCounter.clockEnd();
                     if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                         return Optional.empty();
@@ -199,7 +217,7 @@ public class IterativeCEBasedAlloyRepair {
                     if (allowFactsRelaxation && ((counterexampleTests.isEmpty() && counterexampleUntrustedTests.isEmpty())) && predicateTests.isEmpty()) {
                         logger.fine("No tests available, generating with relaxed facts...");
                         beafixTimeCounter.clockStart();
-                        beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, true, false);
+                        beAFixResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, true, false, repairCandidate.modelToRepair().oraclePath());
                         beafixTimeCounter.clockEnd();
                         if (checkIfInvalidAndReportBeAFixResults(beAFixResult, current, beafixTimeCounter, arepairTimeCounter))
                             return Optional.empty();
@@ -209,7 +227,7 @@ public class IterativeCEBasedAlloyRepair {
                             logger.fine("Generating with assertion forced test generation...");
                             beAFix.testsStartingIndex(Math.max(beAFix.testsStartingIndex(), beAFixResult.getMaxIndex()) + 1);
                             beafixTimeCounter.clockStart();
-                            BeAFixResult beAFixResult_forcedAssertionTestGeneration = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, true);
+                            BeAFixResult beAFixResult_forcedAssertionTestGeneration = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.TESTS, false, true, repairCandidate.modelToRepair().oraclePath());
                             beafixTimeCounter.clockEnd();
                             if (checkIfInvalidAndReportBeAFixResults(beAFixResult_forcedAssertionTestGeneration, current, beafixTimeCounter, arepairTimeCounter))
                                 return Optional.empty();
@@ -285,7 +303,7 @@ public class IterativeCEBasedAlloyRepair {
                 }
             } else {
                 evaluatedCandidatesLeadingToNoFix++;
-                saveFailingTestSuite(aRepairResult.usedTests(), modelToRepairName, true);
+                saveFailingTestSuite(aRepairResult.usedTests(), current.modelName(), true);
                 if (aRepairResult.hasMessage()) {
                     logger.fine("ARepair ended with the following message:\n" + aRepairResult.message());
                 }
@@ -311,49 +329,87 @@ public class IterativeCEBasedAlloyRepair {
 
     private SuggestionManager suggestionManager = null;
 
-    private Pair<Boolean, FixCandidate> updateModelWithSuggestion(BeAFixResult beAFixCheckResult, FixCandidate repairCandidate) {
+    private enum SuggestionResult {
+        SUGGESTION_IS_FIX,
+        SUGGESTION_IS_BETTER,
+        SUGGESTION_KEEP_ORIGINAL,
+        SUGGESTION_CREATES_BRANCH
+    };
+    private Pair<SuggestionResult, FixCandidate> updateModelWithSuggestion(BeAFixResult beAFixCheckResult, FixCandidate repairCandidate) {
         logger.info("Asking for OpenAI suggestion");
         if (suggestionManager == null) {
-            initSuggestionManager();
+            initSuggestionManager(repairCandidate.modelToRepair().path().getParent());
         }
-        Path buggyModel = repairCandidate.modelToRepair();
         try {
-            Optional<Path> suggestedFix = suggestionManager.askForSuggestion(buggyModel, oracle);
+            Optional<Path> suggestedFix = suggestionManager.askForSuggestion(repairCandidate.modelToRepair());
             if (suggestedFix.isEmpty()) {
                 logger.info("No suggestion obtained, continuing with ARepair fix and the original model");
             } else {
                 logger.info("Got suggestion, saved at " + suggestedFix.get());
-                FixCandidate suggestedFixCandidate = FixCandidate.aRepairCheckCandidate(suggestedFix.get(), repairCandidate.depth());
-                BeAFixResult suggestionBeAFixCheckResult = runBeAFixCheck(beafixTimeCounter, suggestedFixCandidate);
+                ModelToRepair suggestedModel = new ModelToRepair(suggestedFix.get(), repairCandidate.modelToRepair().oraclePath());
+                FixCandidate suggestedFixCandidate = FixCandidate.aRepairCheckCandidate(suggestedModel, repairCandidate.depth());
+                BeAFixResult suggestionBeAFixCheckResult = runBeAFixCheck(beafixTimeCounter, suggestedFixCandidate, suggestedFixCandidate.modelToRepair().oraclePath());
                 logger.info("Validating OpenAI suggestion against property-based oracle: DOES" + (suggestionBeAFixCheckResult.checkResult()?"":" NOT") + " SATISFIES ORACLE");
                 Pair<Boolean, FixCandidate> beAFixCheckAnalysis = analyzeBeAFixCheck(beAFixCheckResult, beafixTimeCounter, arepairTimeCounter, totalTime, suggestedFixCandidate, repairCandidate);
                 if (beAFixCheckAnalysis.fst())
-                    return beAFixCheckAnalysis;
-                int repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
-                int suggestionRepairedProperties = suggestionBeAFixCheckResult.passingProperties();
-                logger.info("Suggested model fixes " +
+                    return new Pair<>(SuggestionResult.SUGGESTION_IS_FIX, beAFixCheckAnalysis.snd());
+                List<BeAFixTest> tests = new LinkedList<>();
+                if (initialTests != null && !initialTests.getInitialTests().isEmpty()) {
+                    tests.addAll(initialTests.getInitialTests());
+                } else if (!trustedCounterexampleTests.isEmpty()) {
+                    tests.addAll(trustedCounterexampleTests);
+                } else {
+                    tests.addAll(repairCandidate.trustedTests());
+                    tests.addAll(repairCandidate.untrustedTests());
+                }
+                boolean changeToSuggestion = false;
+                int repairedPropertiesForCurrent = 0;
+                int suggestionRepairedProperties = 0;
+                boolean usingTests = false;
+                if (tests.isEmpty()) {
+                    repairedPropertiesForCurrent = beAFixCheckResult.passingProperties();
+                    suggestionRepairedProperties = suggestionBeAFixCheckResult.passingProperties();
+                } else {
+                    usingTests = true;
+                    BeAFixResult testCheckCurrentCandidate = runBeAFixTestsCheck(beafixTimeCounter, repairCandidate, tests);
+                    BeAFixResult testCheckSuggestedCandidate = runBeAFixTestsCheck(beafixTimeCounter, suggestedFixCandidate, tests);
+                    if (testCheckCurrentCandidate.error() || testCheckSuggestedCandidate.error()) {
+                        logger.warning("Test check failed for at least one candidate " +
+                                "[Current : " + (testCheckCurrentCandidate.error()?"FAILED":"OK") + "]" +
+                                "[Suggested : " + (testCheckSuggestedCandidate.error()?"FAILED":"OK") + "]" +
+                                "\nWill continue working with current fix candidate");
+                    } else {
+                        repairedPropertiesForCurrent = testCheckCurrentCandidate.passingProperties();
+                        suggestionRepairedProperties = testCheckSuggestedCandidate.passingProperties();
+                    }
+                }
+                logger.info("Suggested model make " +
                         (suggestionRepairedProperties>repairedPropertiesForCurrent?"MORE":"SAME OR LESS") +
-                        " properties than the ARepair fix " +
+                        " " + (usingTests?"TEST":"ORACLE") + " properties than the ARepair fix " +
                         "(" + suggestionRepairedProperties + " satisfied properties for the suggestion " +
                         "VS " + repairedPropertiesForCurrent + " satisfied properties for the ARepair fix" + ")");
                 if (suggestionRepairedProperties > repairedPropertiesForCurrent) {
+                    changeToSuggestion = true;
+                }
+                if (changeToSuggestion && usingTests) {
                     logger.info("Changing current buggy model to OpenAI suggestion");
-                    modelToRepair = suggestedFixCandidate.modelToRepair();
-                    return beAFixCheckAnalysis;
+                    return new Pair<>(SuggestionResult.SUGGESTION_IS_BETTER, beAFixCheckAnalysis.snd());
+                } else if (changeToSuggestion) {
+                    logger.info("Creating new branch with OpenAI suggestion");
+                    return new Pair<>(SuggestionResult.SUGGESTION_CREATES_BRANCH, beAFixCheckAnalysis.snd());
                 }
             }
-            return new Pair<>(Boolean.FALSE, repairCandidate);
+            return new Pair<>(SuggestionResult.SUGGESTION_KEEP_ORIGINAL, repairCandidate);
         } catch (IOException e) {
             logger.severe(
                     "An error occurred while trying to get a suggestion" +
                             "(will continue with the original model) :\n" + Utils.exceptionToString(e));
-            return new Pair<>(Boolean.FALSE, repairCandidate);
+            return new Pair<>(SuggestionResult.SUGGESTION_KEEP_ORIGINAL, repairCandidate);
         }
     }
 
-    private void initSuggestionManager() {
+    private void initSuggestionManager(Path suggestionsFolder) {
         Dotenv dotenv = Dotenv.configure().filename(ICEBARProperties.getInstance().icebarOpenAIEnvFile().toString()).load();
-        Path suggestionsFolder = modelToRepair.getParent();
         int maximumContent = Integer.parseInt(dotenv.get("ICEBAR_OPENAI_CONTEXT_MAX_MESSAGES", "1"));
         suggestionManager = new SuggestionManager(suggestionsFolder, maximumContent);
         logger.info("Initialized SuggestionManager with:" +
@@ -367,7 +423,7 @@ public class IterativeCEBasedAlloyRepair {
             logger.severe("BeAFix check ended in error, ending search");
             Report report = Report.beafixCheckFailed(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
             writeReport(report);
-            return new Pair<>(true, null);
+            return new Pair<>(false, null);
         } else if (beAFixCheckResult.checkResult()) {
             logger.fine("BeAFix validated the repair, fix found");
             Report report = Report.repairFound(current, current.untrustedTests().size() + current.trustedTests().size() + trustedCounterexampleTests.size(), beafixTimeCounter, arepairTimeCounter, arepairCalls, generateTestsAndCandidateCounters());
@@ -390,10 +446,32 @@ public class IterativeCEBasedAlloyRepair {
         }
     }
 
-    private BeAFixResult runBeAFixCheck(TimeCounter beafixTimeCounter, FixCandidate repairCandidate) {
+    private BeAFixResult runBeAFixTestsCheck(TimeCounter beafixTimeCounter, FixCandidate repairCandidate, List<BeAFixTest> tests) {
+        Path testsPath = Paths.get(repairCandidate.modelToRepair().path().toAbsolutePath().toString().replace(".als", "_tests.als"));
+        int testsCount;
+        try {
+            testsCount = generateTestsFile(testsPath, tests);
+            if (testsCount < 0) {
+                logger.severe("Couldn't delete tests file (" + testsPath + ")");
+                return BeAFixResult.error("Couldn't delete tests file (" + testsPath + ")");
+            } else if (testsCount == 0) {
+                logger.severe("No tests to run");
+                return BeAFixResult.error("No tests to run");
+            } else {
+                return runBeAFixCheck(beafixTimeCounter, repairCandidate, testsPath);
+            }
+        } catch (IOException e) {
+            String exceptionAsString = Utils.exceptionToString(e);
+            logger.severe("Exception occurred while checking model against tests\n" + exceptionAsString);
+            return BeAFixResult.error(exceptionAsString);
+        }
+
+    }
+
+    private BeAFixResult runBeAFixCheck(TimeCounter beafixTimeCounter, FixCandidate repairCandidate, Path oracle) {
         logger.fine("Validating current candidate with BeAFix");
         beafixTimeCounter.clockStart();
-        BeAFixResult beAFixCheckResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.CHECK, false, false);
+        BeAFixResult beAFixCheckResult = runBeAFixWithCurrentConfig(repairCandidate, BeAFixMode.CHECK, false, false, oracle);
         beafixTimeCounter.clockEnd();
         logger.fine( "BeAFix check finished\n" + beAFixCheckResult.toString());
         return beAFixCheckResult;
@@ -437,7 +515,7 @@ public class IterativeCEBasedAlloyRepair {
             Set<BeAFixTest> localTrustedTests = new HashSet<>(current.trustedTests());
             Set<BeAFixTest> localUntrustedTests = new HashSet<>(current.untrustedTests());
             localUntrustedTests.addAll(combination);
-            FixCandidate newCandidate = FixCandidate.descendant(modelToRepair, localUntrustedTests, localTrustedTests, current);
+            FixCandidate newCandidate = FixCandidate.descendant(current.modelToRepair(), localUntrustedTests, localTrustedTests, current);
             newCandidate.repairedProperties(repairedPropertiesForCurrent);
             if (newCandidate.hasLocalTests()) {
                 searchSpace.push(newCandidate);
@@ -522,6 +600,19 @@ public class IterativeCEBasedAlloyRepair {
         }
     }
 
+    private int generateTestsFile(Path testsPath, @NotNull List<BeAFixTest> tests) throws IOException {
+        if (tests.isEmpty()) {
+            return 0;
+        }
+        File testsFile = testsPath.toFile();
+        if (testsFile.exists()) {
+            if (!testsFile.delete()) {
+                return -1;
+            }
+        }
+        return Utils.writeTestsFile(tests, testsPath);
+    }
+
     private ARepairResult runARepairWithCurrentConfig(FixCandidate candidate) {
         if (!aRepair.cleanFixDirectory())
             logger.warning("There was a problem cleaning ARepair .hidden folder, will keep going (cross your fingers)");
@@ -530,22 +621,20 @@ public class IterativeCEBasedAlloyRepair {
         tests.addAll(candidate.trustedTests());
         if (tests.isEmpty() && (initialTests == null || initialTests.getInitialTests().isEmpty()))
             return ARepairResult.NO_TESTS;
-        Path testsPath = Paths.get(modelToRepair.toAbsolutePath().toString().replace(".als", "_tests.als"));
-        File testsFile = testsPath.toFile();
-        if (testsFile.exists()) {
-            if (!testsFile.delete()) {
-                logger.severe("Couldn't delete tests file (" + testsFile + ")");
-                ARepairResult error = ARepairResult.ERROR;
-                error.message("Couldn't delete tests file (" + testsFile + ")");
-                return error;
-            }
+        if (initialTests != null) {
+            tests.addAll(0, initialTests.getInitialTests());
         }
+        aRepair.modelToRepair(candidate.modelToRepair().path());
+        Path testsPath = Paths.get(candidate.modelToRepair().path().toAbsolutePath().toString().replace(".als", "_tests.als"));
         int testCount;
         try {
-            if (initialTests != null) {
-                tests.addAll(0, initialTests.getInitialTests());
+            testCount = generateTestsFile(testsPath, tests);
+            if (testCount < 0) {
+                logger.severe("Couldn't delete tests file (" + testsPath + ")");
+                ARepairResult error = ARepairResult.ERROR;
+                error.message("Couldn't delete tests file (" + testsPath + ")");
+                return error;
             }
-            testCount = generateTestsFile(tests, testsPath);
         } catch (IOException e) {
             logger.severe("An exception occurred while trying to generate tests file\n" + Utils.exceptionToString(e) + "\n");
             ARepairResult error = ARepairResult.ERROR;
@@ -564,7 +653,7 @@ public class IterativeCEBasedAlloyRepair {
 
     private enum BeAFixMode {TESTS, CHECK}
 
-    private BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate, BeAFixMode mode, boolean relaxedFacts, boolean forceAssertionGeneration) {
+    private BeAFixResult runBeAFixWithCurrentConfig(FixCandidate candidate, BeAFixMode mode, boolean relaxedFacts, boolean forceAssertionGeneration, Path oracle) {
         try {
             if (!beAFix.cleanOutputDir()) {
                 return BeAFixResult.error("Couldn't delete BeAFix output directory");
@@ -573,8 +662,8 @@ public class IterativeCEBasedAlloyRepair {
             logger.severe("An exception occurred when trying to clean BeAFix output directory\n" + exceptionToString(e));
             return BeAFixResult.error("An exception occurred when trying to clean BeAFix output directory\n" + exceptionToString(e));
         }
-        Path modelToCheckWithOraclePath = Paths.get(candidate.modelToRepair().toAbsolutePath().toString().replace(".als", "_withOracle.als"));
-        File modelToCheckWithOracleFile = modelToCheckWithOraclePath.toFile();
+        Path modelToCheckWithOraclePath = Paths.get(candidate.modelToRepair().path().toAbsolutePath().toString().replace(".als", "_withOracle.als"));
+        File modelToCheckWithOracleFile = oracle.toFile();
         if (modelToCheckWithOracleFile.exists()) {
             if (!modelToCheckWithOracleFile.delete()) {
                 logger.severe("Couldn't delete model with oracle file (" + (modelToCheckWithOracleFile) + ")");
@@ -582,7 +671,7 @@ public class IterativeCEBasedAlloyRepair {
             }
         }
         try {
-            mergeFiles(candidate.modelToRepair(), oracle, modelToCheckWithOraclePath);
+            mergeFiles(candidate.modelToRepair().path(), oracle, modelToCheckWithOraclePath);
         } catch (IOException e) {
             logger.severe("An exception occurred while trying to generate model with oracle file\n" + Utils.exceptionToString(e) + "\n");
             return BeAFixResult.error(Utils.exceptionToString(e));

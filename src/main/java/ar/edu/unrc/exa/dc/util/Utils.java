@@ -115,7 +115,7 @@ public final class Utils {
         return sb.toString();
     }
 
-    public static int generateTestsFile(Collection<BeAFixTest> tests, Path output) throws IOException {
+    public static int writeTestsFile(Collection<BeAFixTest> tests, Path output) throws IOException {
         return writeTestsToFile(tests, output, true);
     }
 
